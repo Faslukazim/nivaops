@@ -16,18 +16,15 @@ VITE_SUPABASE_URL=your-project-url
 VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-Create a `tenants` table with these columns:
+Run the Phase 1 Supabase migration in `supabase/migrations` to create:
 
-| Column | Type |
-| --- | --- |
-| id | uuid primary key default gen_random_uuid() |
-| name | text |
-| phone | text |
-| roomNumber | text |
-| monthlyRent | numeric |
-| joinDate | date |
-| paymentStatus | text |
-| paymentDate | date nullable |
-| createdAt | timestamptz default now() |
+- `organizations`
+- `properties`
+- `rooms`
+- `beds`
+- `tenants`
+- `occupancies`
+
+The app keeps the current UI shape, but Supabase persistence now stores tenants through the normalized multi-property schema. Payment status remains on `occupancies` for this phase so the existing paid/unpaid workflow continues to work.
 
 The app falls back to browser local storage when Supabase keys are not configured.
