@@ -1,38 +1,12 @@
 import { useEffect, useState, useMemo } from 'react';
-import {
-  ArrowLeft, BedDouble, CheckCircle2, Loader2,
-  MessageCircle, Plus, Trash2, X,
-} from 'lucide-react';
+import { ArrowLeft, BedDouble, Plus, X } from 'lucide-react';
 import { fetchRoomsWithOccupants } from './services/propertyService';
 import { deleteTenant, updateTenant } from './services/tenantService';
-
-function fmt(value) {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency', currency: 'INR', maximumFractionDigits: 0,
-  }).format(Number(value || 0));
-}
-
-function waLink(name, phone, roomNumber, bedNumber, rent) {
-  const p = String(phone).replace(/\D/g, '');
-  const msg = `Hi ${name}, rent reminder for Room ${roomNumber} Bed ${bedNumber}. Monthly rent ${fmt(rent)} is unpaid. Please pay at your earliest.`;
-  return `https://wa.me/${p}?text=${encodeURIComponent(msg)}`;
-}
-
-function Label({ children, className = '' }) {
-  return (
-    <span className={`text-2xs font-semibold uppercase tracking-widest text-slate2 ${className}`}>
-      {children}
-    </span>
-  );
-}
-
-function Card({ children, className = '' }) {
-  return (
-    <div className={`rounded-xl bg-white shadow-card border border-border ${className}`}>
-      {children}
-    </div>
-  );
-}
+import {
+  fmt, Label, Card, SectionHeader, Btn, IconBtn,
+  StatusBadge, PaymentToggleBtn, WhatsAppLink,
+  PageLoader, StatCard, ConfirmInline,
+} from './components/ui';
 
 // ─── Occupancy bar ────────────────────────────────────────────────────────────
 
@@ -53,11 +27,19 @@ function OccBar({ occupied, capacity }) {
 function RoomCard({ room, isSelected, onClick }) {
   const occupied = room.beds.filter(b => b.tenant).length;
   const capacity = room.beds.length;
-  const unpaid = room.beds.filter(
-    b => b.occupancy?.payment_status === 'Unpaid'
-  ).length;
+  const unpaid = room.beds.filter(b => b.occupancy?.payment_status === 'Unpaid').length;
   const isEmpty = occupied === 0;
   const isFull = occupied === capacity;
+
+  const badgeStatus = unpaid > 0 ? 'unpaid'
+    : isFull ? 'paid'
+    : isEmpty ? 'empty'
+    : null;
+
+  const badgeLabel = unpaid > 0 ? `${unpaid} unpaid`
+    : isFull ? 'All paid'
+    : isEmpty ? 'Empty'
+    : null;
 
   return (
     <button
@@ -73,24 +55,15 @@ function RoomCard({ room, isSelected, onClick }) {
         <p className={`font-bold text-sm ${isSelected ? 'text-white' : 'text-ink'}`}>
           Room {room.room_number}
         </p>
-        {unpaid > 0 && (
-          <span className="shrink-0 rounded-full bg-coral/10 px-2 py-0.5 text-2xs font-semibold text-coral">
-            {unpaid} unpaid
-          </span>
-        )}
-        {unpaid === 0 && isFull && (
-          <span className="shrink-0 rounded-full bg-leaf/10 px-2 py-0.5 text-2xs font-semibold text-leaf">
-            All paid
-          </span>
-        )}
-        {isEmpty && (
-          <span className="shrink-0 rounded-full bg-amber/10 px-2 py-0.5 text-2xs font-semibold text-amber">
-            Empty
-          </span>
+        {badgeStatus && (
+          <StatusBadge
+            status={badgeStatus}
+            label={badgeLabel}
+          />
         )}
       </div>
 
-      <p className={`mt-1 text-xs ${isSelected ? 'text-white/70' : 'text-slate2'}`}>
+      <p className={`mt-1 text-xs tabular-nums ${isSelected ? 'text-white/70' : 'text-slate2'}`}>
         {occupied}/{capacity} beds occupied
       </p>
 
@@ -114,52 +87,34 @@ function BedRow({ bed, roomNumber, onMarkPaid, onMarkUnpaid, onVacate }) {
   const occ = bed.occupancy;
   const tenant = bed.tenant;
   const isPaid = occ?.payment_status === 'Paid';
-  const [confirmVacate, setConfirmVacate] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   if (!tenant) {
     return (
       <div className="flex items-center gap-3 px-4 py-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-mist text-xs font-bold text-slate2 shrink-0">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-mist text-xs font-bold tabular-nums text-slate2 shrink-0">
           {bed.bed_number}
         </div>
-        <span className="text-sm text-slate2">Available</span>
-        <span className="ml-auto rounded-full bg-leaf/10 px-2 py-0.5 text-2xs font-semibold text-leaf">
-          Free
-        </span>
+        <span className="text-sm text-slate2 flex-1">Available</span>
+        <StatusBadge status="free" />
       </div>
     );
   }
 
-  if (confirmVacate) {
+  if (confirming) {
     return (
-      <div className="flex items-center gap-3 px-4 py-3 bg-coral/5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-coral/10 text-xs font-bold text-coral shrink-0">
-          {bed.bed_number}
-        </div>
-        <p className="text-sm text-ink flex-1">
-          Vacate <span className="font-semibold">{tenant.name}</span> from Bed {bed.bed_number}?
-        </p>
-        <button
-          type="button"
-          onClick={() => setConfirmVacate(false)}
-          className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-slate2 hover:bg-mist"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={() => { onVacate(tenant.id); setConfirmVacate(false); }}
-          className="rounded-lg bg-coral px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-600"
-        >
-          Yes, vacate
-        </button>
-      </div>
+      <ConfirmInline
+        message={<>Vacate <span className="font-semibold">{tenant.name}</span> from Bed {bed.bed_number}?</>}
+        confirmLabel="Yes, vacate"
+        onCancel={() => setConfirming(false)}
+        onConfirm={() => { onVacate(tenant.id); setConfirming(false); }}
+      />
     );
   }
 
   return (
     <div className="flex items-center gap-3 px-4 py-3">
-      <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold shrink-0 ${
+      <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold tabular-nums shrink-0 ${
         isPaid ? 'bg-leaf/10 text-leaf' : 'bg-coral/10 text-coral'
       }`}>
         {bed.bed_number}
@@ -167,49 +122,36 @@ function BedRow({ bed, roomNumber, onMarkPaid, onMarkUnpaid, onVacate }) {
 
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-ink truncate">{tenant.name}</p>
-        <p className="text-xs text-slate2">
+        <p className="text-xs text-slate2 tabular-nums">
           {fmt(occ.monthly_rent)}/mo · since {occ.start_date}
         </p>
       </div>
 
-      <div className="flex items-center gap-1.5 shrink-0">
-        <span className={`rounded-full px-2 py-0.5 text-2xs font-semibold ${
-          isPaid ? 'bg-leaf/10 text-leaf' : 'bg-coral/10 text-coral'
-        }`}>
-          {isPaid ? 'Paid' : 'Unpaid'}
-        </span>
-
-        <button
-          type="button"
-          onClick={() => isPaid ? onMarkUnpaid(tenant.id) : onMarkPaid(tenant.id)}
-          title={isPaid ? 'Mark unpaid' : 'Mark paid'}
-          className={`rounded-lg p-1.5 transition-colors ${
-            isPaid
-              ? 'text-coral hover:bg-coral/10'
-              : 'text-leaf hover:bg-leaf/10'
-          }`}
-        >
-          <CheckCircle2 className="h-4 w-4" />
-        </button>
-
-        <a
-          href={waLink(tenant.name, tenant.phone, roomNumber, bed.bed_number, occ.monthly_rent)}
-          target="_blank"
-          rel="noreferrer"
-          title="WhatsApp reminder"
-          className="rounded-lg p-1.5 text-slate2 hover:bg-mist hover:text-ink transition-colors"
-        >
-          <MessageCircle className="h-4 w-4" />
-        </a>
-
-        <button
-          type="button"
-          onClick={() => setConfirmVacate(true)}
+      <div className="flex items-center gap-0.5 shrink-0">
+        <StatusBadge status={isPaid ? 'paid' : 'unpaid'} />
+        <PaymentToggleBtn
+          isPaid={isPaid}
+          onMarkPaid={() => onMarkPaid(tenant.id)}
+          onMarkUnpaid={() => onMarkUnpaid(tenant.id)}
+        />
+        <WhatsAppLink
+          name={tenant.name}
+          phone={tenant.phone}
+          roomNumber={roomNumber}
+          bedNumber={bed.bed_number}
+          rent={occ.monthly_rent}
+        />
+        <IconBtn
+          variant="danger"
           title="Vacate"
-          className="rounded-lg p-1.5 text-coral hover:bg-coral/10 transition-colors"
+          onClick={() => setConfirming(true)}
         >
-          <Trash2 className="h-4 w-4" />
-        </button>
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+        </IconBtn>
       </div>
     </div>
   );
@@ -218,8 +160,6 @@ function BedRow({ bed, roomNumber, onMarkPaid, onMarkUnpaid, onVacate }) {
 // ─── Room detail panel ────────────────────────────────────────────────────────
 
 function RoomDetail({ room, onClose, onAssign, onRoomUpdate }) {
-  const [rooms, setRooms] = useState(null);
-
   const occupied = room.beds.filter(b => b.tenant).length;
   const capacity = room.beds.length;
   const unpaid = room.beds.filter(b => b.occupancy?.payment_status === 'Unpaid').length;
@@ -227,6 +167,8 @@ function RoomDetail({ room, onClose, onAssign, onRoomUpdate }) {
   const pendingAmt = room.beds
     .filter(b => b.occupancy?.payment_status === 'Unpaid')
     .reduce((s, b) => s + Number(b.occupancy?.monthly_rent || 0), 0);
+
+  const hasAvailable = room.beds.some(b => !b.tenant);
 
   async function handleMarkPaid(tenantId) {
     await updateTenant(tenantId, {
@@ -246,48 +188,41 @@ function RoomDetail({ room, onClose, onAssign, onRoomUpdate }) {
     onRoomUpdate();
   }
 
-  const hasAvailable = room.beds.some(b => !b.tenant);
-
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-start justify-between gap-3 p-4 border-b border-border">
         <div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
+            <IconBtn
+              variant="ghost"
               onClick={onClose}
-              className="rounded-lg p-1 text-slate2 hover:bg-mist hover:text-ink sm:hidden"
+              className="sm:hidden"
             >
               <ArrowLeft className="h-4 w-4" />
-            </button>
+            </IconBtn>
             <h2 className="font-bold text-ink text-lg">Room {room.room_number}</h2>
           </div>
-          <p className="mt-0.5 text-sm text-slate2">
+          <p className="mt-0.5 text-sm text-slate2 tabular-nums">
             {occupied}/{capacity} occupied
             {revenue > 0 && ` · ${fmt(revenue)}/mo`}
-            {unpaid > 0 && ` · `}
-            {unpaid > 0 && <span className="text-coral">{fmt(pendingAmt)} unpaid</span>}
+            {unpaid > 0 && (
+              <> · <span className="text-coral">{fmt(pendingAmt)} unpaid</span></>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
           {hasAvailable && (
-            <button
-              type="button"
-              onClick={() => onAssign(room)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-leaf px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 active:scale-95 transition-all"
+            <Btn variant="success" size="md" onClick={() => onAssign(room)}
+              className="bg-leaf text-white hover:bg-emerald-700"
             >
               <Plus className="h-4 w-4" />
               Assign bed
-            </button>
+            </Btn>
           )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="hidden sm:flex rounded-lg p-1.5 text-slate2 hover:bg-mist hover:text-ink"
-          >
+          <IconBtn variant="ghost" onClick={onClose} className="hidden sm:flex">
             <X className="h-4 w-4" />
-          </button>
+          </IconBtn>
         </div>
       </div>
 
@@ -315,16 +250,16 @@ function RoomDetail({ room, onClose, onAssign, onRoomUpdate }) {
             {room.beds
               .filter(b => b.occupancy?.payment_status === 'Unpaid' && b.tenant)
               .map(b => (
-                <a
+                <WhatsAppLink
                   key={b.id}
-                  href={waLink(b.tenant.name, b.tenant.phone, room.room_number, b.bed_number, b.occupancy.monthly_rent)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-slate2 hover:text-ink hover:bg-mist transition-colors"
-                >
-                  <MessageCircle className="h-4 w-4 shrink-0" />
-                  Remind {b.tenant.name.split(' ')[0]} (Bed {b.bed_number})
-                </a>
+                  name={b.tenant.name}
+                  phone={b.tenant.phone}
+                  roomNumber={room.room_number}
+                  bedNumber={b.bed_number}
+                  rent={b.occupancy.monthly_rent}
+                  label={`Remind ${b.tenant.name.split(' ')[0]} (Bed ${b.bed_number})`}
+                  className="border border-border justify-start hover:bg-mist rounded-lg px-3 py-2"
+                />
               ))}
           </div>
         </div>
@@ -347,7 +282,6 @@ export default function RoomsPage({ selectedPropertyId, onAssignBed }) {
     try {
       const data = await fetchRoomsWithOccupants(selectedPropertyId);
       setRooms(data);
-      // Refresh selected room data if one is open
       if (selectedRoom) {
         const refreshed = data.find(r => r.id === selectedRoom.id);
         setSelectedRoom(refreshed ?? null);
@@ -373,7 +307,6 @@ export default function RoomsPage({ selectedPropertyId, onAssignBed }) {
   }, [rooms]);
 
   function handleAssign(room) {
-    // Find first available bed in room
     const availableBed = room.beds.find(b => !b.tenant);
     onAssignBed({
       propertyId: selectedPropertyId,
@@ -382,13 +315,7 @@ export default function RoomsPage({ selectedPropertyId, onAssignBed }) {
     });
   }
 
-  if (loading) {
-    return (
-      <div className="flex min-h-60 items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-slate2" />
-      </div>
-    );
-  }
+  if (loading) return <PageLoader />;
 
   if (error) {
     return (
@@ -398,29 +325,20 @@ export default function RoomsPage({ selectedPropertyId, onAssignBed }) {
     );
   }
 
-  // Summary strip
   const summaryStrip = (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-4">
-      {[
-        { label: 'Total rooms', value: rooms.length, color: 'text-ink' },
-        { label: 'Occupied beds', value: `${stats.occupied}/${stats.totalBeds}`, color: 'text-leaf' },
-        { label: 'Empty rooms', value: stats.emptyRooms, color: stats.emptyRooms > 0 ? 'text-amber' : 'text-leaf' },
-        { label: 'Rooms w/ unpaid', value: stats.unpaidRooms, color: stats.unpaidRooms > 0 ? 'text-coral' : 'text-leaf' },
-      ].map(s => (
-        <Card key={s.label} className="p-4">
-          <Label>{s.label}</Label>
-          <p className={`mt-1.5 text-2xl font-bold tabular-nums ${s.color}`}>{s.value}</p>
-        </Card>
-      ))}
+      <StatCard label="Total rooms"     value={rooms.length}        color="text-ink" />
+      <StatCard label="Occupied beds"   value={`${stats.occupied}/${stats.totalBeds}`} color="text-leaf" />
+      <StatCard label="Empty rooms"     value={stats.emptyRooms}    color={stats.emptyRooms > 0 ? 'text-amber' : 'text-leaf'} />
+      <StatCard label="Rooms w/ unpaid" value={stats.unpaidRooms}   color={stats.unpaidRooms > 0 ? 'text-coral' : 'text-leaf'} />
     </div>
   );
 
-  // Mobile: show detail screen if room selected
+  // Mobile: full-screen detail view
   if (selectedRoom) {
     return (
-      <div className="sm:hidden flex flex-col min-h-screen -mt-4 -mx-4">
-        {summaryStrip && null}
-        <Card className="flex-1 rounded-none border-0">
+      <div className="sm:hidden flex flex-col" style={{ minHeight: 'calc(100vh - 160px)' }}>
+        <Card className="flex-1 rounded-xl overflow-hidden">
           <RoomDetail
             room={selectedRoom}
             onClose={() => setSelectedRoom(null)}
@@ -436,9 +354,8 @@ export default function RoomsPage({ selectedPropertyId, onAssignBed }) {
     <div>
       {summaryStrip}
 
-      {/* Desktop: two-column layout */}
+      {/* Desktop: two-column */}
       <div className="hidden sm:grid sm:grid-cols-[300px_1fr] lg:grid-cols-[340px_1fr] gap-4">
-        {/* Room list */}
         <div className="flex flex-col gap-2 max-h-[calc(100vh-220px)] overflow-y-auto pr-1">
           {rooms.map(room => (
             <RoomCard
@@ -450,7 +367,6 @@ export default function RoomsPage({ selectedPropertyId, onAssignBed }) {
           ))}
         </div>
 
-        {/* Detail panel */}
         <Card className="overflow-hidden max-h-[calc(100vh-220px)] flex flex-col">
           {selectedRoom ? (
             <RoomDetail
@@ -468,7 +384,7 @@ export default function RoomsPage({ selectedPropertyId, onAssignBed }) {
         </Card>
       </div>
 
-      {/* Mobile: room cards list */}
+      {/* Mobile: room list */}
       <div className="sm:hidden flex flex-col gap-2">
         {rooms.map(room => (
           <RoomCard
