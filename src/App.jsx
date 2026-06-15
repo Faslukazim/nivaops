@@ -54,9 +54,9 @@ function BedGrid({ tenants, selectedPropertyId }) {
       {loading ? (
         <InlineLoader text="Loading bed map…" />
       ) : (
-        <div className="mt-3 flex flex-col gap-2">
-          {rooms.map(room => (
-            <div key={room.id} className="flex items-center gap-2">
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+  {rooms.map(room => (
+    <div key={room.id} className="flex items-center gap-2">
               <span className="w-10 text-xs font-semibold tabular-nums text-slate2 shrink-0">
                 {room.room_number}
               </span>
