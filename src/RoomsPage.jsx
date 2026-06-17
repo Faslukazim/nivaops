@@ -64,11 +64,27 @@ function RoomCard({ room, isSelected, onClick }) {
       </div>
 
       <p className={`mt-1 text-xs tabular-nums ${isSelected ? 'text-white/70' : 'text-slate2'}`}>
-        {occupied}/{capacity} beds occupied
-      </p>
+  {occupied}/{capacity} occupied · {capacity - occupied} vacant
+</p>
 
-      <OccBar occupied={occupied} capacity={capacity} />
+<OccBar occupied={occupied} capacity={capacity} />
 
+<div className="mt-3 flex gap-1">
+  {Array.from({ length: capacity }).map((_, i) => (
+    <div
+      key={i}
+      className={`h-3 w-3 rounded-sm ${
+        i < occupied
+          ? isSelected
+            ? 'bg-white'
+            : 'bg-leaf'
+          : isSelected
+            ? 'bg-white/30'
+            : 'bg-border'
+      }`}
+    />
+  ))}
+</div>
       {occupied > 0 && (
         <p className={`mt-2 text-xs truncate ${isSelected ? 'text-white/60' : 'text-slate2'}`}>
           {room.beds
@@ -204,12 +220,12 @@ function RoomDetail({ room, onClose, onAssign, onRoomUpdate }) {
             <h2 className="font-bold text-ink text-lg">Room {room.room_number}</h2>
           </div>
           <p className="mt-0.5 text-sm text-slate2 tabular-nums">
-            {occupied}/{capacity} occupied
-            {revenue > 0 && ` · ${fmt(revenue)}/mo`}
-            {unpaid > 0 && (
-              <> · <span className="text-coral">{fmt(pendingAmt)} unpaid</span></>
-            )}
-          </p>
+  {occupied}/{capacity} occupied · {capacity - occupied} vacant
+  {revenue > 0 && ` · ${fmt(revenue)}/mo`}
+  {unpaid > 0 && (
+    <> · <span className="text-coral">{fmt(pendingAmt)} unpaid</span></>
+  )}
+</p>
         </div>
         <div className="flex items-center gap-2">
           {hasAvailable && (
@@ -276,22 +292,28 @@ export default function RoomsPage({ selectedPropertyId, onAssignBed }) {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [error, setError] = useState('');
 
-  async function load() {
-    if (!selectedPropertyId) return;
-    setLoading(true);
-    try {
-      const data = await fetchRoomsWithOccupants(selectedPropertyId);
-      setRooms(data);
-      if (selectedRoom) {
-        const refreshed = data.find(r => r.id === selectedRoom.id);
-        setSelectedRoom(refreshed ?? null);
-      }
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
+async function load() {
+  if (!selectedPropertyId) return;
+
+  setLoading(true);
+
+  try {
+    const data = await fetchRoomsWithOccupants(selectedPropertyId);
+
+    setRooms(data);
+
+    if (selectedRoom) {
+      const refreshed = data.find(r => r.id === selectedRoom.id);
+      setSelectedRoom(refreshed ?? data[0] ?? null);
+    } else {
+      setSelectedRoom(data[0] ?? null);
     }
+  } catch (e) {
+    setError(e.message);
+  } finally {
+    setLoading(false);
   }
+}
 
   useEffect(() => {
     setSelectedRoom(null);
@@ -378,7 +400,6 @@ export default function RoomsPage({ selectedPropertyId, onAssignBed }) {
           ) : (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-slate2 p-8">
               <BedDouble className="h-8 w-8 opacity-30" />
-              <p className="text-sm">Select a room to see bed details</p>
             </div>
           )}
         </Card>
