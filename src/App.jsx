@@ -347,8 +347,9 @@ function TenantCard({ tenant, onEdit, onDelete, onMarkPaid, onMarkUnpaid, onRetu
   const hasDeposit = tenant.depositAmount > 0;
   const depositHeld = hasDeposit && tenant.depositStatus === 'held';
   const depositReturned = hasDeposit && tenant.depositStatus === 'returned';
-  const depositForfeited = hasDeposit && tenant.depositStatus === 'Deposit Not Refundable';
+  const depositForfeited = hasDeposit && tenant.depositStatus === 'forfeited';
   const [confirmingForfeit, setConfirmingForfeit] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   return (
     <Card className="overflow-hidden">
@@ -380,8 +381,8 @@ function TenantCard({ tenant, onEdit, onDelete, onMarkPaid, onMarkUnpaid, onRetu
           confirmingForfeit ? (
             <div className="mt-2 rounded-lg overflow-hidden">
               <ConfirmInline
-                message={<>Forfeit {fmt(tenant.depositAmount)} deposit for <span className="font-semibold">{tenant.name}</span>? This cannot be undone.</>}
-                confirmLabel="Yes, forfeit"
+                message={<>Cancel {fmt(tenant.depositAmount)} deposit for <span className="font-semibold">{tenant.name}</span>? This cannot be undone.</>}
+                confirmLabel="Yes, Cancel"
                 onCancel={() => setConfirmingForfeit(false)}
                 onConfirm={() => { onForfeitDeposit(tenant); setConfirmingForfeit(false); }}
               />
@@ -453,12 +454,21 @@ function TenantCard({ tenant, onEdit, onDelete, onMarkPaid, onMarkUnpaid, onRetu
         <IconBtn
           variant="danger"
           className="rounded-none py-2.5"
-          onClick={() => onDelete(tenant)}
+          onClick={() => setConfirmingDelete(true)}
           title="Remove tenant"
         >
           <Trash2 className="h-4 w-4" />
         </IconBtn>
       </div>
+
+      {confirmingDelete && (
+        <ConfirmInline
+          message={<>Remove <span className="font-semibold">{tenant.name}</span> from Bed {tenant.bedNumber}?</>}
+          confirmLabel="Yes, remove"
+          onCancel={() => setConfirmingDelete(false)}
+          onConfirm={() => { onDelete(tenant); setConfirmingDelete(false); }}
+        />
+      )}
     </Card>
   );
 }
@@ -662,6 +672,18 @@ function DashboardPage({ tenants, totalBeds, selectedPropertyId, onGoToPayments,
 }
 
 function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, saving, roomPrefill, onAddTenant, onUpdateTenant, onCancelEdit, onEdit, onDelete, onMarkPaid, onMarkUnpaid, onReturnDeposit, onForfeitDeposit }) {
+  const [query, setQuery] = useState('');
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return tenants;
+    return tenants.filter(t =>
+      t.name.toLowerCase().includes(q) ||
+      t.phone.includes(q) ||
+      String(t.roomNumber).toLowerCase().includes(q)
+    );
+  }, [tenants, query]);
+
   return (
     <div className="grid gap-4 lg:grid-cols-[380px_1fr]">
       <TenantForm
@@ -674,21 +696,51 @@ function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, sa
         saving={saving}
       />
       <div className="flex flex-col gap-3">
-        {tenants.length === 0
-          ? <Card className="p-8 text-center text-sm text-slate2">No tenants yet.</Card>
-          : tenants.map(t => (
-            <TenantCard
-              key={t.id}
-              tenant={t}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onMarkPaid={onMarkPaid}
-              onMarkUnpaid={onMarkUnpaid}
-              onReturnDeposit={onReturnDeposit}
-              onForfeitDeposit={onForfeitDeposit}
-            />
-          ))
-        }
+        <div className="relative">
+          <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input
+            type="search"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search by name, phone, or room…"
+            className="w-full rounded-lg border border-border bg-white pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate2 hover:text-ink"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        {tenants.length === 0 ? (
+          <Card className="p-8 text-center text-sm text-slate2">No tenants yet.</Card>
+        ) : filtered.length === 0 ? (
+          <Card className="p-8 text-center text-sm text-slate2">No tenants match "{query}".</Card>
+        ) : (
+          <>
+            {query && (
+              <p className="text-xs text-slate2 px-1">{filtered.length} of {tenants.length} tenants</p>
+            )}
+            {filtered.map(t => (
+              <TenantCard
+                key={t.id}
+                tenant={t}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onMarkPaid={onMarkPaid}
+                onMarkUnpaid={onMarkUnpaid}
+                onReturnDeposit={onReturnDeposit}
+                onForfeitDeposit={onForfeitDeposit}
+              />
+            ))}
+          </>
+        )}
       </div>
     </div>
   );
