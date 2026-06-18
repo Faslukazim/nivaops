@@ -515,30 +515,44 @@ function BusinessHealth({ tenants, totalBeds }) {
 // ─── dashboard: attention required ───────────────────────────────────────────
 // Unpaid tenants only — the people who need a nudge today.
 
-function buildWhatsAppHref(tenant) {
-  const phone = String(tenant.phone).replace(/\D/g, '');
-  const msg = `Hi ${tenant.name}, rent reminder for Room ${tenant.roomNumber} Bed ${tenant.bedNumber}. Monthly rent ${fmt(tenant.monthlyRent)} is unpaid. Please pay at your earliest.`;
-  return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
-}
-
 function AttentionRequired({ tenants }) {
   const unpaid = tenants.filter(t => t.paymentStatus === 'Unpaid');
-
-  function handleWhatsAppAll() {
-    unpaid.forEach(t => window.open(buildWhatsAppHref(t), '_blank'));
-  }
+  const [remindExpanded, setRemindExpanded] = useState(false);
 
   return (
     <Card className="overflow-hidden">
       <SectionHeader
         title="Attention Required"
         action={unpaid.length > 0 && (
-          <Btn variant="secondary" size="sm" onClick={handleWhatsAppAll}>
+          <Btn
+            variant="secondary"
+            size="sm"
+            onClick={() => setRemindExpanded(v => !v)}
+          >
             <MessageCircle className="h-3.5 w-3.5" />
-            WhatsApp All
+            {remindExpanded ? 'Done' : `Remind All (${unpaid.length})`}
           </Btn>
         )}
       />
+
+      {remindExpanded && unpaid.length > 0 && (
+        <div className="border-b border-border bg-mist px-4 py-3 flex flex-col gap-1.5">
+          <p className="text-xs text-slate2 mb-1">Tap each to open WhatsApp — send one at a time.</p>
+          {unpaid.map(t => (
+            <WhatsAppLink
+              key={t.id}
+              name={t.name}
+              phone={t.phone}
+              roomNumber={t.roomNumber}
+              bedNumber={t.bedNumber}
+              rent={t.monthlyRent}
+              label={`${t.name.split(' ')[0]} · Room ${t.roomNumber} · ${fmt(t.monthlyRent)}`}
+              className="border border-border bg-white rounded-lg px-3 py-2 justify-start w-full text-xs font-medium text-ink hover:bg-mist"
+            />
+          ))}
+        </div>
+      )}
+
       {unpaid.length === 0 ? (
         <p className="px-4 py-6 text-sm text-slate2">
           All tenants are paid up. Nothing needs attention.
