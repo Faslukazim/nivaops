@@ -203,10 +203,11 @@ function BedSelector({ properties, propertyId, roomId, bedId, onPropertyChange, 
 
 // ─── tenant form ─────────────────────────────────────────────────────────────
 
+// after
 const emptyForm = {
   name: '', phone: '', propertyId: '', roomId: '', bedId: '',
-  monthlyRent: '', joinDate: new Date().toISOString().slice(0, 10),
-  depositAmount: '',
+  monthlyRent: '7000', joinDate: new Date().toISOString().slice(0, 10),
+  depositAmount: '500',
 };
 
 function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onSubmit, onCancel, saving }) {
