@@ -19,8 +19,8 @@ export default {
         '2xs': ['10px', { lineHeight: '14px', letterSpacing: '0.08em' }],
       },
       boxShadow: {
-        card: '0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04)',
-        lift: '0 4px 12px rgba(0,0,0,0.10)',
+        card: '0 1px 3px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04)',
+        lift: '0 4px 14px rgba(0,0,0,0.10)',
       },
     },
   },

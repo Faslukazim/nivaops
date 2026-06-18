@@ -5,7 +5,7 @@ import { deleteTenant, updateTenant } from './services/tenantService';
 import {
   fmt, Label, Card, SectionHeader, Btn, IconBtn,
   StatusBadge, PaymentToggleBtn, WhatsAppLink,
-  PageLoader, StatCard, ConfirmInline,
+  PageLoader, StatStrip, ConfirmInline,
 } from './components/ui';
 
 // ─── Occupancy bar ────────────────────────────────────────────────────────────
@@ -46,9 +46,9 @@ function RoomCard({ room, isSelected, onClick }) {
       type="button"
       onClick={onClick}
       className={`w-full text-left rounded-xl border p-4 transition-all active:scale-[0.98] ${
-       isSelected
-  ?'border-leaf bg-emerald-50 shadow-lift ring-2 ring-leaf/30'
-          : 'border-border bg-white hover:border-slate2 shadow-card'
+        isSelected
+          ? 'border-leaf bg-leaf/5 shadow-lift'
+          : 'border-border bg-white hover:border-slate2/60 shadow-card'
       }`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -357,15 +357,13 @@ if (selectedRoom) {
   }
 
   const summaryStrip = (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-4">
-      <StatCard label="Total rooms"     value={rooms.length}        color="text-ink" />
-      <StatCard label="Occupancy"
-value={`${Math.round((stats.occupied / stats.totalBeds) * 100)}%`} />
-<StatCard
-  label="Vacant beds"
-  value={stats.totalBeds - stats.occupied}
-  color={(stats.totalBeds - stats.occupied) > 0 ? 'text-amber' : 'text-leaf'}
-/>      <StatCard label="Rooms w/ unpaid" value={stats.unpaidRooms}   color={stats.unpaidRooms > 0 ? 'text-coral' : 'text-leaf'} />
+    <div className="mb-4">
+      <StatStrip stats={[
+        { label: 'Total rooms',     value: rooms.length, color: 'text-ink' },
+        { label: 'Occupancy',       value: `${Math.round((stats.occupied / stats.totalBeds) * 100)}%` },
+        { label: 'Vacant beds',     value: stats.totalBeds - stats.occupied, color: (stats.totalBeds - stats.occupied) > 0 ? 'text-amber' : 'text-leaf' },
+        { label: 'Rooms w/ unpaid', value: stats.unpaidRooms, color: stats.unpaidRooms > 0 ? 'text-coral' : 'text-leaf' },
+      ]} />
     </div>
   );
 

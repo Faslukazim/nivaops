@@ -11,7 +11,7 @@ import RoomsPage from './RoomsPage';
 import {
   fmt, Label, Card, SectionHeader, Btn, IconBtn,
   StatusBadge, PaymentToggleBtn, WhatsAppLink,
-  PageLoader, StatCard, ConfirmInline,
+  PageLoader, StatCard, StatStrip, ConfirmInline,
 } from './components/ui';
 
 
@@ -45,15 +45,12 @@ function PropertyPill({ properties, selectedId, onChange, loading }) {
 function Header({ properties, selectedPropertyId, onPropertyChange, loadingProperties }) {
   const prop = properties.find(p => p.id === selectedPropertyId);
   return (
-    <header className="bg-ink text-white px-4 pt-5 pb-4 sm:px-6">
+    <header className="bg-ink text-white px-4 py-3.5 sm:px-6">
       <div className="mx-auto max-w-5xl">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <Label className="text-white/40">StayOps</Label>
-            <h1 className="mt-1 text-xl font-bold tracking-tight">
-              {prop?.name ?? 'All Properties'}
-            </h1>
-          </div>
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="text-lg font-bold tracking-tight leading-tight">
+            {prop?.name ?? 'All Properties'}
+          </h1>
           <PropertyPill
             properties={properties}
             selectedId={selectedPropertyId}
@@ -77,7 +74,10 @@ const PAGES = [
 
 function BottomNav({ active, onChange }) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-white sm:hidden">
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-white sm:hidden"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+    >
       <div className="grid grid-cols-4">
         {PAGES.map(p => {
           const Icon = p.icon;
@@ -87,7 +87,7 @@ function BottomNav({ active, onChange }) {
               key={p.id}
               type="button"
               onClick={() => onChange(p.id)}
-              className={`flex flex-col items-center gap-0.5 py-3 text-2xs font-semibold uppercase tracking-widest transition-colors ${
+              className={`flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium tracking-normal transition-colors ${
                 isActive ? 'text-ink' : 'text-slate2'
               }`}
             >
@@ -113,7 +113,7 @@ function TopNav({ active, onChange }) {
               key={p.id}
               type="button"
               onClick={() => onChange(p.id)}
-              className={`inline-flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${
+              className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
                 isActive
                   ? 'border-ink text-ink'
                   : 'border-transparent text-slate2 hover:text-ink'
@@ -428,34 +428,28 @@ function TenantCard({ tenant, onEdit, onDelete, onMarkPaid, onMarkUnpaid, onRetu
         )}
       </div>
 
-      <div className="grid grid-cols-4 border-t border-border divide-x divide-border">
+      <div className="flex items-center justify-end gap-0.5 px-3 py-1.5 border-t border-border">
         <IconBtn
           variant="ghost"
-          className="rounded-none py-2.5"
           onClick={() => onEdit(tenant)}
           title="Edit"
         >
           <Pencil className="h-4 w-4" />
         </IconBtn>
-
         <PaymentToggleBtn
           isPaid={isPaid}
           onMarkPaid={() => onMarkPaid(tenant)}
           onMarkUnpaid={() => onMarkUnpaid(tenant)}
         />
-
         <WhatsAppLink
           name={tenant.name}
           phone={tenant.phone}
           roomNumber={tenant.roomNumber}
           bedNumber={tenant.bedNumber}
           rent={tenant.monthlyRent}
-          className="rounded-none"
         />
-
         <IconBtn
           variant="danger"
-          className="rounded-none py-2.5"
           onClick={() => setConfirmingDelete(true)}
           title="Remove tenant"
         >
@@ -489,32 +483,32 @@ function BusinessHealth({ tenants, totalBeds }) {
   const revenue = tenants.reduce((s, t) => s + Number(t.monthlyRent || 0), 0);
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <StatCard
-        label="Occupancy"
-        value={`${pct}%`}
-        sub={`${occupied}/${totalBeds} beds`}
-        color={pct >= 80 ? 'text-leaf' : pct >= 50 ? 'text-amber' : 'text-coral'}
-      />
-      <StatCard
-        label="Vacant Beds"
-        value={vacant}
-        sub={`of ${totalBeds}`}
-        color={vacant > 0 ? 'text-amber' : 'text-leaf'}
-      />
-      <StatCard
-        label="Pending Rent"
-        value={fmt(pendingRent)}
-        sub={`${unpaid.length} unpaid`}
-        color={pendingRent > 0 ? 'text-coral' : 'text-leaf'}
-      />
-      <StatCard
-        label="Monthly Revenue"
-        value={fmt(revenue)}
-        sub={`${tenants.length} tenants`}
-        color="text-ink"
-      />
-    </div>
+    <StatStrip stats={[
+      {
+        label: 'Occupancy',
+        value: `${pct}%`,
+        sub: `${occupied}/${totalBeds} beds`,
+        color: pct >= 80 ? 'text-leaf' : pct >= 50 ? 'text-amber' : 'text-coral',
+      },
+      {
+        label: 'Vacant Beds',
+        value: vacant,
+        sub: `of ${totalBeds}`,
+        color: vacant > 0 ? 'text-amber' : 'text-leaf',
+      },
+      {
+        label: 'Pending Rent',
+        value: fmt(pendingRent),
+        sub: `${unpaid.length} unpaid`,
+        color: pendingRent > 0 ? 'text-coral' : 'text-leaf',
+      },
+      {
+        label: 'Monthly Revenue',
+        value: fmt(revenue),
+        sub: `${tenants.length} tenants`,
+        color: 'text-ink',
+      },
+    ]} />
   );
 }
 
@@ -826,12 +820,12 @@ function PaymentsPage({ selectedPropertyId }) {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Paid"    value={paid}          color="text-leaf" />
-        <StatCard label="Unpaid"  value={unpaid}        color={unpaid > 0 ? 'text-coral' : 'text-leaf'} />
-        <StatCard label="Overdue" value={overdue}       color={overdue > 0 ? 'text-coral' : 'text-leaf'} />
-        <StatCard label="Pending" value={fmt(pendingAmt)} color="text-amber" />
-      </div>
+      <StatStrip stats={[
+        { label: 'Paid',    value: paid,            color: 'text-leaf' },
+        { label: 'Unpaid',  value: unpaid,          color: unpaid > 0 ? 'text-coral' : 'text-leaf' },
+        { label: 'Overdue', value: overdue,         color: overdue > 0 ? 'text-coral' : 'text-leaf' },
+        { label: 'Pending', value: fmt(pendingAmt), color: 'text-amber' },
+      ]} />
 
       {recordError && (
         <div className="rounded-lg border border-coral/30 bg-coral/5 px-4 py-3 text-sm text-coral">

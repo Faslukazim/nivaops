@@ -39,7 +39,7 @@ export function Card({ children, className = '' }) {
 
 export function SectionHeader({ title, action }) {
   return (
-    <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border">
+    <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-border">
       <Label>{title}</Label>
       {action}
     </div>
@@ -105,7 +105,7 @@ export function StatusBadge({ status, label }) {
     full: 'Full', empty: 'Empty', partial: 'Partial', free: 'Free',
   };
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-2xs font-semibold shrink-0 ${styles[status] ?? 'bg-mist text-slate2'}`}>
+    <span className={`inline-flex items-center rounded px-2 py-0.5 text-2xs font-semibold shrink-0 ${styles[status] ?? 'bg-mist text-slate2'}`}>
       {label ?? defaultLabels[status] ?? status}
     </span>
   );
@@ -179,8 +179,28 @@ export function StatCard({ label, value, sub, color = 'text-ink' }) {
   return (
     <Card className="p-4">
       <Label>{label}</Label>
-      <p className={`mt-1.5 text-2xl font-bold tabular-nums ${color}`}>{value}</p>
+      <p className={`mt-1.5 text-xl font-bold tabular-nums ${color}`}>{value}</p>
       {sub && <p className="mt-0.5 text-xs text-slate2">{sub}</p>}
+    </Card>
+  );
+}
+
+// ─── StatStrip ────────────────────────────────────────────────────────────────
+// One card, divided grid. Use instead of multiple StatCards in a row.
+// Pass stats as array: [{ label, value, sub?, color? }]
+
+export function StatStrip({ stats }) {
+  return (
+    <Card className="overflow-hidden">
+      <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4">
+        {stats.map(s => (
+          <div key={s.label} className="bg-white px-4 py-4">
+            <Label>{s.label}</Label>
+            <p className={`mt-1.5 text-xl font-bold tabular-nums ${s.color ?? 'text-ink'}`}>{s.value}</p>
+            {s.sub && <p className="mt-0.5 text-xs text-slate2">{s.sub}</p>}
+          </div>
+        ))}
+      </div>
     </Card>
   );
 }
