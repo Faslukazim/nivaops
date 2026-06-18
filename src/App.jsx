@@ -538,18 +538,26 @@ function AttentionRequired({ tenants }) {
       {remindExpanded && unpaid.length > 0 && (
         <div className="border-b border-border bg-mist px-4 py-3 flex flex-col gap-1.5">
           <p className="text-xs text-slate2 mb-1">Tap each to open WhatsApp — send one at a time.</p>
-          {unpaid.map(t => (
-            <WhatsAppLink
-              key={t.id}
-              name={t.name}
-              phone={t.phone}
-              roomNumber={t.roomNumber}
-              bedNumber={t.bedNumber}
-              rent={t.monthlyRent}
-              label={`${t.name.split(' ')[0]} · Room ${t.roomNumber} · ${fmt(t.monthlyRent)}`}
-              className="border border-border bg-white rounded-lg px-3 py-2 justify-start w-full text-xs font-medium text-ink hover:bg-mist"
-            />
-          ))}
+          {unpaid.map(t => {
+            const phone = String(t.phone).replace(/\D/g, '');
+            const msg = `Hi ${t.name}, rent reminder for Room ${t.roomNumber} Bed ${t.bedNumber}. Monthly rent ${fmt(t.monthlyRent)} is unpaid. Please pay at your earliest.`;
+            const href = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+            return (
+              <a
+                key={t.id}
+                href={href}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 border border-border bg-white rounded-lg px-3 py-2.5 text-sm font-medium text-ink hover:bg-mist transition-colors"
+              >
+                <MessageCircle className="h-4 w-4 text-slate2 shrink-0" />
+                <span>{t.name.split(' ')[0]}</span>
+                <span className="text-slate2">·</span>
+                <span className="text-slate2 text-xs">Room {t.roomNumber}</span>
+                <span className="ml-auto text-xs font-semibold text-coral tabular-nums">{fmt(t.monthlyRent)}</span>
+              </a>
+            );
+          })}
         </div>
       )}
 
