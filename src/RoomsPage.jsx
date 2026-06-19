@@ -2,11 +2,12 @@ import { useEffect, useState, useMemo } from 'react';
 import { ArrowLeft, ArrowRightLeft, BedDouble, ChevronDown, Loader2, Plus, X } from 'lucide-react';
 import { fetchRoomsWithOccupants } from './services/propertyService';
 import { deleteTenant, moveTenant, updateTenant } from './services/tenantService';
+import { markTenantRecordPaid } from './services/paymentService';
 import { logActivity } from './services/activityService';
 import {
   fmt, Label, Card, SectionHeader, Btn, IconBtn,
   StatusBadge, PaymentToggleBtn, WhatsAppLink,
-  PageLoader, StatStrip, ConfirmInline, EmptyState,
+  PageLoader, StatStrip, ConfirmInline, EmptyState, CollectModal,
 } from './components/ui';
 
 // ─── Occupancy bar ────────────────────────────────────────────────────────────
@@ -44,7 +45,7 @@ function RoomCard({ room, isSelected, onClick }) {
     >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="font-bold text-base text-ink">Room {room.room_number}</p>
+          <p className="font-semibold text-base text-ink">Room {room.room_number}</p>
           {isSelected && (
             <span className="text-[10px] font-semibold uppercase tracking-wide text-leaf">Selected</span>
           )}
@@ -99,7 +100,7 @@ function MoveBedForm({ tenant, fromRoomId, rooms, onConfirm, onCancel, saving })
       {eligibleRooms.length === 0 ? (
         <p className="text-sm text-slate2 mb-3">No available beds in other rooms.</p>
       ) : (
-        <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className="grid grid-cols-1 gap-2 mb-3 sm:grid-cols-2">
           <label className="block">
             <Label>Room</Label>
             <div className="relative mt-1">
@@ -166,7 +167,7 @@ function BedRow({ bed, roomNumber, roomId, rooms, onMarkPaid, onMarkUnpaid, onVa
   if (!tenant) {
     return (
       <div className="flex items-center gap-3 px-4 py-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-mist text-xs font-bold tabular-nums text-slate2 shrink-0">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-mist text-xs font-semibold tabular-nums text-slate2 shrink-0">
           {bed.bed_number}
         </div>
         <span className="text-sm text-slate2 flex-1">Available</span>
@@ -189,7 +190,7 @@ function BedRow({ bed, roomNumber, roomId, rooms, onMarkPaid, onMarkUnpaid, onVa
   return (
     <div>
       <div className="flex items-center gap-3 px-4 py-3">
-        <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold tabular-nums shrink-0 ${
+        <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold tabular-nums shrink-0 ${
           isPaid ? 'bg-leaf/10 text-leaf' : 'bg-coral/10 text-coral'
         }`}>
           {bed.bed_number}
@@ -205,7 +206,7 @@ function BedRow({ bed, roomNumber, roomId, rooms, onMarkPaid, onMarkUnpaid, onVa
         <div className="flex items-center gap-0.5 shrink-0">
           <PaymentToggleBtn
             isPaid={isPaid}
-            onMarkPaid={() => onMarkPaid(tenant.id)}
+            onMarkPaid={() => onMarkPaid({ tenantId: tenant.id, name: tenant.name, roomNumber, bedNumber: bed.bed_number, monthlyRent: occ.monthly_rent })}
             onMarkUnpaid={() => onMarkUnpaid(tenant.id)}
           />
           <WhatsAppLink
@@ -268,13 +269,21 @@ function RoomDetail({ room, rooms, selectedPropertyId, onClose, onAssign, onRoom
   const pendingAmt = room.beds
     .filter(b => b.occupancy?.payment_status === 'Unpaid')
     .reduce((s, b) => s + Number(b.occupancy?.monthly_rent || 0), 0);
+  const [collectingBed, setCollectingBed] = useState(null);
 
   const hasAvailable = room.beds.some(b => !b.tenant);
 
-  async function handleMarkPaid(tenantId) {
-    const bed = room.beds.find(b => b.tenant?.id === tenantId);
+  function handleMarkPaid(bedInfo) {
+    setCollectingBed(bedInfo);
+  }
+
+  async function handleConfirmPaid(amountCollected, deductionReason) {
+    const { tenantId, name } = collectingBed;
+    setCollectingBed(null);
+    const currentYM = new Date().toISOString().slice(0, 7);
     await updateTenant(tenantId, { paymentStatus: 'Paid', paymentDate: new Date().toISOString().slice(0, 10) });
-    logActivity(selectedPropertyId, 'payment_paid', `${bed?.tenant?.name ?? 'Tenant'} marked paid — Room ${room.room_number}`);
+    markTenantRecordPaid(tenantId, currentYM, amountCollected, deductionReason).catch(console.error);
+    logActivity(selectedPropertyId, 'payment_paid', `${name} marked paid — Room ${room.room_number}`);
     onRoomUpdate();
   }
 
@@ -307,7 +316,7 @@ function RoomDetail({ room, rooms, selectedPropertyId, onClose, onAssign, onRoom
             <IconBtn variant="ghost" onClick={onClose} className="sm:hidden">
               <ArrowLeft className="h-4 w-4" />
             </IconBtn>
-            <h2 className="font-bold text-ink text-lg">Room {room.room_number}</h2>
+            <h2 className="font-semibold text-ink text-lg">Room {room.room_number}</h2>
           </div>
           <p className="mt-0.5 text-sm text-slate2 tabular-nums">
             {occupied} occupied · {capacity - occupied} vacant · {Math.round((occupied / capacity) * 100)}% full
@@ -375,6 +384,14 @@ function RoomDetail({ room, rooms, selectedPropertyId, onClose, onAssign, onRoom
               })}
           </div>
         </div>
+      )}
+
+      {collectingBed && (
+        <CollectModal
+          record={{ amount: collectingBed.monthlyRent, name: collectingBed.name, roomNumber: collectingBed.roomNumber, bedNumber: collectingBed.bedNumber }}
+          onConfirm={handleConfirmPaid}
+          onCancel={() => setCollectingBed(null)}
+        />
       )}
     </div>
   );

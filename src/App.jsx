@@ -12,7 +12,7 @@ import RoomsPage from './RoomsPage';
 import {
   fmt, Label, Card, SectionHeader, Btn, IconBtn,
   StatusBadge, WhatsAppLink,
-  PageLoader, StatStrip, ConfirmInline, EmptyState,
+  PageLoader, StatStrip, ConfirmInline, EmptyState, CollectModal,
 } from './components/ui';
 
 
@@ -833,84 +833,6 @@ function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, sa
             ))}
           </>
         )}
-      </div>
-    </div>
-  );
-}
-
-// ─── collect modal ───────────────────────────────────────────────────────────
-
-const DEDUCTION_REASONS = [
-  'Food not taken',
-  'Home leave',
-  'Temporary discount',
-  'Adjustment',
-  'Other',
-];
-
-function CollectModal({ record, onConfirm, onCancel }) {
-  const [amount, setAmount] = useState(String(record.amount));
-  const [reason, setReason] = useState('');
-
-  const numAmount = Math.max(0, Number(amount) || 0);
-  const deduction = record.amount - numAmount;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-      <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
-        <div className="px-5 pt-5 pb-4">
-          <h3 className="font-semibold text-ink">Record Payment</h3>
-          <p className="text-sm text-slate2 mt-0.5">{record.name} · Room {record.roomNumber} · Bed {record.bedNumber}</p>
-
-          <div className="mt-4 flex items-center justify-between rounded-lg bg-mist px-3 py-2.5">
-            <Label>Standard Rent</Label>
-            <span className="text-sm font-bold text-ink tabular-nums">{fmt(record.amount)}</span>
-          </div>
-
-          <label className="mt-3 block">
-            <Label>Amount Collected</Label>
-            <input
-              type="number"
-              min="0"
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm font-semibold text-ink focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink tabular-nums"
-              autoFocus
-            />
-          </label>
-
-          {deduction > 0 && (
-            <div className="mt-2 flex items-center justify-between rounded-lg border border-coral/20 bg-coral/5 px-3 py-2">
-              <span className="text-xs text-slate2">Deduction</span>
-              <span className="text-sm font-bold text-coral tabular-nums">{fmt(deduction)}</span>
-            </div>
-          )}
-
-          {deduction > 0 && (
-            <label className="mt-3 block">
-              <Label>Reason <span className="font-normal text-slate2">(optional)</span></Label>
-              <div className="relative mt-1.5">
-                <select
-                  value={reason}
-                  onChange={e => setReason(e.target.value)}
-                  className="w-full appearance-none rounded-lg border border-border bg-white px-3 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
-                >
-                  <option value="">Select reason…</option>
-                  {DEDUCTION_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate2" />
-              </div>
-            </label>
-          )}
-        </div>
-
-        <div className="flex gap-2 justify-end border-t border-border px-5 py-3.5">
-          <Btn variant="secondary" onClick={onCancel}>Cancel</Btn>
-          <Btn variant="filled-success" onClick={() => onConfirm(numAmount, reason || null)}>
-            <CheckCircle2 className="h-4 w-4" />
-            Confirm
-          </Btn>
-        </div>
       </div>
     </div>
   );
