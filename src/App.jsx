@@ -496,7 +496,6 @@ function TenantCard({ tenant, onEdit, onDelete, onMarkPaid, onMarkUnpaid, onRetu
 // ─── pages ───────────────────────────────────────────────────────────────────
 
 // ─── dashboard: business health ──────────────────────────────────────────────
-// Occupancy, vacancy, pending rent, and committed monthly revenue at a glance.
 
 function BusinessHealth({ tenants, totalBeds }) {
   const occupied = tenants.length;
@@ -527,12 +526,58 @@ function BusinessHealth({ tenants, totalBeds }) {
         color: pendingRent > 0 ? 'text-coral' : 'text-leaf',
       },
       {
-        label: 'Monthly Revenue',
+        label: 'Potential Revenue',
         value: fmt(revenue),
-        sub: `${tenants.length} tenants`,
+        sub: `${tenants.length} occupied beds`,
         color: 'text-ink',
       },
     ]} />
+  );
+}
+
+// ─── dashboard: financial health ─────────────────────────────────────────────
+// Revenue breakdown for the current month from payment_records.
+
+function FinancialHealth({ selectedPropertyId, totalBeds, tenants }) {
+  const currentYM = useMemo(() => new Date().toISOString().slice(0, 7), []);
+  const [records, setRecords] = useState([]);
+
+  useEffect(() => {
+    if (!selectedPropertyId) return;
+    fetchPaymentRecords(selectedPropertyId, currentYM).then(setRecords).catch(() => {});
+  }, [selectedPropertyId, currentYM]);
+
+  if (records.length === 0) return null;
+
+  const occupied = tenants.length;
+  const vacant = Math.max(totalBeds - occupied, 0);
+  const potentialRevenue = records.reduce((s, r) => s + r.amount, 0);
+  const paidRecords = records.filter(r => r.status === 'paid');
+  const actualCollected = paidRecords.reduce((s, r) => s + (r.amountCollected ?? r.amount), 0);
+  const deductionLoss = paidRecords.reduce((s, r) => s + (r.amount - (r.amountCollected ?? r.amount)), 0);
+  const avgRent = occupied > 0 ? potentialRevenue / occupied : 0;
+  const vacancyLoss = Math.round(vacant * avgRent);
+
+  const monthLabel = new Date(currentYM + '-02').toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+
+  return (
+    <Card className="overflow-hidden">
+      <SectionHeader title={`Revenue Health · ${monthLabel}`} />
+      <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4">
+        {[
+          { label: 'Potential', value: fmt(potentialRevenue), sub: `${occupied} occupied beds`, color: 'text-ink' },
+          { label: 'Collected', value: fmt(actualCollected), sub: `${paidRecords.length} paid`, color: actualCollected > 0 ? 'text-leaf' : 'text-slate2' },
+          { label: 'Deductions', value: fmt(deductionLoss), sub: deductionLoss > 0 ? 'adjustments' : 'none', color: deductionLoss > 0 ? 'text-coral' : 'text-ink' },
+          { label: 'Vacancy Loss', value: fmt(vacancyLoss), sub: `${vacant} vacant beds`, color: vacancyLoss > 0 ? 'text-amber' : 'text-leaf' },
+        ].map(s => (
+          <div key={s.label} className="bg-white px-4 py-4">
+            <Label>{s.label}</Label>
+            <p className={`mt-1.5 text-xl font-bold tabular-nums ${s.color}`}>{s.value}</p>
+            {s.sub && <p className="mt-0.5 text-xs text-slate2">{s.sub}</p>}
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }
 
@@ -706,6 +751,7 @@ function DashboardPage({ tenants, totalBeds, selectedPropertyId, onGoToPayments,
     <div className="flex flex-col gap-4">
       <BusinessHealth tenants={tenants} totalBeds={totalBeds} />
       <AttentionRequired tenants={tenants} onMarkPaid={onMarkPaid} />
+      <FinancialHealth selectedPropertyId={selectedPropertyId} totalBeds={totalBeds} tenants={tenants} />
       <QuickActions
         onAssignTenant={onAssignTenant}
         onAddTenant={onAddTenant}
@@ -792,6 +838,84 @@ function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, sa
   );
 }
 
+// ─── collect modal ───────────────────────────────────────────────────────────
+
+const DEDUCTION_REASONS = [
+  'Food not taken',
+  'Home leave',
+  'Temporary discount',
+  'Adjustment',
+  'Other',
+];
+
+function CollectModal({ record, onConfirm, onCancel }) {
+  const [amount, setAmount] = useState(String(record.amount));
+  const [reason, setReason] = useState('');
+
+  const numAmount = Math.max(0, Number(amount) || 0);
+  const deduction = record.amount - numAmount;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 px-4 pb-4 sm:pb-0">
+      <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
+        <div className="px-5 pt-5 pb-4">
+          <h3 className="font-semibold text-ink">Record Payment</h3>
+          <p className="text-sm text-slate2 mt-0.5">{record.name} · Room {record.roomNumber} · Bed {record.bedNumber}</p>
+
+          <div className="mt-4 flex items-center justify-between rounded-lg bg-mist px-3 py-2.5">
+            <Label>Standard Rent</Label>
+            <span className="text-sm font-bold text-ink tabular-nums">{fmt(record.amount)}</span>
+          </div>
+
+          <label className="mt-3 block">
+            <Label>Amount Collected</Label>
+            <input
+              type="number"
+              min="0"
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm font-semibold text-ink focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink tabular-nums"
+              autoFocus
+            />
+          </label>
+
+          {deduction > 0 && (
+            <div className="mt-2 flex items-center justify-between rounded-lg border border-coral/20 bg-coral/5 px-3 py-2">
+              <span className="text-xs text-slate2">Deduction</span>
+              <span className="text-sm font-bold text-coral tabular-nums">{fmt(deduction)}</span>
+            </div>
+          )}
+
+          {deduction > 0 && (
+            <label className="mt-3 block">
+              <Label>Reason <span className="font-normal text-slate2">(optional)</span></Label>
+              <div className="relative mt-1.5">
+                <select
+                  value={reason}
+                  onChange={e => setReason(e.target.value)}
+                  className="w-full appearance-none rounded-lg border border-border bg-white px-3 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+                >
+                  <option value="">Select reason…</option>
+                  {DEDUCTION_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate2" />
+              </div>
+            </label>
+          )}
+        </div>
+
+        <div className="flex gap-2 justify-end border-t border-border px-5 py-3.5">
+          <Btn variant="secondary" onClick={onCancel}>Cancel</Btn>
+          <Btn variant="filled-success" onClick={() => onConfirm(numAmount, reason || null)}>
+            <CheckCircle2 className="h-4 w-4" />
+            Confirm
+          </Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PaymentsPage({ selectedPropertyId }) {
   const now = new Date();
   const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -800,6 +924,7 @@ function PaymentsPage({ selectedPropertyId }) {
   const [records, setRecords] = useState([]);
   const [loadingRecords, setLoadingRecords] = useState(false);
   const [recordError, setRecordError] = useState('');
+  const [collectingRecord, setCollectingRecord] = useState(null);
 
   useEffect(() => {
     if (!selectedPropertyId) return;
@@ -837,20 +962,36 @@ function PaymentsPage({ selectedPropertyId }) {
     return d === 1 ? '1 day overdue' : `${d} days overdue`;
   }
 
-  const paid = records.filter(r => r.status === 'paid').length;
-  const unpaid = records.filter(r => r.status === 'unpaid').length;
+  const paidRecords = records.filter(r => r.status === 'paid');
+  const unpaidRecords = records.filter(r => r.status === 'unpaid');
   const overdue = records.filter(r => isOverdue(r)).length;
-  const pendingAmt = records.filter(r => r.status === 'unpaid').reduce((s, r) => s + r.amount, 0);
+  const actualCollected = paidRecords.reduce((s, r) => s + (r.amountCollected ?? r.amount), 0);
+  const deductions = paidRecords.reduce((s, r) => s + (r.amount - (r.amountCollected ?? r.amount)), 0);
+  const pendingAmt = unpaidRecords.reduce((s, r) => s + r.amount, 0);
 
   const monthLabel = new Date(yearMonth + '-02').toLocaleString('en-IN', { month: 'long', year: 'numeric' });
 
-  async function handleMarkPaid(r) {
-    await markRecordPaid(r.id);
-    setRecords(rs => rs.map(x => x.id === r.id ? { ...x, status: 'paid', paidAt: new Date().toISOString() } : x));
+  function handleMarkPaid(r) {
+    setCollectingRecord(r);
+  }
+  async function handleConfirmPaid(amountCollected, deductionReason) {
+    const r = collectingRecord;
+    setCollectingRecord(null);
+    setRecords(rs => rs.map(x => x.id === r.id ? {
+      ...x, status: 'paid', paidAt: new Date().toISOString(), amountCollected, deductionReason,
+    } : x));
+    try {
+      await markRecordPaid(r.id, amountCollected, deductionReason);
+    } catch (err) {
+      console.error('markRecordPaid failed:', err?.message ?? err);
+      setRecords(rs => rs.map(x => x.id === r.id ? { ...x, status: 'unpaid', paidAt: null, amountCollected: null, deductionReason: null } : x));
+    }
   }
   async function handleMarkUnpaid(r) {
     await markRecordUnpaid(r.id);
-    setRecords(rs => rs.map(x => x.id === r.id ? { ...x, status: 'unpaid', paidAt: null } : x));
+    setRecords(rs => rs.map(x => x.id === r.id ? {
+      ...x, status: 'unpaid', paidAt: null, amountCollected: null, deductionReason: null,
+    } : x));
   }
 
   return (
@@ -864,10 +1005,10 @@ function PaymentsPage({ selectedPropertyId }) {
       </div>
 
       <StatStrip stats={[
-        { label: 'Paid',    value: paid,            color: 'text-leaf' },
-        { label: 'Unpaid',  value: unpaid,          color: unpaid > 0 ? 'text-coral' : 'text-leaf' },
-        { label: 'Overdue', value: overdue,         color: overdue > 0 ? 'text-coral' : 'text-leaf' },
-        { label: 'Pending', value: fmt(pendingAmt), color: 'text-amber' },
+        { label: 'Collected',  value: fmt(actualCollected), sub: `${paidRecords.length} paid`,       color: actualCollected > 0 ? 'text-leaf' : 'text-slate2' },
+        { label: 'Deductions', value: fmt(deductions),      sub: deductions > 0 ? 'adjustments' : 'none', color: deductions > 0 ? 'text-coral' : 'text-ink' },
+        { label: 'Pending',    value: fmt(pendingAmt),      sub: `${unpaidRecords.length} unpaid`,   color: pendingAmt > 0 ? 'text-amber' : 'text-leaf' },
+        { label: 'Overdue',    value: overdue,              sub: overdue > 0 ? 'need attention' : 'all clear', color: overdue > 0 ? 'text-coral' : 'text-leaf' },
       ]} />
 
       {recordError && (
@@ -899,7 +1040,12 @@ function PaymentsPage({ selectedPropertyId }) {
                       <p className="text-xs font-semibold text-coral">{daysOverdueLabel(r)}</p>
                     )}
                     {r.status === 'paid' && r.paidAt && (
-                      <p className="text-xs text-slate2">Paid {String(r.paidAt).slice(0, 10)}</p>
+                      <p className="text-xs text-slate2">
+                        {r.amountCollected != null && r.amountCollected !== r.amount
+                          ? <>{fmt(r.amountCollected)} collected · <span className="text-coral">{fmt(r.amount - r.amountCollected)} deducted</span>{r.deductionReason ? ` · ${r.deductionReason}` : ''}</>
+                          : `Paid ${String(r.paidAt).slice(0, 10)}`
+                        }
+                      </p>
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -935,6 +1081,14 @@ function PaymentsPage({ selectedPropertyId }) {
           </div>
         )}
       </Card>
+
+      {collectingRecord && (
+        <CollectModal
+          record={collectingRecord}
+          onConfirm={handleConfirmPaid}
+          onCancel={() => setCollectingRecord(null)}
+        />
+      )}
     </div>
   );
 }

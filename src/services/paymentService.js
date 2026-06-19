@@ -69,17 +69,25 @@ export async function fetchPaymentRecords(propertyId, yearMonth) {
     roomNumber: r.occupancy?.room?.room_number ?? '—',
     bedNumber: r.occupancy?.bed?.bed_number ?? '—',
     amount: Number(r.amount ?? 0),
+    amountCollected: r.amount_collected != null ? Number(r.amount_collected) : null,
+    deductionReason: r.deduction_reason ?? null,
     dueDay: r.due_day,
     status: r.status,
     paidAt: r.paid_at,
   }));
 }
 
-export async function markRecordPaid(recordId) {
+export async function markRecordPaid(recordId, amountCollected, deductionReason) {
   if (!hasSupabaseConfig) return;
+  const patch = {
+    status: 'paid',
+    paid_at: new Date().toISOString(),
+    amount_collected: amountCollected ?? null,
+    deduction_reason: deductionReason || null,
+  };
   const { error } = await supabase
     .from('payment_records')
-    .update({ status: 'paid', paid_at: new Date().toISOString() })
+    .update(patch)
     .eq('id', recordId);
   if (error) throw error;
 }
