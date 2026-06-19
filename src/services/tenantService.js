@@ -61,6 +61,8 @@ function toUiTenant(occupancy) {
     paymentDate: occupancy.payment_date ?? '',
     depositAmount: Number(occupancy.deposit_amount ?? 0),
     depositStatus: occupancy.deposit_status ?? 'none',
+    admissionFee: Number(occupancy.admission_fee ?? 0),
+    moveInCollection: Number(occupancy.move_in_collection ?? 0),
   };
 }
 
@@ -152,6 +154,8 @@ export async function createTenant(tenant) {
       status: 'active',
       deposit_amount: depositAmt,
       deposit_status: depositAmt > 0 ? 'held' : 'none',
+      admission_fee: tenant.admissionFee ?? 0,
+      move_in_collection: tenant.moveInCollection ?? (tenant.monthlyRent + (tenant.admissionFee ?? 0) + depositAmt),
     })
     .select(`
       *,
@@ -189,6 +193,8 @@ export async function updateTenant(id, patch) {
   if (patch.paymentDate !== undefined) occupancyPatch.payment_date = patch.paymentDate || null;
   if (patch.depositAmount !== undefined) occupancyPatch.deposit_amount = patch.depositAmount;
   if (patch.depositStatus !== undefined) occupancyPatch.deposit_status = patch.depositStatus;
+  if (patch.admissionFee !== undefined) occupancyPatch.admission_fee = patch.admissionFee;
+  if (patch.moveInCollection !== undefined) occupancyPatch.move_in_collection = patch.moveInCollection;
 
   if (patch.bedId && patch.bedId !== currentOccupancy.bed_id) {
     occupancyPatch.room_id = patch.roomId;

@@ -224,7 +224,7 @@ function BedSelector({ properties, propertyId, roomId, bedId, onPropertyChange, 
 const emptyForm = {
   name: '', phone: '', propertyId: '', roomId: '', bedId: '',
   monthlyRent: '7000', joinDate: new Date().toISOString().slice(0, 10),
-  depositAmount: '500',
+  admissionFee: '500', depositAmount: '500', moveInCollection: '8000',
 };
 
 function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onSubmit, onCancel, saving }) {
@@ -240,7 +240,9 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
         bedId: initialTenant.bedId ?? '',
         monthlyRent: initialTenant.monthlyRent,
         joinDate: initialTenant.joinDate,
+        admissionFee: initialTenant.admissionFee ?? '500',
         depositAmount: initialTenant.depositAmount ?? '',
+        moveInCollection: initialTenant.moveInCollection ?? '',
       });
     } else if (prefill) {
       setForm({ ...emptyForm, propertyId: prefill.propertyId ?? '', roomId: prefill.roomId ?? '', bedId: prefill.bedId ?? '' });
@@ -251,12 +253,21 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
+  useEffect(() => {
+    const rent = Number(form.monthlyRent || 0);
+    const fee = Number(form.admissionFee || 0);
+    const dep = Number(form.depositAmount || 0);
+    setForm(f => ({ ...f, moveInCollection: String(rent + fee + dep) }));
+  }, [form.monthlyRent, form.admissionFee, form.depositAmount]);
+
   async function handleSubmit(e) {
     e.preventDefault();
     await onSubmit({
       ...form,
       monthlyRent: Number(form.monthlyRent),
+      admissionFee: Number(form.admissionFee || 0),
       depositAmount: Number(form.depositAmount || 0),
+      moveInCollection: Number(form.moveInCollection || 0),
     });
     if (!initialTenant) setForm({ ...emptyForm, propertyId: defaultPropertyId ?? '' });
   }
@@ -331,17 +342,44 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
           </label>
         </div>
 
-        <label className="block">
-          <Label>Security deposit <span className="text-slate2 font-normal">(0 if none)</span></Label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <Label>Admission Fee <span className="text-slate2 font-normal">(one-time)</span></Label>
+            <input
+              min="0"
+              type="number"
+              value={form.admissionFee}
+              onChange={e => set('admissionFee', e.target.value)}
+              className={inputCls}
+              placeholder="500"
+            />
+          </label>
+          <label className="block">
+            <Label>Security Deposit <span className="text-slate2 font-normal">(refundable)</span></Label>
+            <input
+              min="0"
+              type="number"
+              value={form.depositAmount}
+              onChange={e => set('depositAmount', e.target.value)}
+              className={inputCls}
+              placeholder="500"
+            />
+          </label>
+        </div>
+
+        <div className="rounded-lg bg-mist px-3 py-2.5 flex items-center justify-between">
+          <div>
+            <Label>Move-In Collection</Label>
+            <p className="text-xs text-slate2 mt-0.5">Rent + Admission + Deposit</p>
+          </div>
           <input
             min="0"
             type="number"
-            value={form.depositAmount}
-            onChange={e => set('depositAmount', e.target.value)}
-            className={inputCls}
-            placeholder="0"
+            value={form.moveInCollection}
+            onChange={e => set('moveInCollection', e.target.value)}
+            className="w-28 rounded-lg border border-border bg-white px-3 py-2 text-sm font-bold text-ink text-right focus:outline-none focus:ring-2 focus:ring-ink/20 tabular-nums"
           />
-        </label>
+        </div>
 
         <Btn
           variant="primary"
@@ -439,6 +477,24 @@ function TenantCard({ tenant, onEdit, onDelete, onMarkPaid, onMarkUnpaid, onRetu
           )
         )}
 
+        {tenant.admissionFee > 0 && (
+          <div className="mt-2 flex items-center justify-between rounded-lg border border-border px-3 py-2">
+            <div className="flex items-center gap-3">
+              <div>
+                <Label>Admission</Label>
+                <p className="mt-0.5 text-sm font-semibold tabular-nums">{fmt(tenant.admissionFee)}</p>
+              </div>
+              {tenant.moveInCollection > 0 && (
+                <div>
+                  <Label>Move-In Collected</Label>
+                  <p className="mt-0.5 text-sm font-semibold tabular-nums">{fmt(tenant.moveInCollection)}</p>
+                </div>
+              )}
+            </div>
+            <span className="text-xs font-semibold text-slate2">Non-refundable</span>
+          </div>
+        )}
+
         {tenant.paymentDate && (
           <p className="mt-2 text-xs text-slate2">Paid on {tenant.paymentDate}</p>
         )}
@@ -531,6 +587,28 @@ function BusinessHealth({ tenants, totalBeds }) {
         sub: `${tenants.length} occupied beds`,
         color: 'text-ink',
       },
+    ]} />
+  );
+}
+
+// ─── dashboard: move-in & deposit health ─────────────────────────────────────
+
+function MoveInHealth({ tenants }) {
+  const currentYM = new Date().toISOString().slice(0, 7);
+  const newThisMonth = tenants.filter(t => t.joinDate?.startsWith(currentYM));
+  const moveInTotal = newThisMonth.reduce((s, t) => s + Number(t.moveInCollection || 0), 0);
+  const admissionTotal = newThisMonth.reduce((s, t) => s + Number(t.admissionFee || 0), 0);
+  const depositsHeld = tenants.filter(t => t.depositStatus === 'held').reduce((s, t) => s + Number(t.depositAmount || 0), 0);
+  const depositsReturned = tenants.filter(t => t.depositStatus === 'returned').reduce((s, t) => s + Number(t.depositAmount || 0), 0);
+  const depositsForfeited = tenants.filter(t => t.depositStatus === 'forfeited').reduce((s, t) => s + Number(t.depositAmount || 0), 0);
+  const depositsSettled = depositsReturned + depositsForfeited;
+
+  return (
+    <StatStrip stats={[
+      { label: 'Move-In This Month', value: fmt(moveInTotal),    sub: `${newThisMonth.length} new tenant${newThisMonth.length !== 1 ? 's' : ''}`, color: moveInTotal > 0 ? 'text-leaf' : 'text-slate2' },
+      { label: 'Admission Revenue',  value: fmt(admissionTotal), sub: 'non-refundable fees',  color: admissionTotal > 0 ? 'text-ink' : 'text-slate2' },
+      { label: 'Deposits Held',      value: fmt(depositsHeld),   sub: 'refundable liability', color: depositsHeld > 0 ? 'text-amber' : 'text-leaf' },
+      { label: 'Deposits Settled',   value: fmt(depositsSettled),sub: depositsForfeited > 0 ? `${fmt(depositsForfeited)} forfeited` : 'returned', color: 'text-slate2' },
     ]} />
   );
 }
@@ -751,6 +829,7 @@ function DashboardPage({ tenants, totalBeds, selectedPropertyId, onGoToPayments,
     <div className="flex flex-col gap-4">
       <BusinessHealth tenants={tenants} totalBeds={totalBeds} />
       <AttentionRequired tenants={tenants} onMarkPaid={onMarkPaid} />
+      <MoveInHealth tenants={tenants} />
       <FinancialHealth selectedPropertyId={selectedPropertyId} totalBeds={totalBeds} tenants={tenants} />
       <QuickActions
         onAssignTenant={onAssignTenant}
