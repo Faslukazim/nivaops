@@ -50,7 +50,7 @@ function StayOpsLogo() {
         <rect width="28" height="28" rx="7" fill="white" fillOpacity="0.12"/>
         <text x="14" y="20" fontFamily="system-ui,-apple-system,sans-serif" fontSize="16" fontWeight="700" fill="white" textAnchor="middle">S</text>
       </svg>
-      <span className="text-[13px] font-semibold tracking-wide text-white/70 hidden sm:block">StayOps</span>
+      <span className="text-[13px] font-semibold tracking-wide text-white/70">StayOps</span>
     </div>
   );
 }
@@ -61,12 +61,7 @@ function Header({ properties, selectedPropertyId, onPropertyChange, loadingPrope
     <header className="bg-ink text-white px-4 py-3.5 sm:px-6">
       <div className="mx-auto max-w-5xl">
         <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <StayOpsLogo />
-            <h1 className="text-lg font-bold tracking-tight leading-tight">
-              {prop?.name ?? 'All Properties'}
-            </h1>
-          </div>
+          <StayOpsLogo />
           <PropertyPill
             properties={properties}
             selectedId={selectedPropertyId}
