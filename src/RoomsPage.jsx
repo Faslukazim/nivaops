@@ -457,7 +457,7 @@ export default function RoomsPage({ selectedPropertyId, onAssignBed }) {
         { label: 'Total rooms',     value: rooms.length,                          color: 'text-ink' },
         { label: 'Occupancy',       value: `${Math.round((stats.occupied / (stats.totalBeds || 1)) * 100)}%` },
         { label: 'Vacant beds',     value: stats.totalBeds - stats.occupied,      color: (stats.totalBeds - stats.occupied) > 0 ? 'text-amber' : 'text-leaf' },
-        { label: 'Rooms w/ unpaid', value: stats.unpaidRooms,                     color: stats.unpaidRooms > 0 ? 'text-coral' : 'text-leaf' },
+        { label: 'Rooms Pending', value: stats.unpaidRooms,                     color: stats.unpaidRooms > 0 ? 'text-coral' : 'text-leaf' },
       ]} />
     </div>
   );
