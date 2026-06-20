@@ -221,6 +221,7 @@ function BedRow({ bed, roomNumber, roomId, rooms, onMarkPaid, onMarkUnpaid, onVa
             roomNumber={roomNumber}
             bedNumber={bed.bed_number}
             rent={occ.monthly_rent}
+            label="Remind"
           />
           <button
             type="button"

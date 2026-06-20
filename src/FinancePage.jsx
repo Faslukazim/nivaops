@@ -142,7 +142,7 @@ function RentStatusRow({ r, ym, onMarkPaid, onMarkUnpaid, onViewTenant }) {
       <div className="flex items-center gap-2 shrink-0">
         {st !== STATUS.PAID ? (
           <>
-            <WhatsAppLink name={r.name} phone={r.phone} roomNumber={r.roomNumber} bedNumber={r.bedNumber} rent={r.amount} />
+            <WhatsAppLink name={r.name} phone={r.phone} roomNumber={r.roomNumber} bedNumber={r.bedNumber} rent={r.amount} label="Remind" />
             <Btn size="sm" variant="filled-success" onClick={() => onMarkPaid(r)}>Mark Paid</Btn>
           </>
         ) : (

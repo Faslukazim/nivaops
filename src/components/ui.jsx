@@ -143,10 +143,10 @@ export function WhatsAppLink({ name, phone, roomNumber, bedNumber, rent, label, 
       target="_blank"
       rel="noreferrer"
       title="WhatsApp reminder"
-      className={`inline-flex items-center justify-center gap-1.5 rounded-lg p-2.5 text-slate2 hover:bg-mist hover:text-ink transition-colors ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-lg text-slate2 hover:bg-mist hover:text-ink transition-colors ${label ? 'px-2.5 py-2 text-xs font-semibold' : 'p-2.5'} ${className}`}
     >
       <MessageCircle className="h-4 w-4 shrink-0" />
-      {label && <span className="text-xs font-semibold">{label}</span>}
+      {label && <span>{label}</span>}
     </a>
   );
 }
