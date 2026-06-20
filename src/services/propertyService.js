@@ -64,6 +64,22 @@ export async function fetchRoomsWithOccupants(propertyId) {
     .order('room_number');
   if (error) throw error;
 
+  // Sort rooms by floor (G→F→S→T→…) then by numeric part within each floor
+  const FLOOR_ORDER = { G: 0, F: 1, S: 2, T: 3, FO: 4 };
+  function roomSortKey(rn) {
+    const m = String(rn).match(/^([A-Za-z]+)(\d+)$/);
+    if (!m) return [99, 0, rn];
+    const floor = m[1].toUpperCase();
+    const num = parseInt(m[2], 10);
+    const pri = FLOOR_ORDER[floor] ?? 50 + floor.charCodeAt(0);
+    return [pri, num];
+  }
+  data.sort((a, b) => {
+    const [ap, an] = roomSortKey(a.room_number);
+    const [bp, bn] = roomSortKey(b.room_number);
+    return ap !== bp ? ap - bp : an - bn;
+  });
+
   // Normalize: attach active occupancy directly to each bed
   return data.map(room => ({
     ...room,
