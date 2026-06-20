@@ -24,7 +24,7 @@ export async function ensurePaymentRecords(propertyId, yearMonth) {
 
   const query = supabase
     .from('occupancies')
-    .select('id, property_id, tenant_id, monthly_rent, rent_due_day')
+    .select('id, property_id, tenant_id, monthly_rent, rent_due_day, payment_status, payment_date')
     .eq('status', 'active');
   if (propertyId) query.eq('property_id', propertyId);
 
@@ -32,15 +32,24 @@ export async function ensurePaymentRecords(propertyId, yearMonth) {
   if (error) throw error;
   if (!occupancies.length) return;
 
-  const records = occupancies.map(occ => ({
-    property_id: occ.property_id,
-    tenant_id: occ.tenant_id,
-    occupancy_id: occ.id,
-    month: yearMonth,
-    amount: occ.monthly_rent,
-    due_day: occ.rent_due_day ?? 1,
-    status: 'unpaid',
-  }));
+  const records = occupancies.map(occ => {
+    // If occupancy was already marked Paid for this month (e.g. via Rooms/Dashboard
+    // before Finance tab was first opened), initialise the record as paid so the
+    // Finance page stays in sync even when the payment_records row didn't exist yet.
+    const paidThisMonth = occ.payment_status === 'Paid'
+      && occ.payment_date
+      && String(occ.payment_date).slice(0, 7) === yearMonth;
+    return {
+      property_id:  occ.property_id,
+      tenant_id:    occ.tenant_id,
+      occupancy_id: occ.id,
+      month:        yearMonth,
+      amount:       occ.monthly_rent,
+      due_day:      occ.rent_due_day ?? 1,
+      status:       paidThisMonth ? 'paid' : 'unpaid',
+      paid_at:      paidThisMonth ? new Date().toISOString() : null,
+    };
+  });
 
   const { error: upsertError } = await supabase
     .from('payment_records')
