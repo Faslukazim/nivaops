@@ -1008,6 +1008,13 @@ export default function App() {
   const [roomsVersion, setRoomsVersion] = useState(0);
   const [collectingTenant, setCollectingTenant] = useState(null);
   const [viewingTenantId, setViewingTenantId] = useState(null);
+  const [toast, setToast] = useState('');
+
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(''), 3000);
+    return () => clearTimeout(id);
+  }, [toast]);
   const viewingTenant = viewingTenantId ? tenants.find(t => t.id === viewingTenantId) ?? null : null;
 
   useEffect(() => {
@@ -1068,6 +1075,7 @@ export default function App() {
       const u = await updateTenant(editingTenant.id, tenant);
       setTenants(cur => cur.map(t => t.id === editingTenant.id ? u : t));
       setEditingTenant(null);
+      setToast(`${u.name} updated`);
     } catch (e) { setError(e.message); }
     finally { setSaving(false); }
   }
@@ -1220,6 +1228,13 @@ export default function App() {
           onEdit={t => { setViewingTenantId(null); setEditingTenant(t); navigateTo('tenants'); }}
           onDelete={t => { setViewingTenantId(null); handleDelete(t); }}
         />
+      )}
+
+      {toast && (
+        <div className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-ink text-white text-sm font-semibold px-4 py-2.5 rounded-full shadow-lg whitespace-nowrap pointer-events-none">
+          <CheckCircle2 className="h-4 w-4 text-leaf shrink-0" />
+          {toast}
+        </div>
       )}
 
       <BottomNav active={page} onChange={navigateTo} />
