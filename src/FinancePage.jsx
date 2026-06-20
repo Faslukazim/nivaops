@@ -14,8 +14,11 @@ import {
 } from './components/ui';
 import {
   ensurePaymentRecords, fetchPaymentRecords,
-  markRecordPaid, markRecordUnpaid,
+  markRecordPaid, markRecordUnpaid, syncOccupancyPaymentStatus,
 } from './services/paymentService';
+import {
+  STATUS, computeRecordStatus, recordDaysOverdue, recordDaysUntilDue,
+} from './utils/paymentStatus';
 import {
   EXPENSE_CATEGORIES, CF_TYPES,
   fetchExpenses, addExpense, deleteExpense,
@@ -89,7 +92,83 @@ function SubNav({ active, onChange }) {
   );
 }
 
-// ─── Rent Tab (was PaymentsPage) ─────────────────────────────────────────────
+// ─── Rent Tab ─────────────────────────────────────────────────────────────────
+
+const STATUS_META = {
+  [STATUS.OVERDUE]:  { label: 'Overdue',  bg: 'bg-coral/8',  border: 'border-coral/20',  text: 'text-coral',  dot: 'bg-coral'  },
+  [STATUS.DUE_TODAY]:{ label: 'Due Today',bg: 'bg-amber/8',  border: 'border-amber/20',  text: 'text-amber',  dot: 'bg-amber'  },
+  [STATUS.DUE_SOON]: { label: 'Due Soon', bg: 'bg-amber/5',  border: 'border-amber/15',  text: 'text-amber',  dot: 'bg-amber/70'},
+  [STATUS.PAID]:     { label: 'Paid',     bg: 'bg-leaf/5',   border: 'border-leaf/20',   text: 'text-leaf',   dot: 'bg-leaf'   },
+  [STATUS.UPCOMING]: { label: 'New Tenants (Grace Period)', bg: 'bg-mist', border: 'border-border', text: 'text-slate2', dot: 'bg-slate2/40' },
+};
+
+function RentStatusRow({ r, ym, onMarkPaid, onMarkUnpaid }) {
+  const st = computeRecordStatus(r, ym);
+  const daysOd = recordDaysOverdue(r, ym);
+  const daysUntil = recordDaysUntilDue(r);
+
+  let statusLine = null;
+  if (st === STATUS.OVERDUE) {
+    statusLine = <p className="text-xs font-semibold text-coral">{daysOd === 1 ? '1 day overdue' : `${daysOd} days overdue`}</p>;
+  } else if (st === STATUS.DUE_TODAY) {
+    statusLine = <p className="text-xs font-semibold text-amber">Due today</p>;
+  } else if (st === STATUS.DUE_SOON) {
+    statusLine = <p className="text-xs text-amber">Due in {daysUntil} day{daysUntil !== 1 ? 's' : ''}</p>;
+  } else if (st === STATUS.PAID && r.paidAt) {
+    statusLine = (
+      <p className="text-xs text-slate2">
+        {r.amountCollected != null && r.amountCollected !== r.amount
+          ? <>{fmt(r.amountCollected)} collected · <span className="text-coral">{fmt(r.amount - r.amountCollected)} deducted</span>{r.deductionReason ? ` · ${r.deductionReason}` : ''}</>
+          : `Paid ${String(r.paidAt).slice(0, 10)}`}
+      </p>
+    );
+  } else if (st === STATUS.UPCOMING) {
+    statusLine = <p className="text-xs text-slate2">New tenant — first cycle not due yet</p>;
+  }
+
+  return (
+    <div className="flex items-center gap-3 px-4 py-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-ink truncate">{r.name}</p>
+        <p className="text-xs text-slate2 tabular-nums">Room {r.roomNumber} · Bed {r.bedNumber} · {fmt(r.amount)}</p>
+        {statusLine}
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        {st !== STATUS.PAID ? (
+          <>
+            <WhatsAppLink name={r.name} phone={r.phone} roomNumber={r.roomNumber} bedNumber={r.bedNumber} rent={r.amount} />
+            <Btn size="sm" variant="filled-success" onClick={() => onMarkPaid(r)}>Mark Paid</Btn>
+          </>
+        ) : (
+          <>
+            <StatusBadge status="paid" />
+            <Btn size="sm" variant="ghost" onClick={() => onMarkUnpaid(r)}>Undo</Btn>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function RentSection({ title, meta, records, ym, onMarkPaid, onMarkUnpaid }) {
+  if (records.length === 0) return null;
+  return (
+    <div className={`rounded-xl border overflow-hidden ${meta.border}`}>
+      <div className={`flex items-center justify-between px-4 py-2.5 ${meta.bg}`}>
+        <div className="flex items-center gap-2">
+          <span className={`h-2 w-2 rounded-full ${meta.dot}`} />
+          <span className={`text-xs font-bold uppercase tracking-wide ${meta.text}`}>{title}</span>
+        </div>
+        <span className={`text-xs font-semibold ${meta.text}`}>{records.length}</span>
+      </div>
+      <div className="divide-y divide-border bg-white">
+        {records.map(r => (
+          <RentStatusRow key={r.id} r={r} ym={ym} onMarkPaid={onMarkPaid} onMarkUnpaid={onMarkUnpaid} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function RentTab({ selectedPropertyId }) {
   const cur = ymNow();
@@ -109,34 +188,40 @@ function RentTab({ selectedPropertyId }) {
       .finally(() => setLoading(false));
   }, [selectedPropertyId, ym]);
 
-  const today = new Date().getDate();
-  const isCur = ym === cur;
-
-  function isOverdue(r) {
-    if (r.status === 'paid') return false;
-    return isCur ? today > r.dueDay : true;
+  // Group records by computed status
+  const grouped = {
+    [STATUS.OVERDUE]:   [],
+    [STATUS.DUE_TODAY]: [],
+    [STATUS.DUE_SOON]:  [],
+    [STATUS.PAID]:      [],
+    [STATUS.UPCOMING]:  [],
+  };
+  for (const r of records) {
+    grouped[computeRecordStatus(r, ym)].push(r);
   }
-  function overdueLabel(r) {
-    if (!isCur) return 'Overdue';
-    const d = today - r.dueDay;
-    return d <= 1 ? '1 day overdue' : `${d} days overdue`;
-  }
+  // Sort overdue: most overdue first
+  grouped[STATUS.OVERDUE].sort((a, b) => recordDaysOverdue(b, ym) - recordDaysOverdue(a, ym));
 
-  const paid = records.filter(r => r.status === 'paid');
-  const unpaid = records.filter(r => r.status === 'unpaid');
-  const overdueCnt = records.filter(r => isOverdue(r)).length;
+  const paid = grouped[STATUS.PAID];
+  const overdue = grouped[STATUS.OVERDUE];
+  const dueToday = grouped[STATUS.DUE_TODAY];
+  const dueSoon = grouped[STATUS.DUE_SOON];
+
   const collected = paid.reduce((s, r) => s + (r.amountCollected ?? r.amount), 0);
   const deductions = paid.reduce((s, r) => s + (r.amount - (r.amountCollected ?? r.amount)), 0);
-  const pending = unpaid.reduce((s, r) => s + r.amount, 0);
+  const pending = [...overdue, ...dueToday, ...dueSoon].reduce((s, r) => s + r.amount, 0);
 
   async function confirmPaid(amountCollected, deductionReason) {
     const r = collecting;
     setCollecting(null);
+    const now = new Date().toISOString();
     setRecords(rs => rs.map(x => x.id === r.id
-      ? { ...x, status: 'paid', paidAt: new Date().toISOString(), amountCollected, deductionReason }
+      ? { ...x, status: 'paid', paidAt: now, amountCollected, deductionReason }
       : x));
     try {
       await markRecordPaid(r.id, amountCollected, deductionReason);
+      // Sync occupancy so Dashboard counts stay consistent
+      syncOccupancyPaymentStatus(r.tenantId, 'Paid').catch(console.error);
     } catch (err) {
       console.error(err);
       setRecords(rs => rs.map(x => x.id === r.id
@@ -149,7 +234,15 @@ function RentTab({ selectedPropertyId }) {
     setRecords(rs => rs.map(x => x.id === r.id
       ? { ...x, status: 'unpaid', paidAt: null, amountCollected: null, deductionReason: null }
       : x));
-    await markRecordUnpaid(r.id);
+    try {
+      await markRecordUnpaid(r.id);
+      syncOccupancyPaymentStatus(r.tenantId, 'Unpaid').catch(console.error);
+    } catch (err) {
+      console.error(err);
+      setRecords(rs => rs.map(x => x.id === r.id
+        ? { ...x, status: 'paid' }
+        : x));
+    }
   }
 
   return (
@@ -157,66 +250,36 @@ function RentTab({ selectedPropertyId }) {
       <MonthNav ym={ym} onChange={setYm} />
 
       <StatStrip stats={[
-        { label: 'Collected',  value: fmt(collected), sub: `${paid.length} paid`,    color: collected > 0 ? 'text-leaf'  : 'text-slate2' },
-        { label: 'Deductions', value: fmt(deductions), sub: deductions > 0 ? 'adjustments' : 'none', color: deductions > 0 ? 'text-coral' : 'text-ink' },
-        { label: 'Pending',    value: fmt(pending),    sub: `${unpaid.length} unpaid`, color: pending > 0 ? 'text-amber' : 'text-leaf'  },
-        { label: 'Overdue',    value: overdueCnt,      sub: overdueCnt > 0 ? 'need attention' : 'all clear', color: overdueCnt > 0 ? 'text-coral' : 'text-leaf' },
+        { label: 'Overdue',   value: overdue.length,   sub: overdue.length > 0 ? 'need collection' : 'none', color: overdue.length > 0 ? 'text-coral' : 'text-leaf' },
+        { label: 'Due Today', value: dueToday.length,  sub: dueToday.length > 0 ? 'collect today' : 'none', color: dueToday.length > 0 ? 'text-amber' : 'text-ink'  },
+        { label: 'Due Soon',  value: dueSoon.length,   sub: dueSoon.length > 0 ? 'due in 1–3 days' : 'none', color: dueSoon.length > 0 ? 'text-amber' : 'text-ink'  },
+        { label: 'Paid',      value: paid.length,      sub: fmt(collected),      color: paid.length > 0 ? 'text-leaf' : 'text-slate2' },
       ]} />
+
+      {deductions > 0 && (
+        <div className="rounded-lg bg-white border border-border px-4 py-2.5 flex items-center justify-between">
+          <span className="text-xs text-slate2">Total deductions this month</span>
+          <span className="text-sm font-semibold text-coral tabular-nums">−{fmt(deductions)}</span>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-lg border border-coral/30 bg-coral/5 px-4 py-3 text-sm text-coral">{error}</div>
       )}
 
-      <Card className="overflow-hidden">
-        <SectionHeader title="Payment Records" />
-        {loading ? (
-          <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-slate2" /></div>
-        ) : records.length === 0 ? (
-          <EmptyState icon={CreditCard} title="No records for this month" body="Records are created automatically when tenants are active." />
-        ) : (
-          <div className="divide-y divide-border">
-            {records.map(r => {
-              const od = isOverdue(r);
-              return (
-                <div key={r.id} className="flex items-center gap-3 px-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-ink truncate">{r.name}</p>
-                    <p className="text-xs text-slate2 tabular-nums">
-                      Room {r.roomNumber} · Bed {r.bedNumber} · {fmt(r.amount)}
-                    </p>
-                    {od && <p className="text-xs font-semibold text-coral">{overdueLabel(r)}</p>}
-                    {r.status === 'paid' && r.paidAt && (
-                      <p className="text-xs text-slate2">
-                        {r.amountCollected != null && r.amountCollected !== r.amount
-                          ? <>{fmt(r.amountCollected)} collected · <span className="text-coral">{fmt(r.amount - r.amountCollected)} deducted</span>{r.deductionReason ? ` · ${r.deductionReason}` : ''}</>
-                          : `Paid ${String(r.paidAt).slice(0, 10)}`}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {r.status === 'unpaid' ? (
-                      <>
-                        <WhatsAppLink
-                          name={r.name} phone={r.phone}
-                          roomNumber={r.roomNumber} bedNumber={r.bedNumber} rent={r.amount}
-                        />
-                        <Btn size="sm" variant="filled-success" onClick={() => setCollecting(r)}>
-                          Mark Paid
-                        </Btn>
-                      </>
-                    ) : (
-                      <>
-                        <StatusBadge status="paid" />
-                        <Btn size="sm" variant="ghost" onClick={() => handleUnpaid(r)}>Undo</Btn>
-                      </>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Card>
+      {loading ? (
+        <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-slate2" /></div>
+      ) : records.length === 0 ? (
+        <Card><EmptyState icon={CreditCard} title="No records for this month" body="Records are created automatically when tenants are active." /></Card>
+      ) : (
+        <>
+          <RentSection title="Overdue"   meta={STATUS_META[STATUS.OVERDUE]}   records={overdue}   ym={ym} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} />
+          <RentSection title="Due Today" meta={STATUS_META[STATUS.DUE_TODAY]} records={dueToday}  ym={ym} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} />
+          <RentSection title="Due Soon"  meta={STATUS_META[STATUS.DUE_SOON]}  records={dueSoon}   ym={ym} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} />
+          <RentSection title="Paid"      meta={STATUS_META[STATUS.PAID]}      records={paid}      ym={ym} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} />
+          <RentSection title="New Tenants (Grace Period)" meta={STATUS_META[STATUS.UPCOMING]} records={grouped[STATUS.UPCOMING]} ym={ym} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} />
+        </>
+      )}
 
       {collecting && (
         <CollectModal

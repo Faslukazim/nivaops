@@ -9,6 +9,7 @@ import { logActivity, fetchRecentActivity } from './services/activityService';
 import { fetchProperties, fetchRoomsWithBeds } from './services/propertyService';
 import { readExpensesSync } from './services/financeService';
 import { hasSupabaseConfig } from './lib/supabase';
+import { STATUS, computeTenantStatus, tenantDaysOverdue } from './utils/paymentStatus';
 import RoomsPage from './RoomsPage';
 import FinancePage from './FinancePage';
 import {
@@ -543,7 +544,11 @@ function BusinessHealth({ tenants, totalBeds }) {
   const occupied = tenants.length;
   const vacant = Math.max(totalBeds - occupied, 0);
   const pct = totalBeds ? Math.round((occupied / totalBeds) * 100) : 0;
-  const unpaid = tenants.filter(t => t.paymentStatus === 'Unpaid');
+  // Use same status logic as Finance page — exclude new tenants (UPCOMING) from pending
+  const unpaid = tenants.filter(t => {
+    const s = computeTenantStatus(t);
+    return s === STATUS.OVERDUE || s === STATUS.DUE_TODAY || s === STATUS.DUE_SOON;
+  });
   const pendingRent = unpaid.reduce((s, t) => s + Number(t.monthlyRent || 0), 0);
   const revenue = tenants.reduce((s, t) => s + Number(t.monthlyRent || 0), 0);
 
@@ -668,47 +673,54 @@ function FinancialHealth({ selectedPropertyId, totalBeds, tenants }) {
 }
 
 // ─── dashboard: attention required ───────────────────────────────────────────
-// Unpaid tenants only — the people who need a nudge today.
 
-function daysOverdue() {
-  const now = new Date();
-  return Math.floor((now - new Date(now.getFullYear(), now.getMonth(), 1)) / 86400000);
-}
+const ATTENTION_ORDER = [STATUS.OVERDUE, STATUS.DUE_TODAY, STATUS.DUE_SOON];
+
+const ATTENTION_META = {
+  [STATUS.OVERDUE]:  { label: 'Overdue',   labelColor: 'text-coral', badgeCls: 'bg-coral/10 text-coral' },
+  [STATUS.DUE_TODAY]:{ label: 'Due Today', labelColor: 'text-amber', badgeCls: 'bg-amber/10 text-amber' },
+  [STATUS.DUE_SOON]: { label: 'Due Soon',  labelColor: 'text-amber', badgeCls: 'bg-amber/8 text-amber'  },
+};
 
 function AttentionRequired({ tenants, onMarkPaid }) {
-  const unpaid = tenants.filter(t => t.paymentStatus === 'Unpaid');
   const [remindExpanded, setRemindExpanded] = useState(false);
-  const overdueDays = daysOverdue();
+
+  // Group tenants by their computed status — same logic as Finance page
+  const grouped = { [STATUS.OVERDUE]: [], [STATUS.DUE_TODAY]: [], [STATUS.DUE_SOON]: [] };
+  for (const t of tenants) {
+    const s = computeTenantStatus(t);
+    if (grouped[s]) grouped[s].push(t);
+  }
+  // Sort overdue: most overdue first (per-tenant dueDay, not global days-since-month-start)
+  grouped[STATUS.OVERDUE].sort((a, b) => tenantDaysOverdue(b) - tenantDaysOverdue(a));
+
+  const actionable = [
+    ...grouped[STATUS.OVERDUE],
+    ...grouped[STATUS.DUE_TODAY],
+    ...grouped[STATUS.DUE_SOON],
+  ];
 
   return (
     <Card className="overflow-hidden">
       <SectionHeader
         title="Attention Required"
-        action={unpaid.length > 0 && (
-          <Btn
-            variant="secondary"
-            size="sm"
-            onClick={() => setRemindExpanded(v => !v)}
-          >
+        action={actionable.length > 0 && (
+          <Btn variant="secondary" size="sm" onClick={() => setRemindExpanded(v => !v)}>
             <MessageCircle className="h-3.5 w-3.5" />
-            {remindExpanded ? 'Close' : `Remind All (${unpaid.length})`}
+            {remindExpanded ? 'Close' : `Remind All (${actionable.length})`}
           </Btn>
         )}
       />
 
-      {remindExpanded && unpaid.length > 0 && (
+      {remindExpanded && actionable.length > 0 && (
         <div className="border-b border-border bg-mist px-4 py-3 flex flex-col gap-1.5">
           <p className="text-xs text-slate2 mb-1">Tap each to open WhatsApp — send one at a time.</p>
-          {unpaid.map(t => {
+          {actionable.map(t => {
             const phone = String(t.phone).replace(/\D/g, '');
             const msg = `Hi ${t.name}, rent reminder for Room ${t.roomNumber} Bed ${t.bedNumber}. Monthly rent ${fmt(t.monthlyRent)} is unpaid. Please pay at your earliest.`;
             const href = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
             return (
-              <a
-                key={t.id}
-                href={href}
-                target="_blank"
-                rel="noreferrer"
+              <a key={t.id} href={href} target="_blank" rel="noreferrer"
                 className="flex items-center gap-2 border border-border bg-white rounded-lg px-3 py-2.5 text-sm font-medium text-ink hover:bg-mist transition-colors"
               >
                 <MessageCircle className="h-4 w-4 text-slate2 shrink-0" />
@@ -722,39 +734,44 @@ function AttentionRequired({ tenants, onMarkPaid }) {
         </div>
       )}
 
-      {unpaid.length === 0 ? (
+      {actionable.length === 0 ? (
         <EmptyState icon={CheckCircle2} title="All paid up" body="Nothing needs attention right now." />
       ) : (
         <div className="divide-y divide-border">
-          {unpaid.map(t => (
-            <div key={t.id} className="flex items-center justify-between gap-3 px-4 py-3">
-              <div className="min-w-0">
-                <p className="font-semibold text-ink truncate">{t.name}</p>
-                <p className="text-xs text-slate2">Room {t.roomNumber} · {fmt(t.monthlyRent)}</p>
-                {overdueDays > 0 && (
-                  <p className="text-xs font-semibold text-coral">
-                    {overdueDays === 1 ? '1 day overdue' : `${overdueDays} days overdue`}
-                  </p>
-                )}
+          {ATTENTION_ORDER.map(st => grouped[st].map(t => {
+            const meta = ATTENTION_META[st];
+            const daysOd = st === STATUS.OVERDUE ? tenantDaysOverdue(t) : 0;
+            const joinDate = t.joinDate;
+            const dueDay = joinDate ? Number(joinDate.slice(8, 10)) : 1;
+            const today = new Date().getDate();
+            const daysUntil = Math.max(0, dueDay - today);
+            return (
+              <div key={t.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-ink truncate">{t.name}</p>
+                    <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full ${meta.badgeCls}`}>{meta.label}</span>
+                  </div>
+                  <p className="text-xs text-slate2">Room {t.roomNumber} · {fmt(t.monthlyRent)}</p>
+                  {st === STATUS.OVERDUE && daysOd > 0 && (
+                    <p className={`text-xs font-semibold ${meta.labelColor}`}>
+                      {daysOd === 1 ? '1 day overdue' : `${daysOd} days overdue`}
+                    </p>
+                  )}
+                  {st === STATUS.DUE_SOON && (
+                    <p className={`text-xs ${meta.labelColor}`}>Due in {daysUntil} day{daysUntil !== 1 ? 's' : ''}</p>
+                  )}
+                  {st === STATUS.DUE_TODAY && (
+                    <p className={`text-xs font-semibold ${meta.labelColor}`}>Due today</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <WhatsAppLink name={t.name} phone={t.phone} roomNumber={t.roomNumber} bedNumber={t.bedNumber} rent={t.monthlyRent} />
+                  <Btn size="sm" variant="filled-success" onClick={() => onMarkPaid(t)}>Mark Paid</Btn>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <WhatsAppLink
-                  name={t.name}
-                  phone={t.phone}
-                  roomNumber={t.roomNumber}
-                  bedNumber={t.bedNumber}
-                  rent={t.monthlyRent}
-                />
-                <Btn
-                  size="sm"
-                  variant="filled-success"
-                  onClick={() => onMarkPaid(t)}
-                >
-                  Mark Paid
-                </Btn>
-              </div>
-            </div>
-          ))}
+            );
+          }))}
         </div>
       )}
     </Card>

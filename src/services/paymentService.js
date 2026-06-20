@@ -10,9 +10,13 @@ function localRecordsFromTenants(tenants) {
     roomNumber: t.roomNumber,
     bedNumber: t.bedNumber,
     amount: t.monthlyRent,
-    dueDay: t.joinDate ? new Date(t.joinDate).getDate() : 1,
+    // Parse dueDay without UTC timezone issues
+    dueDay: t.joinDate ? Number(t.joinDate.slice(8, 10)) : 1,
+    joinDate: t.joinDate ?? null,
     status: t.paymentStatus === 'Paid' ? 'paid' : 'unpaid',
     paidAt: t.paymentDate || null,
+    amountCollected: null,
+    deductionReason: null,
   }));
 }
 
@@ -36,7 +40,8 @@ export async function ensurePaymentRecords(propertyId, yearMonth) {
     occupancy_id: occ.id,
     month: yearMonth,
     amount: occ.monthly_rent,
-    due_day: occ.tenant.join_date ? new Date(occ.tenant.join_date).getDate() : 1,
+    // Parse day without UTC timezone issues
+    due_day: occ.tenant.join_date ? Number(occ.tenant.join_date.slice(8, 10)) : 1,
     status: 'unpaid',
   }));
 
@@ -54,7 +59,7 @@ export async function fetchPaymentRecords(propertyId, yearMonth) {
 
   const query = supabase
     .from('payment_records')
-    .select('*, tenant:tenants(name, phone), occupancy:occupancies(monthly_rent, room:rooms(room_number), bed:beds(bed_number))')
+    .select('*, tenant:tenants(name, phone), occupancy:occupancies(monthly_rent, start_date, room:rooms(room_number), bed:beds(bed_number))')
     .eq('month', yearMonth);
   if (propertyId) query.eq('property_id', propertyId);
 
@@ -72,6 +77,7 @@ export async function fetchPaymentRecords(propertyId, yearMonth) {
     amountCollected: r.amount_collected != null ? Number(r.amount_collected) : null,
     deductionReason: r.deduction_reason ?? null,
     dueDay: r.due_day,
+    joinDate: r.occupancy?.start_date ?? null,
     status: r.status,
     paidAt: r.paid_at,
   }));
@@ -79,15 +85,14 @@ export async function fetchPaymentRecords(propertyId, yearMonth) {
 
 export async function markRecordPaid(recordId, amountCollected, deductionReason) {
   if (!hasSupabaseConfig) return;
-  const patch = {
-    status: 'paid',
-    paid_at: new Date().toISOString(),
-    amount_collected: amountCollected ?? null,
-    deduction_reason: deductionReason || null,
-  };
   const { error } = await supabase
     .from('payment_records')
-    .update(patch)
+    .update({
+      status: 'paid',
+      paid_at: new Date().toISOString(),
+      amount_collected: amountCollected ?? null,
+      deduction_reason: deductionReason || null,
+    })
     .eq('id', recordId);
   if (error) throw error;
 }
@@ -111,7 +116,24 @@ export async function markRecordUnpaid(recordId) {
   if (!hasSupabaseConfig) return;
   const { error } = await supabase
     .from('payment_records')
-    .update({ status: 'unpaid', paid_at: null })
+    .update({ status: 'unpaid', paid_at: null, amount_collected: null, deduction_reason: null })
     .eq('id', recordId);
   if (error) throw error;
+}
+
+/**
+ * Sync occupancy.payment_status when a record is marked paid/unpaid via Finance tab.
+ * Keeps Dashboard counts consistent with Finance page counts.
+ */
+export async function syncOccupancyPaymentStatus(tenantId, status) {
+  if (!hasSupabaseConfig) return;
+  const patch = status === 'Paid'
+    ? { payment_status: 'Paid', payment_date: new Date().toISOString().slice(0, 10) }
+    : { payment_status: 'Unpaid', payment_date: null };
+  const { error } = await supabase
+    .from('occupancies')
+    .update(patch)
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active');
+  if (error) console.error('syncOccupancyPaymentStatus failed:', error);
 }
