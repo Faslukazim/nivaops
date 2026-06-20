@@ -4,6 +4,12 @@ import { fmt, Label, Btn, IconBtn, ConfirmInline, CollectModal } from './compone
 import { fetchTenantPaymentHistory } from './services/paymentService';
 import { computeTenantStatus, STATUS } from './utils/paymentStatus';
 
+function ordinal(n) {
+  const s = ['th','st','nd','rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
+}
+
 const STATUS_PILL = {
   [STATUS.PAID]:     { label: 'Paid',      cls: 'bg-leaf/10 text-leaf' },
   [STATUS.DUE_SOON]: { label: 'Due Soon',  cls: 'bg-amber/10 text-amber' },
@@ -62,21 +68,23 @@ export default function TenantProfile({ tenant, properties, onClose, onCollect, 
 
         <div className="p-5 flex flex-col gap-5">
           {/* Contact */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1 min-w-0">
+          <div className="flex flex-col gap-2">
+            <div>
               <Label>Phone</Label>
               <p className="mt-0.5 text-sm font-semibold text-ink">{tenant.phone}</p>
             </div>
-            <a href={callHref}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-sm font-semibold text-ink hover:bg-mist transition-colors">
-              <Phone className="h-4 w-4" />
-              Call
-            </a>
-            <a href={waHref} target="_blank" rel="noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-sm font-semibold text-ink hover:bg-mist transition-colors">
-              <MessageCircle className="h-4 w-4" />
-              WhatsApp
-            </a>
+            <div className="flex gap-2">
+              <a href={callHref}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-border text-sm font-semibold text-ink hover:bg-mist transition-colors">
+                <Phone className="h-4 w-4" />
+                Call
+              </a>
+              <a href={waHref} target="_blank" rel="noreferrer"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-border text-sm font-semibold text-ink hover:bg-mist transition-colors">
+                <MessageCircle className="h-4 w-4" />
+                WhatsApp
+              </a>
+            </div>
           </div>
 
           {/* Info grid */}
@@ -88,7 +96,7 @@ export default function TenantProfile({ tenant, properties, onClose, onCollect, 
             <div>
               <Label>Rent Due Day</Label>
               <p className="mt-0.5 text-sm font-semibold text-ink">
-                {tenant.rentDueDay ? `${tenant.rentDueDay}th of month` : '—'}
+                {tenant.rentDueDay ? `${ordinal(tenant.rentDueDay)} of month` : '—'}
               </p>
             </div>
             <div>
