@@ -1029,7 +1029,7 @@ function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, sa
             onClick={() => setShowPast(v => !v)}
             className={`shrink-0 rounded-lg border px-3 py-2.5 text-sm font-semibold transition-colors ${showPast ? 'bg-ink text-white border-ink' : 'border-border text-slate2 hover:text-ink hover:bg-mist'}`}
           >
-            {showPast ? 'Active' : 'Past'}
+            {showPast ? 'Active' : 'Ex-Tenants'}
           </button>
         </div>
 
