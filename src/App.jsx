@@ -27,7 +27,7 @@ import {
 function PropertyPill({ properties, selectedId, onChange, loading }) {
   if (loading) {
     return (
-      <div className="flex items-center gap-1.5 text-xs text-white/60">
+      <div className="flex items-center gap-1.5 text-xs text-slate2">
         <Loader2 className="h-3 w-3 animate-spin" />Loading…
       </div>
     );
@@ -37,13 +37,13 @@ function PropertyPill({ properties, selectedId, onChange, loading }) {
       <select
         value={selectedId}
         onChange={e => onChange(e.target.value)}
-        className="appearance-none rounded-lg bg-white/15 pl-3 pr-7 py-1.5 text-sm font-semibold text-white border border-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 cursor-pointer"
+        className="appearance-none rounded-lg bg-mist pl-3 pr-7 py-1.5 text-sm font-semibold text-ink border border-border focus:outline-none focus:ring-2 focus:ring-ink/20 cursor-pointer"
       >
         {properties.map(p => (
-          <option key={p.id} value={p.id} className="text-ink bg-white">{p.name}</option>
+          <option key={p.id} value={p.id}>{p.name}</option>
         ))}
       </select>
-      <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/70" />
+      <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate2" />
     </div>
   );
 }
@@ -52,16 +52,16 @@ function PropertyPill({ properties, selectedId, onChange, loading }) {
 
 function StayOpsLogo() {
   return (
-    <div className="flex items-center gap-2">
-      <img src="/favicon.png" alt="StayOps" width="28" height="28" className="rounded-md" />
-      <span className="text-[13px] font-semibold tracking-wide text-white/70">StayOps</span>
+    <div className="flex items-center gap-2.5">
+      <img src="/favicon.png" alt="StayOps" width="36" height="36" className="rounded-lg" />
+      <span className="text-[15px] font-semibold tracking-tight text-ink">StayOps</span>
     </div>
   );
 }
 
 function Header({ properties, selectedPropertyId, onPropertyChange, loadingProperties, onSignOut }) {
   return (
-    <header className="bg-ink text-white px-4 py-3.5 sm:px-6">
+    <header className="bg-white border-b border-border px-4 py-3 sm:px-6">
       <div className="mx-auto max-w-5xl">
         <div className="flex items-center justify-between gap-4">
           <StayOpsLogo />
@@ -77,7 +77,7 @@ function Header({ properties, selectedPropertyId, onPropertyChange, loadingPrope
                 type="button"
                 onClick={onSignOut}
                 title="Sign out"
-                className="inline-flex items-center justify-center rounded-lg bg-white/10 p-2 text-white/70 border border-white/15 hover:bg-white/20 hover:text-white transition-colors"
+                className="inline-flex items-center justify-center rounded-lg bg-mist p-2 text-slate2 border border-border hover:bg-border hover:text-ink transition-colors"
               >
                 <LogOut className="h-4 w-4" />
               </button>
