@@ -500,8 +500,8 @@ function VacatedTenantCard({ tenant: t, onReturnDeposit, onForfeitDeposit, onDel
             </div>
             {depositPending && (
               <div className="flex gap-2">
-                <Btn variant="primary" className="flex-1 justify-center py-2 text-xs" onClick={() => onReturnDeposit(t)}>Return</Btn>
-                <Btn variant="danger" className="flex-1 justify-center py-2 text-xs" onClick={() => onForfeitDeposit(t)}>Forfeit</Btn>
+                <button type="button" onClick={() => onReturnDeposit(t)} className="flex-1 text-xs font-semibold text-amber hover:text-amber/80 border border-amber/30 rounded-lg px-2.5 py-2 hover:bg-amber/5 transition-colors">Return Deposit</button>
+                <button type="button" onClick={() => onForfeitDeposit(t)} className="flex-1 text-xs font-semibold text-coral hover:text-coral/80 border border-coral/30 rounded-lg px-2.5 py-2 hover:bg-coral/5 transition-colors">Not Refundable</button>
               </div>
             )}
           </div>
