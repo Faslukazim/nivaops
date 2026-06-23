@@ -19,7 +19,7 @@ const STATUS_PILL = {
   [STATUS.UPCOMING]: { label: 'Upcoming',  cls: 'bg-mist text-slate2' },
 };
 
-export default function TenantProfile({ tenant, properties, onClose, onCollect, onEdit, onDelete }) {
+export default function TenantProfile({ tenant, properties, onClose, onCollect, onEdit, onDelete, onVacate }) {
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -202,18 +202,17 @@ export default function TenantProfile({ tenant, properties, onClose, onCollect, 
 
           {/* Move out */}
           <div className="border-t border-border pt-4">
-            {confirmingDelete ? (
+            <Btn variant="danger" className="w-full justify-center" onClick={() => { if (onVacate) { onClose(); onVacate(tenant); } else { setConfirmingDelete(true); } }}>
+              <Trash2 className="h-4 w-4" />
+              Move Out Tenant
+            </Btn>
+            {confirmingDelete && (
               <ConfirmInline
                 message={<>Move out <span className="font-semibold">{tenant.name}</span>? This frees Bed {tenant.bedNumber} in Room {tenant.roomNumber}.</>}
                 confirmLabel="Confirm Move Out"
                 onCancel={() => setConfirmingDelete(false)}
                 onConfirm={() => { onDelete(tenant); onClose(); }}
               />
-            ) : (
-              <Btn variant="danger" className="w-full justify-center" onClick={() => setConfirmingDelete(true)}>
-                <Trash2 className="h-4 w-4" />
-                Move Out Tenant
-              </Btn>
             )}
           </div>
         </div>

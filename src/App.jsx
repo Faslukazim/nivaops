@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   BarChart2, BedDouble, Camera, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight,
-  Home, Loader2, LogOut, MessageCircle, Pencil, Plus, Save, Sparkles, Trash2, UserPlus, Users, X,
+  Home, Loader2, LogOut, MessageCircle, Pencil, Plus, Save, Sparkles, Trash2, UserMinus, UserPlus, Users, X,
 } from 'lucide-react';
-import { createTenant, deleteTenant, fetchTenants, fetchVacatedTenants, fetchPendingDeposits, fetchMovedOutThisMonth, forfeitDeposit, returnDeposit, updateTenant } from './services/tenantService';
+import { createTenant, deleteTenant, vacateTenant, fetchTenants, fetchVacatedTenants, fetchPendingDeposits, fetchMovedOutThisMonth, forfeitDeposit, returnDeposit, updateTenant } from './services/tenantService';
 import { addIncomeRecord, uploadIdPhoto, saveTenantIdPhoto } from './services/incomeService';
 import { markTenantRecordPaid } from './services/paymentService';
 import { logActivity, fetchRecentActivity } from './services/activityService';
@@ -543,6 +543,96 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
   );
 }
 
+// ─── vacate modal ────────────────────────────────────────────────────────────
+
+function VacateModal({ tenant, onConfirm, onCancel, saving }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [endDate, setEndDate] = useState(today);
+  const [depositAction, setDepositAction] = useState('later');
+  const hasDeposit = tenant.depositAmount > 0 && tenant.depositStatus === 'held';
+
+  const inputCls = 'w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink bg-white';
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative w-full sm:max-w-sm bg-white rounded-t-2xl sm:rounded-2xl shadow-xl overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div>
+            <h2 className="font-semibold text-ink">Vacate Tenant</h2>
+            <p className="text-xs text-slate2 mt-0.5">{tenant.name} · Room {tenant.roomNumber} Bed {tenant.bedNumber}</p>
+          </div>
+          <IconBtn variant="ghost" onClick={onCancel}><X className="h-4 w-4" /></IconBtn>
+        </div>
+
+        <div className="p-4 flex flex-col gap-4">
+          {/* End date */}
+          <label className="block">
+            <Label>Move-Out Date</Label>
+            <input
+              type="date"
+              value={endDate}
+              max={today}
+              onChange={e => setEndDate(e.target.value)}
+              className={`mt-1.5 ${inputCls}`}
+            />
+          </label>
+
+          {/* Deposit settlement */}
+          {hasDeposit && (
+            <div>
+              <Label>Security Deposit — {fmt(tenant.depositAmount)}</Label>
+              <div className="mt-1.5 flex flex-col gap-2">
+                {[
+                  { id: 'returned', label: 'Return to tenant', color: 'text-leaf', border: 'border-leaf/40', bg: 'bg-leaf/5' },
+                  { id: 'forfeited', label: 'Not refundable', color: 'text-coral', border: 'border-coral/40', bg: 'bg-coral/5' },
+                  { id: 'later', label: 'Settle later', color: 'text-slate2', border: 'border-border', bg: 'bg-mist' },
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setDepositAction(opt.id)}
+                    className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-semibold transition-colors text-left ${
+                      depositAction === opt.id ? `${opt.border} ${opt.bg} ${opt.color}` : 'border-border text-slate2 hover:bg-mist'
+                    }`}
+                  >
+                    <span className={`h-3.5 w-3.5 rounded-full border-2 shrink-0 flex items-center justify-center ${depositAction === opt.id ? opt.border : 'border-border'}`}>
+                      {depositAction === opt.id && <span className={`h-1.5 w-1.5 rounded-full ${opt.id === 'returned' ? 'bg-leaf' : opt.id === 'forfeited' ? 'bg-coral' : 'bg-slate2'}`} />}
+                    </span>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Summary */}
+          <div className="rounded-lg bg-mist px-3 py-2.5 text-xs text-slate2 space-y-0.5">
+            <p>· Bed {tenant.bedNumber} will be marked <span className="font-semibold text-ink">available</span></p>
+            {hasDeposit && depositAction === 'returned'  && <p>· Deposit <span className="font-semibold text-leaf">returned</span></p>}
+            {hasDeposit && depositAction === 'forfeited' && <p>· Deposit marked <span className="font-semibold text-coral">not refundable</span></p>}
+            {hasDeposit && depositAction === 'later'     && <p>· Deposit appears in <span className="font-semibold text-amber">Deposits to Review</span></p>}
+          </div>
+
+          <div className="flex gap-2">
+            <Btn variant="secondary" className="flex-1 justify-center" onClick={onCancel}>Cancel</Btn>
+            <Btn
+              variant="danger"
+              className="flex-1 justify-center"
+              disabled={saving || !endDate}
+              onClick={() => onConfirm({ endDate, depositAction })}
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserMinus className="h-4 w-4" />}
+              Confirm Vacate
+            </Btn>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── vacated tenant card ─────────────────────────────────────────────────────
 
 function VacatedTenantCard({ tenant: t, onReturnDeposit, onForfeitDeposit, onDelete }) {
@@ -608,14 +698,15 @@ function VacatedTenantCard({ tenant: t, onReturnDeposit, onForfeitDeposit, onDel
 
 // ─── tenant card ─────────────────────────────────────────────────────────────
 
-function TenantCard({ tenant, upiId, onEdit, onDelete, onMarkPaid, onMarkUnpaid, onReturnDeposit, onForfeitDeposit }) {
+function TenantCard({ tenant, upiId, onEdit, onDelete, onVacate, onMarkPaid, onMarkUnpaid, onReturnDeposit, onForfeitDeposit }) {
   const isPaid = tenant.paymentStatus === 'Paid';
   const hasDeposit = tenant.depositAmount > 0;
   const depositHeld = hasDeposit && tenant.depositStatus === 'held';
   const depositReturned = hasDeposit && tenant.depositStatus === 'returned';
   const depositForfeited = hasDeposit && tenant.depositStatus === 'forfeited';
   const [confirmingForfeit, setConfirmingForfeit] = useState(false);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [vacating, setVacating] = useState(false);
+  const [vacateSaving, setVacateSaving] = useState(false);
 
   return (
     <Card className="overflow-hidden">
@@ -742,18 +833,23 @@ function TenantCard({ tenant, upiId, onEdit, onDelete, onMarkPaid, onMarkUnpaid,
           <IconBtn variant="ghost" onClick={() => onEdit(tenant)} title="Edit">
             <Pencil className="h-4 w-4" />
           </IconBtn>
-          <IconBtn variant="danger" onClick={() => setConfirmingDelete(true)} title="Remove">
-            <Trash2 className="h-4 w-4" />
+          <IconBtn variant="danger" onClick={() => setVacating(true)} title="Vacate">
+            <UserMinus className="h-4 w-4" />
           </IconBtn>
         </div>
       </div>
 
-      {confirmingDelete && (
-        <ConfirmInline
-          message={<>Remove <span className="font-semibold">{tenant.name}</span> from Bed {tenant.bedNumber}?</>}
-          confirmLabel="Yes, remove"
-          onCancel={() => setConfirmingDelete(false)}
-          onConfirm={() => { onDelete(tenant); setConfirmingDelete(false); }}
+      {vacating && (
+        <VacateModal
+          tenant={tenant}
+          saving={vacateSaving}
+          onCancel={() => setVacating(false)}
+          onConfirm={async opts => {
+            setVacateSaving(true);
+            await onVacate(tenant, opts);
+            setVacateSaving(false);
+            setVacating(false);
+          }}
         />
       )}
     </Card>
@@ -1196,7 +1292,7 @@ function UpiSettings({ propertyId, upiId, onSave }) {
   );
 }
 
-function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, saving, roomPrefill, upiId, onAddTenant, onUpdateTenant, onCancelEdit, onEdit, onDelete, onMarkPaid, onMarkUnpaid, onReturnDeposit, onForfeitDeposit, onAddDayGuest, selectedPropertyId }) {
+function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, saving, roomPrefill, upiId, onAddTenant, onUpdateTenant, onCancelEdit, onEdit, onDelete, onVacate, onMarkPaid, onMarkUnpaid, onReturnDeposit, onForfeitDeposit, onAddDayGuest, selectedPropertyId }) {
   const [query, setQuery] = useState('');
   const [showPast, setShowPast] = useState(false);
   const [vacated, setVacated] = useState([]);
@@ -1296,6 +1392,7 @@ function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, sa
                   upiId={upiId}
                   onEdit={onEdit}
                   onDelete={onDelete}
+                  onVacate={onVacate}
                   onMarkPaid={onMarkPaid}
                   onMarkUnpaid={onMarkUnpaid}
                   onReturnDeposit={onReturnDeposit}
@@ -1377,6 +1474,8 @@ export default function App({ session, organizationName, onSignOut } = {}) {
   const [roomsVersion, setRoomsVersion] = useState(0);
   const [collectingTenant, setCollectingTenant] = useState(null);
   const [viewingTenantId, setViewingTenantId] = useState(null);
+  const [vacatingTenant, setVacatingTenant] = useState(null);
+  const [vacatingSaving, setVacatingSaving] = useState(false);
   const [toast, setToast] = useState('');
   const [seeding, setSeeding] = useState(false);
   const [upiId, setUpiId] = useState('');
@@ -1541,6 +1640,22 @@ export default function App({ session, organizationName, onSignOut } = {}) {
     finally { setSaving(false); }
   }
 
+  async function handleVacate(tenant, { endDate, depositAction } = {}) {
+    setError('');
+    try {
+      await vacateTenant(tenant.id, { endDate, depositAction });
+      setTenants(cur => cur.filter(t => t.id !== tenant.id));
+      if (editingTenant?.id === tenant.id) setEditingTenant(null);
+      setRoomsVersion(v => v + 1);
+      // Refresh dashboard lists
+      fetchPendingDeposits(selectedPropertyId).then(setPendingDeposits).catch(() => {});
+      fetchMovedOutThisMonth(selectedPropertyId).then(setMovedOutThisMonth).catch(() => {});
+      const orgId = properties.find(p=>p.id===selectedPropertyId)?.organization_id;
+      logActivity(selectedPropertyId, orgId, 'tenant_vacated', `${tenant.name} vacated Room ${tenant.roomNumber} Bed ${tenant.bedNumber} on ${endDate}`);
+      setToast(`${tenant.name} vacated`);
+    } catch (e) { setError(e.message); }
+  }
+
   async function handleDelete(tenant) {
     setError('');
     try {
@@ -1548,7 +1663,6 @@ export default function App({ session, organizationName, onSignOut } = {}) {
       setTenants(cur => cur.filter(t => t.id !== tenant.id));
       if (editingTenant?.id === tenant.id) setEditingTenant(null);
       setRoomsVersion(v => v + 1);
-      logActivity(selectedPropertyId, properties.find(p=>p.id===selectedPropertyId)?.organization_id, 'tenant_vacated', `${tenant.name} vacated Room ${tenant.roomNumber} Bed ${tenant.bedNumber}`);
     } catch (e) { setError(e.message); }
   }
 
@@ -1683,6 +1797,7 @@ export default function App({ session, organizationName, onSignOut } = {}) {
                   onCancelEdit={() => setEditingTenant(null)}
                   onEdit={t => { setEditingTenant(t); navigateTo('tenants'); }}
                   onDelete={handleDelete}
+                  onVacate={handleVacate}
                   onMarkPaid={setCollectingTenant}
                   onMarkUnpaid={t => patchPayment(t, 'Unpaid')}
                   onReturnDeposit={handleReturnDeposit}
@@ -1719,7 +1834,22 @@ export default function App({ session, organizationName, onSignOut } = {}) {
             markTenantRecordPaid(t.id, currentYM, amt, reason).catch(console.error);
           }}
           onEdit={t => { setViewingTenantId(null); setEditingTenant(t); navigateTo('tenants'); }}
+          onVacate={t => { setViewingTenantId(null); setVacatingTenant(t); }}
           onDelete={t => { setViewingTenantId(null); handleDelete(t); }}
+        />
+      )}
+
+      {vacatingTenant && (
+        <VacateModal
+          tenant={vacatingTenant}
+          saving={vacatingSaving}
+          onCancel={() => setVacatingTenant(null)}
+          onConfirm={async opts => {
+            setVacatingSaving(true);
+            await handleVacate(vacatingTenant, opts);
+            setVacatingSaving(false);
+            setVacatingTenant(null);
+          }}
         />
       )}
 
