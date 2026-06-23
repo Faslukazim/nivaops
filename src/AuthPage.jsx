@@ -6,10 +6,7 @@ import { Btn } from './components/ui';
 function StayOpsMark() {
   return (
     <div className="flex flex-col items-center gap-2">
-      <svg width="44" height="44" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="28" height="28" rx="8" fill="#0F1117" />
-        <text x="14" y="20" fontFamily="system-ui,-apple-system,sans-serif" fontSize="16" fontWeight="700" fill="white" textAnchor="middle">S</text>
-      </svg>
+      <img src="/favicon.png" alt="StayOps" width="56" height="56" className="rounded-xl" />
       <span className="text-lg font-bold tracking-tight text-ink">StayOps</span>
     </div>
   );

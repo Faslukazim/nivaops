@@ -53,10 +53,7 @@ function PropertyPill({ properties, selectedId, onChange, loading }) {
 function StayOpsLogo() {
   return (
     <div className="flex items-center gap-2">
-      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="28" height="28" rx="7" fill="white" fillOpacity="0.12"/>
-        <text x="14" y="20" fontFamily="system-ui,-apple-system,sans-serif" fontSize="16" fontWeight="700" fill="white" textAnchor="middle">S</text>
-      </svg>
+      <img src="/favicon.png" alt="StayOps" width="28" height="28" className="rounded-md" />
       <span className="text-[13px] font-semibold tracking-wide text-white/70">StayOps</span>
     </div>
   );

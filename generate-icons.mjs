@@ -12,7 +12,7 @@ const dataUrl = `data:image/png;base64,${base64}`;
 // Source image is 1536x1024 (3:2). We place it centred on a square white canvas
 // with 10% padding on each side, preserving aspect ratio.
 function makeSvg(size) {
-  const pad = Math.round(size * 0.08);
+  const pad = Math.round(size * 0.02);
   const imgW = size - pad * 2;
   const imgH = Math.round(imgW * (1024 / 1536));
   const imgY = Math.round((size - imgH) / 2);
