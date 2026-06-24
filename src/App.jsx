@@ -1418,8 +1418,13 @@ function UpiSettings({ propertyId, upiId, onSave }) {
 function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, saving, roomPrefill, upiId, flashPaidId, onAddTenant, onUpdateTenant, onCancelEdit, onEdit, onDelete, onVacate, onMarkPaid, onMarkUnpaid, onReturnDeposit, onForfeitDeposit, onAddDayGuest, selectedPropertyId }) {
   const [query, setQuery] = useState('');
   const [showPast, setShowPast] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [vacated, setVacated] = useState([]);
   const [loadingVacated, setLoadingVacated] = useState(false);
+
+  useEffect(() => {
+    if (editingTenant) setShowForm(true);
+  }, [editingTenant]);
 
   useEffect(() => {
     if (!showPast) return;
@@ -1459,19 +1464,37 @@ function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, sa
     return vacated.filter(t => t.name.toLowerCase().includes(q) || t.phone.includes(q));
   }, [vacated, query]);
 
+  function handleCancelForm() {
+    setShowForm(false);
+    onCancelEdit();
+  }
+
   return (
     <div className="grid gap-4 lg:grid-cols-[380px_1fr]">
-      <TenantForm
-        initialTenant={editingTenant}
-        properties={properties}
-        defaultPropertyId={defaultPropertyId}
-        prefill={roomPrefill}
-        onSubmit={editingTenant ? onUpdateTenant : onAddTenant}
-        onCancel={onCancelEdit}
-        saving={saving}
-        organizationId={properties.find(p => p.id === defaultPropertyId)?.organization_id}
-        onAddDayGuest={onAddDayGuest}
-      />
+      <div>
+        {!showForm ? (
+          <button
+            type="button"
+            onClick={() => setShowForm(true)}
+            className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-white py-3 text-sm font-semibold text-slate2 hover:text-ink hover:border-ink/40 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Add tenant
+          </button>
+        ) : (
+          <TenantForm
+            initialTenant={editingTenant}
+            properties={properties}
+            defaultPropertyId={defaultPropertyId}
+            prefill={roomPrefill}
+            onSubmit={editingTenant ? onUpdateTenant : (data) => { onAddTenant(data); setShowForm(false); }}
+            onCancel={handleCancelForm}
+            saving={saving}
+            organizationId={properties.find(p => p.id === defaultPropertyId)?.organization_id}
+            onAddDayGuest={onAddDayGuest}
+          />
+        )}
+      </div>
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2">
           <div className="relative flex-1">

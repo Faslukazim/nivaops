@@ -77,13 +77,13 @@ const SUB_TABS = [
 
 function SubNav({ active, onChange }) {
   return (
-    <div className="flex rounded-xl bg-white border border-border overflow-hidden shadow-card">
+    <div className="flex rounded-xl bg-white border border-border overflow-x-auto shadow-card scrollbar-none">
       {SUB_TABS.map(t => (
         <button
           key={t.id}
           type="button"
           onClick={() => onChange(t.id)}
-          className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${
+          className={`shrink-0 flex-1 min-w-[72px] py-2.5 text-sm font-semibold transition-colors whitespace-nowrap px-3 ${
             active === t.id
               ? 'bg-ink text-white'
               : 'text-slate2 hover:text-ink hover:bg-mist'
