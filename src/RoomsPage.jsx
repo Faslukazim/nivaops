@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useToast } from './lib/toast.jsx';
-import { ArrowLeft, ArrowRightLeft, BedDouble, Bookmark, ChevronDown, Loader2, Plus, Trash2, X } from 'lucide-react';
+import { ArrowLeft, ArrowRightLeft, BedDouble, Bookmark, ChevronDown, Loader2, Plus, Trash2, UserPlus, X } from 'lucide-react';
 import { fetchRoomsWithOccupants, createRoom, deleteRoom, deleteBed } from './services/propertyService';
 import { deleteTenant, moveTenant, updateTenant } from './services/tenantService';
 import { createBooking, cancelBooking, convertBooking } from './services/bookingService';
