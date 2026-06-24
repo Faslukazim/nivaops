@@ -7,6 +7,9 @@ import AuthPage from './AuthPage.jsx';
 import OnboardingPage from './OnboardingPage.jsx';
 import LandingPage from './LandingPage.jsx';
 import WaitlistPage from './WaitlistPage.jsx';
+import AdminPage from './AdminPage.jsx';
+
+const ADMIN_UID = '06d41f5f-07c6-4922-9456-3e935eef72e7';
 
 function FullScreenLoader() {
   return (
@@ -82,6 +85,11 @@ export default function Root() {
         onSignOut={signOut}
       />
     );
+  }
+
+  // ── Admin ──────────────────────────────────────────────────────────────────
+  if (session.user?.id === ADMIN_UID) {
+    return <AdminPage onSignOut={signOut} />;
   }
 
   const activeOrg = memberships[0];
