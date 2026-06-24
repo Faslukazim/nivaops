@@ -1,12 +1,34 @@
 import { useState } from 'react';
-import { Loader2, ArrowRight, BedDouble, IndianRupee, Users, BarChart2, CheckCircle2 } from 'lucide-react';
+import { Loader2, ArrowRight, BedDouble, CreditCard, Users, BarChart2, CheckCircle2, Zap, Shield, Smartphone } from 'lucide-react';
 import { signIn } from './services/authService';
 
 const FEATURES = [
-  { icon: BedDouble,    title: 'Room & bed management', body: 'Track every bed, assign tenants, and see occupancy at a glance.' },
-  { icon: IndianRupee,  title: 'Rent collection',       body: 'Mark payments paid or unpaid. Send WhatsApp reminders with one tap.' },
-  { icon: Users,        title: 'Tenant profiles',       body: 'Store ID photos, join dates, and deposit status for every tenant.' },
-  { icon: BarChart2,    title: 'Finance overview',      body: 'Monthly P&L, income breakdown, and expense tracking in one view.' },
+  {
+    icon: BedDouble,
+    title: 'Room & bed management',
+    body: 'See every bed at a glance. Track occupancy, assign tenants, and spot vacancies instantly.',
+  },
+  {
+    icon: CreditCard,
+    title: 'Rent collection',
+    body: 'Mark payments, send reminders, and know exactly who has paid — all from your phone.',
+  },
+  {
+    icon: Users,
+    title: 'Tenant records',
+    body: 'ID photos, join dates, deposits, and history — everything in one place per tenant.',
+  },
+  {
+    icon: BarChart2,
+    title: 'Finance overview',
+    body: 'Monthly P&L, income breakdown, and expenses. Know your numbers without an accountant.',
+  },
+];
+
+const WHY = [
+  { icon: Smartphone, title: 'Built for your phone', body: 'No desktop required. Run your property from anywhere, on any Android or iPhone.' },
+  { icon: Zap,        title: 'Zero training needed', body: 'Designed for operators, not accountants. You\'ll be set up in under 10 minutes.' },
+  { icon: Shield,     title: 'Your data, secured',   body: 'Every tenant record is private to your account. Backed by enterprise-grade infrastructure.' },
 ];
 
 export default function LandingPage({ onShowAuth }) {
@@ -26,31 +48,50 @@ export default function LandingPage({ onShowAuth }) {
 
   return (
     <div className="min-h-screen bg-mist flex flex-col">
-      {/* Nav */}
-      <header className="bg-white border-b border-border px-5 flex items-center justify-between sticky top-0 z-40" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)', paddingBottom: '0.75rem' }}>
+
+      {/* ── Nav ─────────────────────────────────────────────────────────── */}
+      <header
+        className="bg-white/90 backdrop-blur border-b border-border px-5 flex items-center justify-between sticky top-0 z-40"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)', paddingBottom: '0.75rem' }}
+      >
         <div className="flex items-center gap-2.5">
-          <img src="/favicon.png" alt="StayOps" width="34" height="34" className="rounded-lg" />
-          <span className="text-[15px] font-semibold tracking-tight text-ink">StayOps</span>
+          <img src="/favicon.png" alt="StayOps" width="32" height="32" className="rounded-lg" />
+          <span className="text-[15px] font-bold tracking-tight text-ink">StayOps</span>
         </div>
-        <button
-          type="button"
-          onClick={onShowAuth}
-          className="text-sm font-semibold text-slate2 hover:text-ink transition-colors"
-        >
-          Sign in
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={onShowAuth}
+            className="text-sm font-semibold text-slate2 hover:text-ink transition-colors"
+          >
+            Sign in
+          </button>
+          <button
+            type="button"
+            onClick={tryDemo}
+            disabled={demoLoading}
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-ink text-white px-4 py-2 text-sm font-semibold hover:bg-ink/90 transition-colors disabled:opacity-60"
+          >
+            {demoLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+            Try demo
+          </button>
+        </div>
       </header>
 
-      {/* Hero */}
-      <section className="flex flex-col items-center text-center px-5 pt-16 pb-12">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-leaf/10 px-3 py-1 text-xs font-semibold text-leaf mb-5">
-          Built for Indian PG operators
+      {/* ── Hero ────────────────────────────────────────────────────────── */}
+      <section className="flex flex-col items-center text-center px-5 pt-16 pb-14">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1 text-xs font-semibold text-slate2 mb-6 shadow-sm">
+          Hostels · Co-living · Boarding houses · PGs
         </span>
-        <h1 className="text-3xl sm:text-4xl font-bold text-ink leading-tight max-w-md">
-          Run your PG without the chaos
+
+        <h1 className="text-[2.25rem] sm:text-5xl font-extrabold text-ink leading-[1.15] max-w-md tracking-tight">
+          Run your beds.<br />
+          <span className="text-leaf">Not spreadsheets.</span>
         </h1>
-        <p className="mt-4 text-slate2 text-base max-w-sm leading-relaxed">
-          Rooms, tenants, rent collection, and finances — all in one place. Works on phone.
+
+        <p className="mt-5 text-slate2 text-base sm:text-lg max-w-sm leading-relaxed">
+          Tenants, rent, rooms, and finances — all on your phone.
+          Know who's paid and who hasn't, in seconds.
         </p>
 
         <div className="mt-8 flex flex-col sm:flex-row gap-3 w-full max-w-xs sm:max-w-none sm:justify-center">
@@ -58,57 +99,107 @@ export default function LandingPage({ onShowAuth }) {
             type="button"
             onClick={tryDemo}
             disabled={demoLoading}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-ink text-white px-6 py-3 text-sm font-semibold hover:bg-ink/90 active:bg-ink/80 transition-colors disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-ink text-white px-7 py-3.5 text-sm font-bold hover:bg-ink/90 active:scale-[0.98] transition-all disabled:opacity-60 shadow-md"
           >
             {demoLoading
               ? <Loader2 className="h-4 w-4 animate-spin" />
               : <ArrowRight className="h-4 w-4" />}
-            Try live demo
+            Try live demo — free
           </button>
           <button
             type="button"
             onClick={onShowAuth}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white border border-border text-ink px-6 py-3 text-sm font-semibold hover:bg-mist transition-colors"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white border border-border text-ink px-7 py-3.5 text-sm font-bold hover:bg-mist active:scale-[0.98] transition-all"
           >
-            Request access
+            Request early access
           </button>
         </div>
+
         {demoError && <p className="mt-3 text-sm text-coral">{demoError}</p>}
-        <p className="mt-3 text-xs text-slate2">No account needed for the demo</p>
+        <p className="mt-3 text-xs text-slate2">No account needed · No credit card</p>
       </section>
 
-      {/* Features */}
-      <section className="px-5 pb-16 max-w-2xl mx-auto w-full">
+      {/* ── Social proof strip ───────────────────────────────────────────── */}
+      <div className="border-y border-border bg-white px-5 py-5">
+        <div className="max-w-xl mx-auto flex flex-wrap justify-center gap-x-8 gap-y-2 text-xs font-semibold text-slate2 text-center">
+          <span>✓ 100+ beds managed daily</span>
+          <span>✓ Works on Android & iPhone</span>
+          <span>✓ No setup fee</span>
+          <span>✓ 5-minute onboarding</span>
+        </div>
+      </div>
+
+      {/* ── Features ────────────────────────────────────────────────────── */}
+      <section className="px-5 py-16 max-w-2xl mx-auto w-full">
+        <h2 className="text-center text-xl font-bold text-ink mb-2">Everything you need. Nothing you don't.</h2>
+        <p className="text-center text-sm text-slate2 mb-8">Designed for operators who manage beds, not software engineers.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {FEATURES.map(({ icon: Icon, title, body }) => (
-            <div key={title} className="bg-white rounded-2xl border border-border p-5">
+            <div key={title} className="bg-white rounded-2xl border border-border p-5 hover:shadow-sm transition-shadow">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-ink/5 mb-3">
-                <Icon className="h-4.5 w-4.5 text-ink" size={18} />
+                <Icon className="text-ink" size={18} />
               </div>
-              <p className="text-sm font-semibold text-ink">{title}</p>
-              <p className="mt-1 text-xs text-slate2 leading-relaxed">{body}</p>
+              <p className="text-sm font-bold text-ink">{title}</p>
+              <p className="mt-1.5 text-xs text-slate2 leading-relaxed">{body}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* CTA strip */}
-      <section className="bg-ink text-white px-5 py-10 text-center">
-        <h2 className="text-xl font-bold mb-2">Ready to bring your PG online?</h2>
-        <p className="text-white/60 text-sm mb-6">Contact us to get access for your property.</p>
-        <a
-          href="https://wa.me/919633310117?text=Hi%2C%20I%27d%20like%20to%20get%20access%20to%20StayOps"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-xl bg-leaf px-6 py-3 text-sm font-semibold text-white hover:bg-leaf/90 transition-colors"
-        >
-          <CheckCircle2 className="h-4 w-4" />
-          Contact on WhatsApp
-        </a>
+      {/* ── Why StayOps ─────────────────────────────────────────────────── */}
+      <section className="bg-ink text-white px-5 py-14">
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-center text-xl font-bold mb-2">Why operators choose StayOps</h2>
+          <p className="text-center text-white/50 text-sm mb-10">Built by a hostel operator, for hostel operators.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {WHY.map(({ icon: Icon, title, body }) => (
+              <div key={title} className="flex flex-col items-start gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
+                  <Icon className="text-white" size={18} />
+                </div>
+                <p className="text-sm font-bold">{title}</p>
+                <p className="text-xs text-white/60 leading-relaxed">{body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
-      <footer className="text-center py-5 text-xs text-slate2">
-        © {new Date().getFullYear()} StayOps
+      {/* ── Final CTA ───────────────────────────────────────────────────── */}
+      <section className="px-5 py-16 flex flex-col items-center text-center">
+        <h2 className="text-2xl font-extrabold text-ink mb-2 tracking-tight">Ready to ditch the spreadsheet?</h2>
+        <p className="text-slate2 text-sm mb-8 max-w-xs">Try a live demo with real data — no signup, no commitment.</p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            type="button"
+            onClick={tryDemo}
+            disabled={demoLoading}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-ink text-white px-7 py-3.5 text-sm font-bold hover:bg-ink/90 active:scale-[0.98] transition-all disabled:opacity-60 shadow-md"
+          >
+            {demoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+            Try live demo
+          </button>
+          <a
+            href="mailto:hello@stayops.com"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white border border-border text-ink px-7 py-3.5 text-sm font-bold hover:bg-mist active:scale-[0.98] transition-all"
+          >
+            <CheckCircle2 className="h-4 w-4 text-leaf" />
+            Get in touch
+          </a>
+        </div>
+        {demoError && <p className="mt-3 text-sm text-coral">{demoError}</p>}
+      </section>
+
+      {/* ── Footer ──────────────────────────────────────────────────────── */}
+      <footer className="border-t border-border bg-white px-5 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate2">
+        <div className="flex items-center gap-2">
+          <img src="/favicon.png" alt="StayOps" width="20" height="20" className="rounded-md opacity-70" />
+          <span>© {new Date().getFullYear()} StayOps</span>
+        </div>
+        <div className="flex items-center gap-5">
+          <button type="button" onClick={onShowAuth} className="hover:text-ink transition-colors">Sign in</button>
+          <a href="mailto:hello@stayops.com" className="hover:text-ink transition-colors">Contact</a>
+        </div>
       </footer>
     </div>
   );
