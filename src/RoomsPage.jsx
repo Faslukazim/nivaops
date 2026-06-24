@@ -204,7 +204,7 @@ function BookBedForm({ bedNumber, onSave, onCancel }) {
 
 // ─── Bed row ──────────────────────────────────────────────────────────────────
 
-function BedRow({ bed, roomNumber, roomId, rooms, upiId, onMarkPaid, onMarkUnpaid, onVacate, onMove, onViewTenant, onDeleteBed, onBook, onCancelBooking, onConvertBooking }) {
+function BedRow({ bed, roomNumber, roomId, rooms, upiId, onMarkPaid, onMarkUnpaid, onVacate, onMove, onViewTenant, onDeleteBed, onBook, onCancelBooking, onConvertBooking, onAssign }) {
   const occ = bed.occupancy;
   const tenant = bed.tenant;
   const booking = bed.booking;
@@ -286,6 +286,16 @@ function BedRow({ bed, roomNumber, roomId, rooms, upiId, onMarkPaid, onMarkUnpai
           {bed.bed_number}
         </div>
         <span className="text-sm text-slate2 flex-1">Available</span>
+        {onAssign && (
+          <button
+            type="button"
+            onClick={() => onAssign(bed.id)}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-ink hover:bg-mist transition-colors"
+          >
+            <UserPlus className="h-3.5 w-3.5" />
+            Assign
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setBooking_(true)}
@@ -410,7 +420,7 @@ function BedRow({ bed, roomNumber, roomId, rooms, upiId, onMarkPaid, onMarkUnpai
 
 // ─── Room detail panel ────────────────────────────────────────────────────────
 
-function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, onClose, onAssign, onRoomUpdate, onViewTenant, onDeleteRoom, onConvertBooking }) {
+function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, onClose, onAssign, onAssignBed, onRoomUpdate, onViewTenant, onDeleteRoom, onConvertBooking }) {
   const toast = useToast();
   const occupied = room.beds.filter(b => b.tenant).length;
   const capacity = room.beds.length;
@@ -565,6 +575,7 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
             onBook={data => handleBook(bed, data)}
             onCancelBooking={handleCancelBooking}
             onConvertBooking={onConvertBooking}
+            onAssign={!bed.tenant && !bed.booking && onAssignBed ? bedId => onAssignBed({ propertyId: selectedPropertyId, roomId: room.id, bedId }) : undefined}
           />
         ))}
       </div>
@@ -771,6 +782,7 @@ export default function RoomsPage({ selectedPropertyId, organizationId, upiId, o
             upiId={upiId}
             onClose={() => setSelectedRoom(null)}
             onAssign={handleAssign}
+            onAssignBed={onAssignBed}
             onRoomUpdate={load}
             onDeleteRoom={handleDeleteRoom}
             onViewTenant={onViewTenant}
@@ -805,12 +817,15 @@ export default function RoomsPage({ selectedPropertyId, organizationId, upiId, o
               room={selectedRoom}
               rooms={rooms}
               selectedPropertyId={selectedPropertyId}
+              organizationId={organizationId}
               upiId={upiId}
               onClose={() => setSelectedRoom(null)}
               onAssign={handleAssign}
+              onAssignBed={onAssignBed}
               onRoomUpdate={load}
               onDeleteRoom={handleDeleteRoom}
               onViewTenant={onViewTenant}
+              onConvertBooking={onConvertBooking}
             />
           ) : (
             <EmptyState

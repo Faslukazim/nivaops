@@ -100,7 +100,7 @@ const PAGES = [
   { id: 'finance',   label: 'Finance',  icon: BarChart2 },
 ];
 
-function BottomNav({ active, onChange }) {
+function BottomNav({ active, onChange, bookingCount = 0 }) {
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-white sm:hidden"
@@ -110,6 +110,7 @@ function BottomNav({ active, onChange }) {
         {PAGES.map(p => {
           const Icon = p.icon;
           const isActive = active === p.id;
+          const badge = p.id === 'rooms' && bookingCount > 0;
           return (
             <button
               key={p.id}
@@ -122,8 +123,9 @@ function BottomNav({ active, onChange }) {
               {isActive && (
                 <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full bg-ink" />
               )}
-              <div className={`rounded-xl p-1 transition-colors ${isActive ? 'bg-black/6' : ''}`}>
+              <div className={`relative rounded-xl p-1 transition-colors ${isActive ? 'bg-black/6' : ''}`}>
                 <Icon className={`h-5 w-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.5]'}`} />
+                {badge && <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-amber text-white text-[8px] font-bold flex items-center justify-center">{bookingCount}</span>}
               </div>
               {p.label}
             </button>
@@ -134,19 +136,20 @@ function BottomNav({ active, onChange }) {
   );
 }
 
-function TopNav({ active, onChange }) {
+function TopNav({ active, onChange, bookingCount = 0 }) {
   return (
     <nav className="hidden sm:flex border-b border-border bg-white px-6">
       <div className="mx-auto max-w-5xl w-full flex gap-1">
         {PAGES.map(p => {
           const Icon = p.icon;
           const isActive = active === p.id;
+          const badge = p.id === 'rooms' && bookingCount > 0;
           return (
             <button
               key={p.id}
               type="button"
               onClick={() => onChange(p.id)}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+              className={`relative inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
                 isActive
                   ? 'border-ink text-ink'
                   : 'border-transparent text-slate2 hover:text-ink'
@@ -154,6 +157,7 @@ function TopNav({ active, onChange }) {
             >
               <Icon className="h-4 w-4" />
               {p.label}
+              {badge && <span className="ml-0.5 h-4 w-4 rounded-full bg-amber text-white text-[9px] font-bold flex items-center justify-center">{bookingCount}</span>}
             </button>
           );
         })}
@@ -697,6 +701,17 @@ function VacatedTenantCard({ tenant: t, onReturnDeposit, onForfeitDeposit, onDel
 
 // ─── tenant card ─────────────────────────────────────────────────────────────
 
+function ordinal(n) {
+  const s = ['th','st','nd','rd'];
+  const v = n % 100;
+  return n + (s[(v-20)%10] || s[v] || s[0]);
+}
+function fmtShortDate(iso) {
+  if (!iso) return '';
+  const [, m, d] = iso.split('-');
+  return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(m)-1] + ' ' + Number(d);
+}
+
 function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMarkPaid, onMarkUnpaid, onReturnDeposit, onForfeitDeposit }) {
   const isPaid = tenant.paymentStatus === 'Paid';
   const hasDeposit = tenant.depositAmount > 0;
@@ -707,18 +722,90 @@ function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMa
   const [vacating, setVacating] = useState(false);
   const [vacateSaving, setVacateSaving] = useState(false);
 
+  // Swipe-to-reveal
+  const touchRef = useRef(null);
+  const [swipeX, setSwipeX] = useState(0);
+  const [swiped, setSwiped] = useState(false);
+  const REVEAL = 120;
+
+  function onTouchStart(e) {
+    touchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, moved: false };
+  }
+  function onTouchMove(e) {
+    if (!touchRef.current) return;
+    const dx = e.touches[0].clientX - touchRef.current.x;
+    const dy = e.touches[0].clientY - touchRef.current.y;
+    if (!touchRef.current.moved && Math.abs(dy) > Math.abs(dx)) { touchRef.current = null; return; }
+    touchRef.current.moved = true;
+    const base = swiped ? -REVEAL : 0;
+    setSwipeX(Math.min(0, Math.max(-REVEAL, base + dx)));
+  }
+  function onTouchEnd() {
+    if (!touchRef.current?.moved) { touchRef.current = null; return; }
+    if (swipeX < -REVEAL / 2) { setSwipeX(-REVEAL); setSwiped(true); }
+    else { setSwipeX(0); setSwiped(false); }
+    touchRef.current = null;
+  }
+  function closeSwipe() { setSwipeX(0); setSwiped(false); }
+
+  const tenantStatus = computeTenantStatus(tenant);
+  const daysOverdue = !isPaid && tenantStatus === STATUS.OVERDUE ? tenantDaysOverdue(tenant) : 0;
+
   return (
-    <Card className={`overflow-hidden transition-colors${flashPaid ? ' flash-paid' : ''}`}>
+    <div
+      className={`relative overflow-hidden rounded-xl border border-border bg-white shadow-card${flashPaid ? ' flash-paid' : ''}`}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      {/* Swipe action tray */}
+      <div className="absolute right-0 inset-y-0 flex" style={{ width: REVEAL }}>
+        {!isPaid && (
+          <button
+            type="button"
+            onClick={() => { closeSwipe(); onMarkPaid(tenant); }}
+            className="flex-1 flex flex-col items-center justify-center gap-1 bg-leaf text-white text-xs font-semibold"
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            Paid
+          </button>
+        )}
+        <a
+          href={`https://wa.me/${String(tenant.phone).replace(/\D/g,'')}?text=${encodeURIComponent(`Hi ${tenant.name}, rent reminder for Room ${tenant.roomNumber} Bed ${tenant.bedNumber}. Monthly rent ${fmt(tenant.monthlyRent)} is unpaid. Please pay at your earliest.${upiId ? ` Pay via GPay/UPI: ${upiId}` : ''}`)}`}
+          target="_blank" rel="noreferrer"
+          onClick={closeSwipe}
+          className={`flex flex-col items-center justify-center gap-1 text-white text-xs font-semibold ${isPaid ? 'flex-1' : 'w-12'}`}
+          style={{ background: '#25D366' }}
+        >
+          <MessageCircle className="h-4 w-4" />
+          {isPaid && 'WA'}
+        </a>
+      </div>
+
+      {/* Sliding card content */}
+      <div
+        style={{ transform: `translateX(${swipeX}px)`, transition: touchRef.current ? 'none' : 'transform 0.2s ease-out' }}
+        className="relative bg-white"
+        onClick={swiped ? closeSwipe : undefined}
+      >
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="font-semibold text-ink truncate">{tenant.name}</p>
             <p className="text-sm text-slate2">{tenant.phone}</p>
           </div>
-          <StatusBadge status={isPaid ? 'paid' : 'unpaid'} />
+          <div className="flex items-center gap-1.5 shrink-0">
+            {daysOverdue > 0 && (
+              <span className="text-[10px] font-semibold text-coral bg-coral/10 rounded px-1.5 py-0.5">{daysOverdue}d overdue</span>
+            )}
+            {!isPaid && tenantStatus === STATUS.DUE_TODAY && (
+              <span className="text-[10px] font-semibold text-amber bg-amber/10 rounded px-1.5 py-0.5">Due today</span>
+            )}
+            <StatusBadge status={isPaid ? 'paid' : 'unpaid'} />
+          </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-3 gap-2 rounded-lg bg-mist p-3">
+        <div className="mt-3 grid grid-cols-4 gap-2 rounded-lg bg-mist p-3">
           <div>
             <Label>Room</Label>
             <p className="mt-0.5 font-semibold tabular-nums">{tenant.roomNumber}</p>
@@ -731,6 +818,12 @@ function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMa
             <Label>Rent</Label>
             <p className="mt-0.5 font-semibold tabular-nums">{fmt(tenant.monthlyRent)}</p>
           </div>
+          {tenant.rentDueDay && (
+            <div>
+              <Label>Due</Label>
+              <p className="mt-0.5 font-semibold tabular-nums">{ordinal(tenant.rentDueDay)}</p>
+            </div>
+          )}
         </div>
 
         {hasDeposit && (
@@ -796,7 +889,7 @@ function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMa
         )}
 
         {tenant.paymentDate && (
-          <p className="mt-2 text-xs text-slate2">Paid on {tenant.paymentDate}</p>
+          <p className="mt-2 text-xs text-slate2">Paid {fmtShortDate(tenant.paymentDate)}</p>
         )}
       </div>
 
@@ -851,7 +944,8 @@ function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMa
           }}
         />
       )}
-    </Card>
+      </div>{/* end sliding content */}
+    </div>
   );
 }
 
@@ -1406,6 +1500,21 @@ function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, sa
           </button>
         </div>
 
+        {!showPast && tenants.length > 0 && (() => {
+          const paid = tenants.filter(t => t.paymentStatus === 'Paid').length;
+          const unpaid = tenants.length - paid;
+          const collected = tenants.filter(t => t.paymentStatus === 'Paid').reduce((s, t) => s + t.monthlyRent, 0);
+          return (
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-white px-4 py-2.5 text-sm">
+              <span className="text-leaf font-semibold">{paid} paid</span>
+              <span className="text-slate2">·</span>
+              <span className="text-coral font-semibold">{unpaid} unpaid</span>
+              <span className="text-slate2">·</span>
+              <span className="text-ink font-semibold">{fmt(collected)} collected</span>
+            </div>
+          );
+        })()}
+
         {!showPast ? (
           tenants.length === 0 ? (
             <Card><EmptyState icon={Users} title="No tenants yet" body="Add your first tenant using the form on the left." /></Card>
@@ -1774,8 +1883,47 @@ export default function App({ session, organizationName, onSignOut } = {}) {
     } catch (e) { toast.error(e.message); }
   }
 
+  // Pull-to-refresh
+  const pullTouchY = useRef(null);
+  const [pullY, setPullY] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const PULL_THRESHOLD = 64;
+
+  function onPullStart(e) {
+    if (window.scrollY > 0) return;
+    pullTouchY.current = e.touches[0].clientY;
+  }
+  function onPullMove(e) {
+    if (pullTouchY.current === null) return;
+    const dy = e.touches[0].clientY - pullTouchY.current;
+    if (dy < 0) { pullTouchY.current = null; return; }
+    setPullY(Math.min(dy * 0.4, PULL_THRESHOLD));
+  }
+  async function onPullEnd() {
+    if (pullY >= PULL_THRESHOLD - 4 && !refreshing) {
+      setRefreshing(true);
+      setPullY(0);
+      try {
+        await Promise.all([
+          fetchTenants(selectedPropertyId || null).then(setTenants),
+          selectedPropertyId ? fetchPendingDeposits(selectedPropertyId).then(setPendingDeposits) : Promise.resolve(),
+          selectedPropertyId ? fetchBookings(selectedPropertyId).then(setPendingBookings) : Promise.resolve(),
+        ]);
+      } catch { /* silent */ }
+      setRefreshing(false);
+    } else {
+      setPullY(0);
+    }
+    pullTouchY.current = null;
+  }
+
   return (
-    <div className="min-h-screen bg-mist pb-14 sm:pb-0">
+    <div
+      className="min-h-screen bg-mist pb-14 sm:pb-0"
+      onTouchStart={onPullStart}
+      onTouchMove={onPullMove}
+      onTouchEnd={onPullEnd}
+    >
       <Header
         properties={properties}
         selectedPropertyId={selectedPropertyId}
@@ -1783,7 +1931,16 @@ export default function App({ session, organizationName, onSignOut } = {}) {
         loadingProperties={loadingProperties}
         onSignOut={onSignOut}
       />
-      <TopNav active={page} onChange={navigateTo} />
+      <TopNav active={page} onChange={navigateTo} bookingCount={pendingBookings.length} />
+
+      {(pullY > 0 || refreshing) && (
+        <div
+          className="flex items-center justify-center overflow-hidden transition-all"
+          style={{ height: refreshing ? 40 : pullY * 0.625 }}
+        >
+          <Loader2 className={`h-5 w-5 text-slate2 ${refreshing ? 'animate-spin' : ''}`} style={{ opacity: refreshing ? 1 : pullY / PULL_THRESHOLD }} />
+        </div>
+      )}
 
       <main className="mx-auto max-w-5xl px-4 py-4 sm:px-6 sm:py-5">
         {error && (
@@ -1925,7 +2082,7 @@ export default function App({ session, organizationName, onSignOut } = {}) {
         />
       )}
 
-      <BottomNav active={page} onChange={navigateTo} />
+      <BottomNav active={page} onChange={navigateTo} bookingCount={pendingBookings.length} />
     </div>
   );
 }
