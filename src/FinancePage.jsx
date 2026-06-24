@@ -68,28 +68,29 @@ function MonthNav({ ym, onChange }) {
 // ─── Sub-nav ──────────────────────────────────────────────────────────────────
 
 const SUB_TABS = [
-  { id: 'rent',      label: 'Rent'      },
-  { id: 'income',    label: 'Income'    },
-  { id: 'expenses',  label: 'Expenses'  },
-  { id: 'pl',        label: 'P&L'       },
-  { id: 'cashflow',  label: 'Cashflow'  },
+  { id: 'rent',      label: 'Rent',     short: 'Rent'  },
+  { id: 'income',    label: 'Income',   short: 'Income' },
+  { id: 'expenses',  label: 'Expenses', short: 'Exp'   },
+  { id: 'pl',        label: 'P&L',      short: 'P&L'   },
+  { id: 'cashflow',  label: 'Cashflow', short: 'Cash'  },
 ];
 
 function SubNav({ active, onChange }) {
   return (
-    <div className="flex rounded-xl bg-white border border-border overflow-x-auto shadow-card scrollbar-none">
+    <div className="flex rounded-xl bg-white border border-border overflow-hidden shadow-card">
       {SUB_TABS.map(t => (
         <button
           key={t.id}
           type="button"
           onClick={() => onChange(t.id)}
-          className={`shrink-0 flex-1 min-w-[72px] py-2.5 text-sm font-semibold transition-colors whitespace-nowrap px-3 ${
+          className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${
             active === t.id
               ? 'bg-ink text-white'
               : 'text-slate2 hover:text-ink hover:bg-mist'
           }`}
         >
-          {t.label}
+          <span className="sm:hidden">{t.short}</span>
+          <span className="hidden sm:inline">{t.label}</span>
         </button>
       ))}
     </div>
