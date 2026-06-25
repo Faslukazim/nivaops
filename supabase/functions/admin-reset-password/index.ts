@@ -2,6 +2,14 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const ADMIN_UID = '06d41f5f-07c6-4922-9456-3e935eef72e7';
 
+function getUidFromToken(token: string): string | null {
+  try {
+    return JSON.parse(atob(token.split('.')[1])).sub ?? null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req: Request) => {
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -10,16 +18,16 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
+    const token = req.headers.get('Authorization')?.replace('Bearer ', '') ?? '';
+    // verify_jwt: true already validated the signature — just check the sub
+    if (getUidFromToken(token) !== ADMIN_UID) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 403, headers: corsHeaders });
+    }
+
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
-
-    const token = req.headers.get('Authorization')?.replace('Bearer ', '');
-    const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token!);
-    if (authErr || user?.id !== ADMIN_UID) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 403, headers: corsHeaders });
-    }
 
     const { user_id, new_password, org_id } = await req.json();
     if (!user_id || !new_password) {

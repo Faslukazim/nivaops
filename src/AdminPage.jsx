@@ -54,10 +54,38 @@ function CopyField({ label, value, mono = false }) {
   );
 }
 
-// ── ViewCredentialsPanel ─────────────────────────────────────────────────────
+// ── CredentialsPanel ─────────────────────────────────────────────────────────
+// Shows saved credentials, or a form to save them for the first time.
 
-function ViewCredentialsPanel({ email, password, onClose }) {
-  const [copied, setCopied] = useState(false);
+function CredentialsPanel({ orgId, email: initEmail, password: initPassword, onClose, onSaved }) {
+  const hasSaved = !!(initEmail && initPassword);
+  const [email, setEmail]     = useState(initEmail ?? '');
+  const [password, setPassword] = useState(initPassword ?? '');
+  const [show, setShow]       = useState(false);
+  const [busy, setBusy]       = useState(false);
+  const [error, setError]     = useState('');
+  const [copied, setCopied]   = useState(false);
+  const [saved, setSaved]     = useState(hasSaved);
+
+  async function handleSave(e) {
+    e.preventDefault();
+    if (!email || !password) { setError('Enter both email and password'); return; }
+    setBusy(true);
+    setError('');
+    try {
+      const { error: err } = await supabase
+        .from('admin_credentials')
+        .upsert({ org_id: orgId, email: email.trim(), password, updated_at: new Date().toISOString() });
+      if (err) throw err;
+      setSaved(true);
+      onSaved?.(email.trim(), password);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function copyAll() {
     navigator.clipboard.writeText(
       `StayOps login\nEmail: ${email}\nPassword: ${password}\nApp: https://stayops.vercel.app`
@@ -65,18 +93,61 @@ function ViewCredentialsPanel({ email, password, onClose }) {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
+
   return (
     <div className="rounded-xl border border-border bg-white p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-ink">Saved credentials</p>
+        <p className="text-sm font-semibold text-ink">{saved ? 'Saved credentials' : 'Save credentials'}</p>
         <button onClick={onClose} className="text-slate2 hover:text-ink"><X className="h-4 w-4" /></button>
       </div>
-      <CopyField label="Email" value={email} />
-      <CopyField label="Password" value={password} mono />
-      <button onClick={copyAll}
-        className="w-full rounded-xl border border-border bg-mist py-2 text-xs font-bold text-ink hover:bg-border transition-colors">
-        {copied ? '✓ Copied!' : 'Copy all for WhatsApp'}
-      </button>
+
+      {saved ? (
+        <>
+          <CopyField label="Email" value={email} />
+          <CopyField label="Password" value={password} mono />
+          <button onClick={copyAll}
+            className="w-full rounded-xl border border-border bg-mist py-2 text-xs font-bold text-ink hover:bg-border transition-colors">
+            {copied ? '✓ Copied!' : 'Copy all for WhatsApp'}
+          </button>
+          <button onClick={() => setSaved(false)} className="text-xs text-slate2 hover:text-ink transition-colors text-left">
+            Update saved password
+          </button>
+        </>
+      ) : (
+        <form onSubmit={handleSave} className="flex flex-col gap-3">
+          <p className="text-xs text-slate2">Enter the current credentials you remember — they'll be saved for future reference.</p>
+          {error && (
+            <div className="flex items-center gap-2 rounded-lg bg-coral/5 border border-coral/20 px-3 py-2">
+              <AlertCircle className="h-3.5 w-3.5 text-coral shrink-0" />
+              <p className="text-xs text-coral">{error}</p>
+            </div>
+          )}
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="Login email"
+            className="w-full rounded-xl border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+          />
+          <div className="relative">
+            <input
+              type={show ? 'text' : 'password'}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="Current password"
+              className="w-full rounded-xl border border-border px-3 py-2.5 text-sm font-mono pr-10 focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+            />
+            <button type="button" onClick={() => setShow(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate2 hover:text-ink">
+              {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+          <button type="submit" disabled={busy}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-ink text-white py-2.5 text-sm font-bold hover:bg-ink/90 transition-colors disabled:opacity-60">
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+            Save
+          </button>
+        </form>
+      )}
     </div>
   );
 }
@@ -184,11 +255,11 @@ function OrgCard({ org, onApprove, onReject, onBan, busy }) {
   const [showCreds, setShowCreds]   = useState(false);
   const [banConfirm, setBanConfirm] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [localEmail, setLocalEmail]       = useState(org.last_email);
   const [localPassword, setLocalPassword] = useState(org.last_password);
 
   const isPending = !org.approved;
   const isBusy    = busy === org.org_id;
-  const hasCreds  = !!(org.last_email && localPassword);
 
   function closeActions() {
     setShowReset(false);
@@ -274,12 +345,11 @@ function OrgCard({ org, onApprove, onReject, onBan, busy }) {
 
           {/* Action bar */}
           <div className="flex items-center gap-1 px-4 py-2.5 bg-mist/60 flex-wrap">
-            {hasCreds && (
-              <button onClick={() => toggleSection('creds')}
-                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${showCreds ? 'bg-ink text-white' : 'bg-white border border-border text-slate2 hover:bg-mist'}`}>
-                <Eye className="h-3.5 w-3.5" /> View password
-              </button>
-            )}
+            <button onClick={() => toggleSection('creds')}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${showCreds ? 'bg-ink text-white' : 'bg-white border border-border text-slate2 hover:bg-mist'}`}>
+              <Eye className="h-3.5 w-3.5" />
+              {localPassword ? 'View password' : 'Save password'}
+            </button>
             <button onClick={() => toggleSection('reset')}
               className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${showReset ? 'bg-ink text-white' : 'bg-white border border-border text-ink hover:bg-mist'}`}>
               <KeyRound className="h-3.5 w-3.5" /> Reset password
@@ -305,10 +375,12 @@ function OrgCard({ org, onApprove, onReject, onBan, busy }) {
           <div className="px-4 pb-4 flex flex-col gap-3 mt-1">
 
             {showCreds && (
-              <ViewCredentialsPanel
-                email={org.last_email}
+              <CredentialsPanel
+                orgId={org.org_id}
+                email={localEmail}
                 password={localPassword}
                 onClose={() => setShowCreds(false)}
+                onSaved={(e, p) => { setLocalEmail(e); setLocalPassword(p); }}
               />
             )}
 
@@ -317,7 +389,7 @@ function OrgCard({ org, onApprove, onReject, onBan, busy }) {
                 userId={org.owner_id}
                 orgId={org.org_id}
                 onClose={() => setShowReset(false)}
-                onPasswordSaved={p => setLocalPassword(p)}
+                onPasswordSaved={p => { setLocalPassword(p); setLocalEmail(org.owner_email); }}
               />
             )}
 
