@@ -54,11 +54,38 @@ function CopyField({ label, value, mono = false }) {
   );
 }
 
+// ── ViewCredentialsPanel ─────────────────────────────────────────────────────
+
+function ViewCredentialsPanel({ email, password, onClose }) {
+  const [copied, setCopied] = useState(false);
+  function copyAll() {
+    navigator.clipboard.writeText(
+      `StayOps login\nEmail: ${email}\nPassword: ${password}\nApp: https://stayops.vercel.app`
+    );
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+  return (
+    <div className="rounded-xl border border-border bg-white p-4 flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold text-ink">Saved credentials</p>
+        <button onClick={onClose} className="text-slate2 hover:text-ink"><X className="h-4 w-4" /></button>
+      </div>
+      <CopyField label="Email" value={email} />
+      <CopyField label="Password" value={password} mono />
+      <button onClick={copyAll}
+        className="w-full rounded-xl border border-border bg-mist py-2 text-xs font-bold text-ink hover:bg-border transition-colors">
+        {copied ? '✓ Copied!' : 'Copy all for WhatsApp'}
+      </button>
+    </div>
+  );
+}
+
 // ── PasswordResetPanel ────────────────────────────────────────────────────────
 // Only sends the reset when the user explicitly clicks "Set password".
 // The new password field starts empty.
 
-function PasswordResetPanel({ userId, onClose }) {
+function PasswordResetPanel({ userId, orgId, onClose, onPasswordSaved }) {
   const [password, setPassword] = useState('');
   const [show, setShow]         = useState(false);
   const [busy, setBusy]         = useState(false);
@@ -77,13 +104,14 @@ function PasswordResetPanel({ userId, onClose }) {
       const res = await fetch(RESET_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ user_id: userId, new_password: password }),
+        body: JSON.stringify({ user_id: userId, org_id: orgId, new_password: password }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Failed');
       setSavedPass(password);
       setPassword('');
       setDone(true);
+      onPasswordSaved?.(password);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -151,22 +179,27 @@ function PasswordResetPanel({ userId, onClose }) {
 // ── OrgCard ───────────────────────────────────────────────────────────────────
 
 function OrgCard({ org, onApprove, onReject, onBan, busy }) {
-  const [open, setOpen]           = useState(false);
-  const [showReset, setShowReset] = useState(false);
+  const [open, setOpen]             = useState(false);
+  const [showReset, setShowReset]   = useState(false);
+  const [showCreds, setShowCreds]   = useState(false);
   const [banConfirm, setBanConfirm] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [localPassword, setLocalPassword] = useState(org.last_password);
 
   const isPending = !org.approved;
   const isBusy    = busy === org.org_id;
+  const hasCreds  = !!(org.last_email && localPassword);
 
   function closeActions() {
     setShowReset(false);
+    setShowCreds(false);
     setBanConfirm(false);
     setDeleteConfirm(false);
   }
 
   function toggleSection(section) {
     if (section === 'reset')  { closeActions(); setShowReset(v => !v); }
+    if (section === 'creds')  { closeActions(); setShowCreds(v => !v); }
     if (section === 'ban')    { closeActions(); setBanConfirm(v => !v); }
     if (section === 'delete') { closeActions(); setDeleteConfirm(v => !v); }
   }
@@ -241,6 +274,12 @@ function OrgCard({ org, onApprove, onReject, onBan, busy }) {
 
           {/* Action bar */}
           <div className="flex items-center gap-1 px-4 py-2.5 bg-mist/60 flex-wrap">
+            {hasCreds && (
+              <button onClick={() => toggleSection('creds')}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${showCreds ? 'bg-ink text-white' : 'bg-white border border-border text-slate2 hover:bg-mist'}`}>
+                <Eye className="h-3.5 w-3.5" /> View password
+              </button>
+            )}
             <button onClick={() => toggleSection('reset')}
               className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${showReset ? 'bg-ink text-white' : 'bg-white border border-border text-ink hover:bg-mist'}`}>
               <KeyRound className="h-3.5 w-3.5" /> Reset password
@@ -265,8 +304,21 @@ function OrgCard({ org, onApprove, onReject, onBan, busy }) {
           {/* Inline panels */}
           <div className="px-4 pb-4 flex flex-col gap-3 mt-1">
 
+            {showCreds && (
+              <ViewCredentialsPanel
+                email={org.last_email}
+                password={localPassword}
+                onClose={() => setShowCreds(false)}
+              />
+            )}
+
             {showReset && (
-              <PasswordResetPanel userId={org.owner_id} onClose={() => setShowReset(false)} />
+              <PasswordResetPanel
+                userId={org.owner_id}
+                orgId={org.org_id}
+                onClose={() => setShowReset(false)}
+                onPasswordSaved={p => setLocalPassword(p)}
+              />
             )}
 
             {banConfirm && (
