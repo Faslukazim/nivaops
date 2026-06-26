@@ -17,6 +17,7 @@ import { STATUS, computeTenantStatus, tenantDaysOverdue } from './utils/paymentS
 import RoomsPage from './RoomsPage';
 import FinancePage from './FinancePage';
 import TenantProfile from './TenantProfile';
+import { NivaLogo } from './components/NivaLogo';
 import {
   fmt, Label, Card, SectionHeader, Btn, IconBtn,
   StatusBadge, WhatsAppLink,
@@ -55,8 +56,8 @@ function PropertyPill({ properties, selectedId, onChange, loading }) {
 function StayOpsLogo() {
   return (
     <div className="flex items-center gap-2.5">
-      <img src="/favicon.png" alt="StayOps" width="36" height="36" className="rounded-lg" />
-      <span className="text-[15px] font-semibold tracking-tight text-ink">StayOps</span>
+      <NivaLogo size={28} />
+      <span className="text-[15px] font-semibold tracking-tight text-ink">NivaOps</span>
     </div>
   );
 }
@@ -1597,9 +1598,9 @@ function EmptyWorkspace({ onSeed, seeding }) {
         <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-mist">
           <BedDouble className="h-6 w-6 text-ink" />
         </div>
-        <h2 className="text-lg font-bold text-ink">Welcome to StayOps</h2>
+        <h2 className="text-lg font-bold text-ink">Welcome to NivaOps</h2>
         <p className="mt-1.5 text-sm text-slate2">
-          Your workspace is empty. Load a sample hostel — rooms, tenants, and this month&apos;s rent — to see how StayOps works.
+          Your workspace is empty. Load a sample hostel — rooms, tenants, and this month&apos;s rent — to see how NivaOps works.
         </p>
         <Btn variant="primary" className="mt-4 w-full justify-center py-3" onClick={onSeed} disabled={seeding}>
           {seeding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}

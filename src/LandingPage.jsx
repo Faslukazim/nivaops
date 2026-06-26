@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Loader2, ArrowRight, BedDouble, CreditCard, Users, BarChart2, CheckCircle2, Zap, Shield, Smartphone } from 'lucide-react';
 import { signIn } from './services/authService';
+import { NivaLogo } from './components/NivaLogo';
 
 const FEATURES = [
   {
@@ -39,7 +40,7 @@ export default function LandingPage({ onShowAuth }) {
     setDemoLoading(true);
     setDemoError('');
     try {
-      await signIn('demo@stayops.com', 'demo2026');
+      await signIn('demo@stayops.com', 'demo2026'); // demo account unchanged
     } catch {
       setDemoError('Demo unavailable right now. Try again in a moment.');
       setDemoLoading(false);
@@ -55,8 +56,8 @@ export default function LandingPage({ onShowAuth }) {
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)', paddingBottom: '1rem' }}
       >
         <div className="flex items-center gap-2.5">
-          <img src="/favicon.png" alt="StayOps" width="32" height="32" className="rounded-lg" />
-          <span className="text-[15px] font-bold tracking-tight text-ink">StayOps</span>
+          <NivaLogo size={28} />
+          <span className="text-[15px] font-bold tracking-tight text-ink">NivaOps</span>
         </div>
         <div className="flex items-center gap-4">
           <button
@@ -70,7 +71,7 @@ export default function LandingPage({ onShowAuth }) {
             type="button"
             onClick={tryDemo}
             disabled={demoLoading}
-            className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-ink text-white px-4 py-2 text-sm font-semibold hover:bg-ink/90 transition-colors disabled:opacity-60"
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-forest text-white px-4 py-2 text-sm font-semibold hover:bg-forest/90 transition-colors disabled:opacity-60"
           >
             {demoLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
             Try demo
@@ -84,14 +85,12 @@ export default function LandingPage({ onShowAuth }) {
           Hostels · Co-living · Boarding houses · PGs
         </span>
 
-        <h1 className="text-[2.25rem] sm:text-5xl font-extrabold text-ink leading-[1.15] max-w-md tracking-tight">
-          Run your beds.<br />
-          <span className="text-leaf">Not spreadsheets.</span>
+        <h1 className="font-marketing text-[2.25rem] sm:text-5xl font-extrabold text-ink leading-[1.15] max-w-md tracking-tight">
+          The operating system for modern rental properties.
         </h1>
 
         <p className="mt-5 text-slate2 text-base sm:text-lg max-w-sm leading-relaxed">
-          Tenants, rent, rooms, and finances — all on your phone.
-          Know who's paid and who hasn't, in seconds.
+          NivaOps helps property operators streamline operations, maximize occupancy, and deliver great living experiences.
         </p>
 
         <div className="mt-8 flex flex-col sm:flex-row gap-3 w-full max-w-xs sm:max-w-none sm:justify-center">
@@ -99,7 +98,7 @@ export default function LandingPage({ onShowAuth }) {
             type="button"
             onClick={tryDemo}
             disabled={demoLoading}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-ink text-white px-7 py-3.5 text-sm font-bold hover:bg-ink/90 active:scale-[0.98] transition-all disabled:opacity-60 shadow-md"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-forest text-white px-7 py-3.5 text-sm font-bold hover:bg-forest/90 active:scale-[0.98] transition-all disabled:opacity-60 shadow-md"
           >
             {demoLoading
               ? <Loader2 className="h-4 w-4 animate-spin" />
@@ -146,11 +145,11 @@ export default function LandingPage({ onShowAuth }) {
         </div>
       </section>
 
-      {/* ── Why StayOps ─────────────────────────────────────────────────── */}
-      <section className="bg-ink text-white px-5 py-14">
+      {/* ── Why NivaOps ─────────────────────────────────────────────────── */}
+      <section className="bg-forest text-white px-5 py-14">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-center text-xl font-bold mb-2">Why operators choose StayOps</h2>
-          <p className="text-center text-white/50 text-sm mb-10">Built by a hostel operator, for hostel operators.</p>
+          <h2 className="text-center text-xl font-bold mb-2">Why operators choose NivaOps</h2>
+          <p className="text-center text-white/50 text-sm mb-10">Run properties smarter. Delight residents. Grow with confidence.</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {WHY.map(({ icon: Icon, title, body }) => (
               <div key={title} className="flex flex-col items-start gap-3">
@@ -198,7 +197,7 @@ export default function LandingPage({ onShowAuth }) {
           </div>
 
           {/* Growth */}
-          <div className="bg-ink rounded-2xl p-6 flex flex-col relative overflow-hidden">
+          <div className="bg-forest rounded-2xl p-6 flex flex-col relative overflow-hidden">
             <div className="absolute top-4 right-4 rounded-full bg-leaf px-2.5 py-0.5 text-[10px] font-bold text-white tracking-wide uppercase">
               Popular
             </div>
@@ -229,7 +228,7 @@ export default function LandingPage({ onShowAuth }) {
 
         <p className="text-center text-xs text-slate2 mt-6">
           More than 100 beds?{' '}
-          <a href="mailto:hello@stayops.com" className="font-semibold text-ink hover:underline">
+          <a href="mailto:hello@nivaops.com" className="font-semibold text-ink hover:underline">
             Talk to us
           </a>{' '}
           for a custom plan.
@@ -245,13 +244,13 @@ export default function LandingPage({ onShowAuth }) {
             type="button"
             onClick={tryDemo}
             disabled={demoLoading}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-ink text-white px-7 py-3.5 text-sm font-bold hover:bg-ink/90 active:scale-[0.98] transition-all disabled:opacity-60 shadow-md"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-forest text-white px-7 py-3.5 text-sm font-bold hover:bg-forest/90 active:scale-[0.98] transition-all disabled:opacity-60 shadow-md"
           >
             {demoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
             Try live demo
           </button>
           <a
-            href="mailto:hello@stayops.com"
+            href="mailto:hello@nivaops.com"
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white border border-border text-ink px-7 py-3.5 text-sm font-bold hover:bg-mist active:scale-[0.98] transition-all"
           >
             <CheckCircle2 className="h-4 w-4 text-leaf" />
@@ -264,12 +263,12 @@ export default function LandingPage({ onShowAuth }) {
       {/* ── Footer ──────────────────────────────────────────────────────── */}
       <footer className="border-t border-border bg-white px-5 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate2">
         <div className="flex items-center gap-2">
-          <img src="/favicon.png" alt="StayOps" width="20" height="20" className="rounded-md opacity-70" />
-          <span>© {new Date().getFullYear()} StayOps</span>
+          <NivaLogo size={20} className="opacity-70" />
+          <span>© {new Date().getFullYear()} NivaOps</span>
         </div>
         <div className="flex items-center gap-5">
           <button type="button" onClick={onShowAuth} className="hover:text-ink transition-colors">Sign in</button>
-          <a href="mailto:hello@stayops.com" className="hover:text-ink transition-colors">Contact</a>
+          <a href="mailto:hello@nivaops.com" className="hover:text-ink transition-colors">Contact</a>
         </div>
       </footer>
     </div>

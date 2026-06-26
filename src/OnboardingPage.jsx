@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Loader2, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { createOrganization, signOut } from './services/authService';
 import { SignOutBtn } from './components/ui';
+import { NivaLogo } from './components/NivaLogo';
 
 export default function OnboardingPage({ email, onCreated, onSignOut }) {
   const [step, setStep] = useState(1); // 1 = business name, 2 = first property
@@ -11,7 +12,7 @@ export default function OnboardingPage({ email, onCreated, onSignOut }) {
   const [error, setError]             = useState('');
   const [busy, setBusy]               = useState(false);
 
-  const inputCls = 'w-full rounded-xl border border-border bg-white px-4 py-3 text-base text-ink placeholder:text-slate2/60 focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink transition-all';
+  const inputCls = 'w-full rounded-xl border border-border bg-white px-4 py-3 text-base text-ink placeholder:text-slate2/60 focus:outline-none focus:ring-2 focus:ring-sage/40 focus:border-forest transition-all';
 
   async function handleSignOut() {
     try { await signOut(); } finally { onSignOut?.(); }
@@ -48,8 +49,8 @@ export default function OnboardingPage({ email, onCreated, onSignOut }) {
       {/* Top bar */}
       <div className="flex items-center justify-between px-5 pt-5 pb-2">
         <div className="flex items-center gap-2">
-          <img src="/favicon.png" alt="StayOps" width="28" height="28" className="rounded-lg" />
-          <span className="text-sm font-bold text-ink tracking-tight">StayOps</span>
+          <NivaLogo size={28} />
+          <span className="text-sm font-bold text-ink tracking-tight">NivaOps</span>
         </div>
         <SignOutBtn onSignOut={handleSignOut} />
       </div>
@@ -90,7 +91,7 @@ export default function OnboardingPage({ email, onCreated, onSignOut }) {
 
               <button
                 type="submit"
-                className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-ink text-white py-3.5 text-sm font-bold hover:bg-ink/90 active:scale-[0.98] transition-all"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-forest text-white py-3.5 text-sm font-bold hover:bg-forest/90 active:scale-[0.98] transition-all"
               >
                 Continue
                 <ArrowRight className="h-4 w-4" />
@@ -151,12 +152,12 @@ export default function OnboardingPage({ email, onCreated, onSignOut }) {
                 <button
                   type="submit"
                   disabled={busy}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-ink text-white py-3.5 text-sm font-bold hover:bg-ink/90 active:scale-[0.98] transition-all disabled:opacity-60"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-forest text-white py-3.5 text-sm font-bold hover:bg-forest/90 active:scale-[0.98] transition-all disabled:opacity-60"
                 >
                   {busy
                     ? <Loader2 className="h-4 w-4 animate-spin" />
                     : <ArrowRight className="h-4 w-4" />}
-                  Open StayOps
+                  Open NivaOps
                 </button>
                 <button
                   type="button"

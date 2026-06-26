@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { SignOutBtn } from './components/ui';
+import { NivaLogo } from './components/NivaLogo';
 
 const CREATE_URL = 'https://drlkmfhpthhkvnljuprm.supabase.co/functions/v1/admin-create-user';
 const RESET_URL  = 'https://drlkmfhpthhkvnljuprm.supabase.co/functions/v1/admin-reset-password';
@@ -124,7 +125,7 @@ function CredentialsPanel({ userId, email: initEmail, password: initPassword, on
 
   function copyAll() {
     navigator.clipboard.writeText(
-      `StayOps login\nEmail: ${email}\nPassword: ${password}\nApp: https://stayops.vercel.app`
+      `NivaOps login\nEmail: ${email}\nPassword: ${password}\nApp: https://nivaops.vercel.app`
     );
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -179,7 +180,7 @@ function CredentialsPanel({ userId, email: initEmail, password: initPassword, on
             </button>
           </div>
           <button type="submit" disabled={busy}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-ink text-white py-2.5 text-sm font-bold hover:bg-ink/90 transition-colors disabled:opacity-60">
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-forest text-white py-2.5 text-sm font-bold hover:bg-forest/90 transition-colors disabled:opacity-60">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
             Save
           </button>
@@ -257,7 +258,7 @@ function PasswordResetPanel({ userId, ownerEmail, onClose, onPasswordSaved, onTo
       </button>
 
       <button type="submit" disabled={busy}
-        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-ink text-white py-2.5 text-sm font-bold hover:bg-ink/90 transition-colors disabled:opacity-60">
+        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-forest text-white py-2.5 text-sm font-bold hover:bg-forest/90 transition-colors disabled:opacity-60">
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
         Set password
       </button>
@@ -365,12 +366,12 @@ function OrgCard({ org, onApprove, onReject, onBan, busy, onToast }) {
           {/* Action bar */}
           <div className="flex items-center gap-1 px-4 py-2.5 bg-mist/60 flex-wrap">
             <button onClick={() => toggleSection('creds')}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${showCreds ? 'bg-ink text-white' : 'bg-white border border-border text-slate2 hover:bg-mist'}`}>
+              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${showCreds ? 'bg-forest text-white' : 'bg-white border border-border text-slate2 hover:bg-mist'}`}>
               <Eye className="h-3.5 w-3.5" />
               {localPassword ? 'View password' : 'Save password'}
             </button>
             <button onClick={() => toggleSection('reset')}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${showReset ? 'bg-ink text-white' : 'bg-white border border-border text-ink hover:bg-mist'}`}>
+              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${showReset ? 'bg-forest text-white' : 'bg-white border border-border text-ink hover:bg-mist'}`}>
               <KeyRound className="h-3.5 w-3.5" /> Reset password
             </button>
             <button onClick={() => toggleSection('ban')}
@@ -554,7 +555,7 @@ function CreateAccountForm({ onCreated, onClose, onToast }) {
       </div>
 
       <button type="submit" disabled={busy}
-        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-ink text-white py-3 text-sm font-bold hover:bg-ink/90 transition-colors disabled:opacity-60">
+        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-forest text-white py-3 text-sm font-bold hover:bg-forest/90 transition-colors disabled:opacity-60">
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
         Create account
       </button>
@@ -568,7 +569,7 @@ function CredentialsCard({ creds, onClose }) {
   const [copied, setCopied] = useState(false);
   function copyAll() {
     navigator.clipboard.writeText(
-      `StayOps login\nOrganization: ${creds.orgName}\nEmail: ${creds.email}\nPassword: ${creds.password}\nApp: https://stayops.vercel.app`
+      `NivaOps login\nOrganization: ${creds.orgName}\nEmail: ${creds.email}\nPassword: ${creds.password}\nApp: https://nivaops.vercel.app`
     );
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -673,7 +674,7 @@ export default function AdminPage({ onSignOut, onOpenApp }) {
       <header className="bg-white border-b border-border px-5 flex items-center justify-between sticky top-0 z-40"
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)', paddingBottom: '1rem' }}>
         <div className="flex items-center gap-2.5">
-          <img src="/favicon.png" alt="StayOps" width="28" height="28" className="rounded-lg" />
+          <NivaLogo size={28} />
           <span className="text-sm font-bold text-ink">Admin</span>
           {pending.length > 0 && (
             <span className="rounded-full bg-amber text-white text-[10px] font-bold px-1.5 py-0.5 leading-none">{pending.length}</span>
@@ -699,7 +700,7 @@ export default function AdminPage({ onSignOut, onOpenApp }) {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-ink">Accounts</h2>
             <button onClick={() => { setShowCreate(v => !v); setCreds(null); }}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-ink text-white px-3 py-1.5 text-xs font-bold hover:bg-ink/90 transition-colors">
+              className="inline-flex items-center gap-1.5 rounded-xl bg-forest text-white px-3 py-1.5 text-xs font-bold hover:bg-forest/90 transition-colors">
               {showCreate ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
               {showCreate ? 'Cancel' : 'New account'}
             </button>

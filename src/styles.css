@@ -2,9 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
-  color: #0F1117;
-  background: #F7F7F5;
+  --color-forest:     #20342C;
+  --color-sage:       #B2CBB6;
+  --color-sage-deep:  #8FBC8F;
+  --color-warm-white: #F7F6F3;
+  --color-charcoal:   #1D2420;
+  --color-surface:    #ECEFEA;
+
+  color: #1D2420;
+  background: #F7F6F3;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -14,6 +23,11 @@
 body {
   margin: 0;
   min-width: 320px;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.font-marketing {
+  font-family: 'Satoshi', system-ui, sans-serif;
 }
 
 button,

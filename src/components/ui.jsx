@@ -1,4 +1,4 @@
-// ─── StayOps shared primitives ───────────────────────────────────────────────
+// ─── NivaOps shared primitives ───────────────────────────────────────────────
 // Single source of truth for all reusable UI elements.
 // Import from here, never redefine inline.
 
@@ -105,7 +105,7 @@ export function SectionHeader({ title, action }) {
 
 export function Btn({ children, className = '', variant = 'ghost', size = 'md', ...props }) {
   const variants = {
-    primary:        'bg-ink text-white hover:bg-ink/80',
+    primary:        'bg-forest text-white hover:bg-forest/80',
     secondary:      'border border-border text-slate2 hover:bg-mist hover:text-ink',
     ghost:          'text-slate2 hover:bg-mist hover:text-ink',
     danger:         'text-coral hover:bg-coral/10',

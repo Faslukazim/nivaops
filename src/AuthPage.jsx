@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { Loader2, Mail, Lock, ArrowRight, ArrowLeft } from 'lucide-react';
 import { signIn } from './services/authService';
 import { Btn } from './components/ui';
+import { NivaLogo } from './components/NivaLogo';
 
 function StayOpsMark() {
   return (
     <div className="flex flex-col items-center gap-2">
-      <img src="/favicon.png" alt="StayOps" width="56" height="56" className="rounded-xl" />
-      <span className="text-lg font-bold tracking-tight text-ink">StayOps</span>
+      <NivaLogo size={56} className="rounded-xl" />
+      <span className="text-lg font-bold tracking-tight text-ink">NivaOps</span>
     </div>
   );
 }
@@ -67,7 +68,7 @@ export default function AuthPage({ onAuthed, onBack }) {
 
         <div className="rounded-2xl bg-white border border-border shadow-card p-6">
           <h1 className="text-lg font-bold text-ink text-center">Welcome back</h1>
-          <p className="mt-1 text-sm text-slate2 text-center">Sign in to your StayOps workspace.</p>
+          <p className="mt-1 text-sm text-slate2 text-center">Sign in to your NivaOps workspace.</p>
 
           {error && (
             <div className="mt-4 rounded-lg border border-coral/30 bg-coral/5 px-3 py-2.5 text-sm text-coral">
@@ -129,7 +130,7 @@ export default function AuthPage({ onAuthed, onBack }) {
         <p className="mt-5 text-center text-sm text-slate2">
           Don't have access?{' '}
           <a
-            href="https://wa.me/919633310117?text=Hi%2C%20I%27d%20like%20to%20get%20access%20to%20StayOps"
+            href="https://wa.me/919633310117?text=Hi%2C%20I%27d%20like%20to%20get%20access%20to%20NivaOps"
             target="_blank"
             rel="noopener noreferrer"
             className="font-semibold text-ink hover:underline"
