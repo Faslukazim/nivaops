@@ -19,7 +19,7 @@ export default function AuthPage({ onAuthed, onBack }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const inputCls = 'w-full rounded-lg border border-border bg-white pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald/30 focus:border-emerald';
+  const inputCls = 'w-full rounded-lg border border-border bg-white pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-green';
 
   async function handleSubmit(e) {
     e.preventDefault();

@@ -105,7 +105,7 @@ const PAGES = [
 function BottomNav({ active, onChange, bookingCount = 0 }) {
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-white sm:hidden"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-midnight border-t border-white/10 sm:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="grid grid-cols-4">
@@ -119,14 +119,14 @@ function BottomNav({ active, onChange, bookingCount = 0 }) {
               type="button"
               onClick={() => onChange(p.id)}
               className={`relative flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium tracking-normal transition-colors ${
-                isActive ? 'text-ink' : 'text-slate2'
+                isActive ? 'text-green' : 'text-white/40'
               }`}
             >
               {isActive && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full bg-ink" />
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full bg-green" />
               )}
-              <div className={`relative rounded-xl p-1 transition-colors ${isActive ? 'bg-black/6' : ''}`}>
-                <Icon className={`h-5 w-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.5]'}`} />
+              <div className={`relative rounded-xl p-1 transition-colors ${isActive ? 'bg-green/10' : ''}`}>
+                <Icon className={`h-5 w-5 ${isActive ? 'text-green stroke-[2.5]' : 'text-white/40 stroke-[1.5]'}`} />
                 {badge && <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-amber text-white text-[8px] font-bold flex items-center justify-center">{bookingCount}</span>}
               </div>
               {p.label}

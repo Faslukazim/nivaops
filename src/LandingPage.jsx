@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Loader2, ArrowRight, BedDouble, CreditCard, Users, BarChart2, CheckCircle2, Zap, Shield, Smartphone } from 'lucide-react';
+import { Loader2, ArrowRight, BedDouble, CreditCard, Users, BarChart2, CheckCircle2, Zap, Shield, Smartphone,
+  Home, IndianRupee, BarChart3, MessageCircle, Check, Menu, X } from 'lucide-react';
 import { signIn } from './services/authService';
 import { NivaLogo, NivaWordmark } from './components/NivaLogo';
 
@@ -71,7 +72,7 @@ export default function LandingPage({ onShowAuth }) {
             type="button"
             onClick={tryDemo}
             disabled={demoLoading}
-            className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-emerald text-white px-4 py-2 text-sm font-semibold hover:bg-emerald/90 transition-colors disabled:opacity-60"
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-green hover:bg-green-hover text-white px-4 py-2 text-sm font-semibold transition-all duration-150 disabled:opacity-60"
           >
             {demoLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
             Try demo
@@ -81,7 +82,7 @@ export default function LandingPage({ onShowAuth }) {
 
       {/* ── Hero ────────────────────────────────────────────────────────── */}
       <section className="bg-white flex flex-col items-center text-center px-5 pt-16 pb-14">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald/10 text-emerald text-xs font-semibold px-3 py-1 border border-emerald/20 mb-6">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-green-light text-green text-xs font-semibold px-3 py-1 border border-green/20 mb-6">
           Hostels · Co-living · Boarding houses · PGs
         </span>
 
@@ -98,7 +99,7 @@ export default function LandingPage({ onShowAuth }) {
             type="button"
             onClick={tryDemo}
             disabled={demoLoading}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald text-white px-6 py-3 text-sm font-semibold hover:bg-emerald/90 active:scale-[0.98] transition-all disabled:opacity-60 shadow-md"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-green hover:bg-green-hover text-white px-6 py-3 text-sm font-semibold active:scale-[0.98] transition-all disabled:opacity-60 shadow-md"
           >
             {demoLoading
               ? <Loader2 className="h-4 w-4 animate-spin" />
@@ -135,8 +136,8 @@ export default function LandingPage({ onShowAuth }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {FEATURES.map(({ icon: Icon, title, body }) => (
             <div key={title} className="bg-white rounded-2xl border border-border p-5 hover:shadow-md transition-shadow">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald/10 mb-3">
-                <Icon className="text-emerald" size={18} />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-green-light mb-3">
+                <Icon className="text-green" size={18} />
               </div>
               <p className="text-sm font-bold text-charcoal">{title}</p>
               <p className="mt-1.5 text-xs text-slate leading-relaxed">{body}</p>
@@ -182,7 +183,7 @@ export default function LandingPage({ onShowAuth }) {
             <ul className="flex flex-col gap-2.5 mb-8 flex-1">
               {['Rooms & bed management','Tenant records + ID photos','Rent tracking & reminders','Expense tracking','Monthly P&L'].map(f => (
                 <li key={f} className="flex items-center gap-2 text-sm text-charcoal">
-                  <CheckCircle2 className="h-4 w-4 text-emerald shrink-0" />
+                  <CheckCircle2 className="h-4 w-4 text-green shrink-0" />
                   {f}
                 </li>
               ))}
@@ -198,7 +199,7 @@ export default function LandingPage({ onShowAuth }) {
 
           {/* Growth */}
           <div className="bg-midnight rounded-2xl p-8 flex flex-col relative overflow-hidden">
-            <div className="absolute top-4 right-4 rounded-full bg-emerald text-white text-[10px] font-bold px-2.5 py-0.5 tracking-wide uppercase">
+            <div className="absolute top-4 right-4 rounded-full bg-green text-white text-[10px] font-bold px-2.5 py-0.5 tracking-wide uppercase">
               Popular
             </div>
             <p className="text-xs font-bold text-white/50 tracking-widest uppercase mb-3">Growth</p>
@@ -210,7 +211,7 @@ export default function LandingPage({ onShowAuth }) {
             <ul className="flex flex-col gap-2.5 mb-8 flex-1">
               {['Everything in Starter','Multiple properties','Deposit management','Income records & day guests','Cashflow tracking'].map(f => (
                 <li key={f} className="flex items-center gap-2 text-sm text-white">
-                  <CheckCircle2 className="h-4 w-4 text-emerald shrink-0" />
+                  <CheckCircle2 className="h-4 w-4 text-green shrink-0" />
                   {f}
                 </li>
               ))}
@@ -218,7 +219,7 @@ export default function LandingPage({ onShowAuth }) {
             <button
               type="button"
               onClick={onShowAuth}
-              className="w-full inline-flex items-center justify-center rounded-xl bg-emerald text-white py-2.5 text-sm font-bold hover:bg-emerald/90 transition-colors"
+              className="w-full inline-flex items-center justify-center rounded-xl bg-green hover:bg-green-hover text-white py-2.5 text-sm font-bold transition-colors"
             >
               Get started
             </button>
@@ -244,7 +245,7 @@ export default function LandingPage({ onShowAuth }) {
             type="button"
             onClick={tryDemo}
             disabled={demoLoading}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald text-white px-7 py-3.5 text-sm font-bold hover:bg-emerald/90 active:scale-[0.98] transition-all disabled:opacity-60 shadow-md"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-green hover:bg-green-hover text-white px-7 py-3.5 text-sm font-bold active:scale-[0.98] transition-all disabled:opacity-60 shadow-md"
           >
             {demoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
             Try live demo
@@ -253,7 +254,7 @@ export default function LandingPage({ onShowAuth }) {
             href="mailto:hello@nivaops.com"
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white border border-border text-charcoal px-7 py-3.5 text-sm font-bold hover:bg-light active:scale-[0.98] transition-all"
           >
-            <CheckCircle2 className="h-4 w-4 text-emerald" />
+            <CheckCircle2 className="h-4 w-4 text-green" />
             Get in touch
           </a>
         </div>

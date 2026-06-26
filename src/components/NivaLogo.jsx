@@ -15,7 +15,7 @@ export function NivaWordmark({ size = 'base', className = '' }) {
   const sizeClass = size === 'lg' ? 'text-xl' : size === 'sm' ? 'text-sm' : 'text-base';
   return (
     <span className={`font-bold tracking-tight ${sizeClass} ${className}`}>
-      <span style={{ color: '#0F172A' }}>Niva</span><span style={{ color: '#00C853' }}>Ops</span>
+      <span style={{ color: '#0F172A' }}>Niva</span><span style={{ color: '#16A34A' }}>Ops</span>
     </span>
   );
 }

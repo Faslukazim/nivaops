@@ -105,9 +105,10 @@ export function SectionHeader({ title, action }) {
 
 export function Btn({ children, className = '', variant = 'ghost', size = 'md', ...props }) {
   const variants = {
-    primary:        'bg-emerald text-white hover:bg-emerald/90',
-    secondary:      'border border-border text-charcoal hover:bg-light hover:text-charcoal',
-    ghost:          'text-slate2 hover:bg-light hover:text-charcoal',
+    primary:        'bg-green hover:bg-green-hover active:scale-[0.98] text-white font-semibold text-sm px-5 py-2.5 rounded-lg transition-all duration-150',
+    secondary:      'bg-white hover:bg-light border border-border text-charcoal font-semibold text-sm px-5 py-2.5 rounded-lg transition-all duration-150',
+    ghost:          'bg-transparent hover:bg-light text-charcoal font-medium text-sm px-5 py-2.5 rounded-lg transition-all duration-150',
+    destructive:    'bg-error/10 hover:bg-error/20 text-error border border-error/20 font-semibold text-sm px-5 py-2.5 rounded-lg transition-all duration-150',
     danger:         'text-coral hover:bg-coral/10',
     success:        'text-leaf hover:bg-leaf/10',
     'filled-success': 'bg-leaf text-white hover:bg-leaf/90',
@@ -164,8 +165,8 @@ export function StatusBadge({ status, label }) {
     full:     'bg-success/10 text-success border border-success/20',
     empty:    'bg-slate/10 text-slate border border-slate/20',
     partial:  'bg-warning/10 text-warning border border-warning/20',
-    free:     'bg-emerald/10 text-emerald border border-emerald/20',
-    active:   'bg-emerald/10 text-emerald border border-emerald/20',
+    free:     'bg-green-light text-green border border-green/20',
+    active:   'bg-green-light text-green border border-green/20',
     overdue:  'bg-error/10 text-error border border-error/20',
     pending:  'bg-warning/10 text-warning border border-warning/20',
     occupied: 'bg-midnight/10 text-midnight border border-midnight/20',
@@ -400,7 +401,7 @@ export function CollectModal({ record, onConfirm, onCancel }) {
                 <select
                   value={reason}
                   onChange={e => setReason(e.target.value)}
-                  className="w-full appearance-none rounded-lg border border-border bg-white px-3 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-emerald/30 focus:border-emerald"
+                  className="w-full appearance-none rounded-lg border border-border bg-white px-3 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-green"
                 >
                   <option value="">Select reason…</option>
                   {DEDUCTION_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
