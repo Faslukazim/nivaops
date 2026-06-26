@@ -60,6 +60,9 @@ export default function TenantProfile({ tenant, properties, onClose, onCollect, 
         bottom-0 left-0 right-0 rounded-t-2xl max-h-[90dvh]
         sm:top-0 sm:right-0 sm:bottom-0 sm:left-auto sm:w-[22rem] sm:rounded-none sm:rounded-l-2xl sm:max-h-none sm:h-full">
 
+        {/* Handle bar (mobile bottom-sheet) */}
+        <div className="w-10 h-1 bg-border rounded-full mx-auto mt-3 mb-2 sm:hidden" />
+
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-start justify-between gap-3 px-5 py-4 bg-white border-b border-border">
           <div className="min-w-0">
