@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { signIn } from './services/authService';
 import { NivaLogo, NivaWordmark } from './components/NivaLogo';
-import { Home, Users, IndianRupee, BarChart3, Check, ArrowRight, Menu, X, Loader2 } from 'lucide-react';
+import { Home, Users, DollarSign, BarChart3, Check, ArrowRight, Menu, X, Loader2 } from 'lucide-react';
 
 export default function LandingPage({ onShowAuth }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -54,12 +54,12 @@ export default function LandingPage({ onShowAuth }) {
       {/* HERO */}
       <section className="px-5 pt-24 pb-20">
         <div className="max-w-2xl mx-auto text-center">
-          <p className="text-green text-xs font-semibold uppercase tracking-widest mb-6">For Indian PG &amp; hostel operators</p>
+          <p className="text-green text-xs font-semibold uppercase tracking-widest mb-6">For PG &amp; hostel operators</p>
           <h1 className="text-4xl sm:text-5xl font-bold text-charcoal tracking-tight leading-[1.1] mb-5">
             Run your rental property from your phone.
           </h1>
           <p className="text-lg text-slate leading-relaxed mb-10">
-            Beds, rent, tenants, and finances — one simple app, built for Indian operators.
+            Beds, rent, tenants, and finances — one simple app for property operators worldwide.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button onClick={tryDemo} disabled={demoLoading}
@@ -83,9 +83,9 @@ export default function LandingPage({ onShowAuth }) {
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-px bg-border rounded-xl overflow-hidden">
             {[
               { icon: <Home size={18} className="text-green" />, title: 'Beds & rooms', desc: 'See every bed, track occupancy, assign tenants.' },
-              { icon: <IndianRupee size={18} className="text-green" />, title: 'Rent collection', desc: 'WhatsApp reminders with UPI links. Track paid and overdue.' },
+              { icon: <DollarSign size={18} className="text-green" />, title: 'Rent collection', desc: 'Send reminders, track paid and overdue, collect faster.' },
               { icon: <Users size={18} className="text-green" />, title: 'Tenant records', desc: 'Profiles, ID photos, join dates, deposit history.' },
-              { icon: <BarChart3 size={18} className="text-green" />, title: 'Finance', desc: 'Monthly P&L, expenses, and income in one view.' },
+              { icon: <BarChart3 size={18} className="text-green" />, title: 'Finance', desc: 'Monthly P&L, expenses, and cash flow in one view.' },
             ].map((f, i) => (
               <div key={i} className="bg-white p-6">
                 <div className="w-8 h-8 rounded-lg bg-green-light flex items-center justify-center mb-4">{f.icon}</div>
@@ -102,18 +102,18 @@ export default function LandingPage({ onShowAuth }) {
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-10">
             <h2 className="text-2xl sm:text-3xl font-bold text-charcoal tracking-tight mb-2">Simple pricing.</h2>
-            <p className="text-slate">5–6× cheaper than alternatives. No lock-in.</p>
+            <p className="text-slate">Straightforward pricing. No lock-in.</p>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="bg-white rounded-2xl border border-border p-7">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-4">STARTER</p>
               <div className="flex items-end gap-1 mb-1">
-                <span className="text-3xl font-bold text-charcoal">₹799</span>
+                <span className="text-3xl font-bold text-charcoal">$9</span>
                 <span className="text-slate text-sm mb-1">/month</span>
               </div>
               <p className="text-muted text-xs mb-6">Up to 25 beds · 1 property</p>
               <ul className="space-y-2.5 mb-7">
-                {['Tenant management','Rent collection','WhatsApp reminders','Expense tracking','Mobile PWA'].map((f, i) => (
+                {['Tenant management','Rent collection','Payment reminders','Expense tracking','Mobile PWA'].map((f, i) => (
                   <li key={i} className="flex items-center gap-2 text-sm text-charcoal">
                     <Check size={13} className="text-green shrink-0" />{f}
                   </li>
@@ -125,7 +125,7 @@ export default function LandingPage({ onShowAuth }) {
               <span className="absolute top-4 right-4 bg-green text-white text-xs font-bold px-2.5 py-0.5 rounded-full">POPULAR</span>
               <p className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-4">GROWTH</p>
               <div className="flex items-end gap-1 mb-1">
-                <span className="text-3xl font-bold text-white">₹1,499</span>
+                <span className="text-3xl font-bold text-white">$19</span>
                 <span className="text-white/50 text-sm mb-1">/month</span>
               </div>
               <p className="text-white/40 text-xs mb-6">Up to 100 beds · Multiple properties</p>
@@ -149,7 +149,7 @@ export default function LandingPage({ onShowAuth }) {
             <NivaLogo size={20} />
             <span className="font-semibold text-white text-sm">NivaOps</span>
           </div>
-          <p className="text-white/30 text-xs">© 2025 NivaOps · Built for PG operators in India</p>
+          <p className="text-white/30 text-xs">© 2025 NivaOps · Property management, simplified.</p>
           <button onClick={onShowAuth} className="text-white/50 hover:text-white text-sm transition-colors">Sign in →</button>
         </div>
       </footer>
