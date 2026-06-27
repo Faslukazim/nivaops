@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   Loader2, CheckCircle2, Trash2, RefreshCw, LayoutDashboard,
   Plus, X, Eye, EyeOff, Copy, Check, ChevronDown, ChevronUp,
-  Ban, ShieldCheck, KeyRound, Building2, Users, BedDouble, Clock, AlertCircle, Sparkles,
+  Ban, ShieldCheck, KeyRound, Building2, Users, BedDouble, Clock, AlertCircle, Sparkles, BookmarkPlus,
 } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { SignOutBtn } from './components/ui';
@@ -375,7 +375,7 @@ function OrgCard({ org, onApprove, onReject, onBan, onPlanChange, busy, onToast 
           <div className="flex items-center gap-1 px-4 py-2.5 bg-mist/60 flex-wrap">
             <button onClick={() => toggleSection('creds')}
               className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${showCreds ? 'bg-ink text-white' : 'bg-white border border-border text-slate2 hover:bg-mist'}`}>
-              <Eye className="h-3.5 w-3.5" />
+              {localPassword ? <Eye className="h-3.5 w-3.5" /> : <BookmarkPlus className="h-3.5 w-3.5" />}
               {localPassword ? 'View password' : 'Save password'}
             </button>
             <button onClick={() => toggleSection('reset')}
