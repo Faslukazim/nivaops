@@ -234,10 +234,10 @@ function scrollTo(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 }
 
+const REQUEST_ACCESS_URL = 'https://wa.me/919633310117?text=Hi%2C%20I%27d%20like%20to%20get%20access%20to%20NivaOps';
+
 export default function LandingPage({ onShowAuth }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const handleGetStarted = onShowAuth;
 
   return (
     <div className="min-h-screen bg-white">
@@ -259,9 +259,10 @@ export default function LandingPage({ onShowAuth }) {
             <button onClick={onShowAuth} className="text-sm text-slate font-medium px-4 py-2 rounded-lg hover:bg-surface transition-colors">
               Sign in
             </button>
-            <button onClick={handleGetStarted} className="text-sm text-white font-semibold px-4 py-2 rounded-lg bg-green hover:bg-green-hover transition-colors">
-              Get started free
-            </button>
+            <a href={REQUEST_ACCESS_URL} target="_blank" rel="noopener noreferrer"
+              className="text-sm text-white font-semibold px-4 py-2 rounded-lg bg-green hover:bg-green-hover transition-colors">
+              Request access
+            </a>
           </div>
           <button className="sm:hidden p-2 text-muted" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
             {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
@@ -270,7 +271,8 @@ export default function LandingPage({ onShowAuth }) {
         {mobileMenuOpen && (
           <div className="sm:hidden bg-white border-t border-border px-5 pb-5 pt-3 space-y-2">
             <button onClick={onShowAuth} className="w-full py-2.5 border border-border rounded-lg text-sm font-semibold text-charcoal">Sign in</button>
-            <button onClick={handleGetStarted} className="w-full py-2.5 bg-green hover:bg-green-hover rounded-lg text-sm font-semibold text-white transition-colors">Get started free</button>
+            <a href={REQUEST_ACCESS_URL} target="_blank" rel="noopener noreferrer"
+              className="block w-full py-2.5 bg-green hover:bg-green-hover rounded-lg text-sm font-semibold text-white text-center transition-colors">Request access</a>
           </div>
         )}
       </nav>
@@ -289,10 +291,10 @@ export default function LandingPage({ onShowAuth }) {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <button onClick={handleGetStarted}
-              className="w-full sm:w-auto bg-green hover:bg-green-hover text-white font-semibold text-sm px-6 py-3 rounded-lg transition-colors duration-150">
-              Get started free
-            </button>
+            <a href={REQUEST_ACCESS_URL} target="_blank" rel="noopener noreferrer"
+              className="w-full sm:w-auto bg-green hover:bg-green-hover text-white font-semibold text-sm px-6 py-3 rounded-lg transition-colors duration-150 text-center">
+              Request access
+            </a>
             <button onClick={onShowAuth}
               className="w-full sm:w-auto text-sm text-slate hover:text-charcoal font-medium transition-colors">
               Sign in →
@@ -392,18 +394,14 @@ export default function LandingPage({ onShowAuth }) {
                   </li>
                 ))}
               </ul>
-              <button onClick={handleGetStarted}
-                className="mt-8 w-full py-3 border border-border rounded-xl text-sm font-semibold text-charcoal hover:bg-surface transition-colors">
-                Get started free
-              </button>
-              <p className="text-xs text-muted text-center mt-2.5">No credit card required</p>
+              <a href={REQUEST_ACCESS_URL} target="_blank" rel="noopener noreferrer"
+                className="mt-8 w-full py-3 border border-border rounded-xl text-sm font-semibold text-charcoal hover:bg-surface transition-colors text-center block">
+                Request access
+              </a>
             </div>
 
             {/* Pro */}
             <div className="bg-midnight rounded-2xl p-8 flex flex-col">
-              <span className="self-start inline-block bg-green text-white text-[10px] font-bold px-2.5 py-1 rounded-full mb-4 tracking-wide">
-                MOST POPULAR
-              </span>
               <p className="text-xs font-semibold text-white/40 uppercase tracking-[1.5px] mb-6">Pro</p>
               <div className="flex items-baseline gap-1.5 mb-1">
                 <span className="text-[58px] font-bold text-white leading-none tracking-[-2.5px]">₹1,499</span>
@@ -411,18 +409,17 @@ export default function LandingPage({ onShowAuth }) {
               </div>
               <p className="text-sm text-white/40 mb-8">Up to 100 beds · Multiple properties</p>
               <ul className="space-y-3 flex-1">
-                {['Everything in Starter','Multiple properties','Advanced reports','Admin panel access','Priority support'].map((f, i) => (
+                {['Everything in Starter','Multiple properties','Unlimited tenants','Finance & P&L overview','Priority support'].map((f, i) => (
                   <li key={f} className="flex items-start gap-2.5">
                     <Check size={14} className="text-green shrink-0 mt-0.5" />
                     <span className={`text-sm ${i === 0 ? 'text-white/35' : 'text-white/70'}`}>{f}</span>
                   </li>
                 ))}
               </ul>
-              <button onClick={handleGetStarted}
-                className="mt-8 w-full py-3 bg-green hover:bg-green-hover rounded-xl text-sm font-semibold text-white transition-colors">
-                Get started free
-              </button>
-              <p className="text-xs text-white/35 text-center mt-2.5">No credit card required</p>
+              <a href={REQUEST_ACCESS_URL} target="_blank" rel="noopener noreferrer"
+                className="mt-8 w-full py-3 bg-green hover:bg-green-hover rounded-xl text-sm font-semibold text-white transition-colors text-center block">
+                Request access
+              </a>
             </div>
 
           </div>
@@ -436,10 +433,10 @@ export default function LandingPage({ onShowAuth }) {
             Your property,{' '}
             <span className="text-green">finally organised.</span>
           </h2>
-          <button onClick={handleGetStarted}
-            className="bg-green hover:bg-green-hover text-white font-semibold text-base px-8 py-4 rounded-xl transition-colors">
-            Get started free
-          </button>
+          <a href={REQUEST_ACCESS_URL} target="_blank" rel="noopener noreferrer"
+            className="bg-green hover:bg-green-hover text-white font-semibold text-base px-8 py-4 rounded-xl transition-colors inline-block">
+            Request access
+          </a>
           <p className="text-sm text-white/30 mt-5">
             No spreadsheets. No paper registers. No missed payments.
           </p>
