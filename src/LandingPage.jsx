@@ -234,10 +234,10 @@ function scrollTo(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 }
 
-export default function LandingPage({ onShowAuth, onShowSignUp }) {
+export default function LandingPage({ onShowAuth }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const handleGetStarted = onShowSignUp ?? onShowAuth;
+  const handleGetStarted = onShowAuth;
 
   return (
     <div className="min-h-screen bg-white">

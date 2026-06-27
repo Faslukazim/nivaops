@@ -24,7 +24,6 @@ export default function Root() {
   const [memberships, setMemberships] = useState(undefined);
   const [membershipError, setMembershipError] = useState('');
   const [showAuth, setShowAuth] = useState(false);
-  const [authMode, setAuthMode] = useState('signin');
   const [adminMode, setAdminMode] = useState(true);
 
   const loadMemberships = useCallback(async () => {
@@ -67,16 +66,10 @@ export default function Root() {
         <AuthPage
           onAuthed={setSession}
           onBack={() => setShowAuth(false)}
-          defaultMode={authMode}
         />
       );
     }
-    return (
-      <LandingPage
-        onShowAuth={() => { setAuthMode('signin'); setShowAuth(true); }}
-        onShowSignUp={() => { setAuthMode('signup'); setShowAuth(true); }}
-      />
-    );
+    return <LandingPage onShowAuth={() => setShowAuth(true)} />;
   }
 
   // ── Signed in — loading memberships ────────────────────────────────────────
