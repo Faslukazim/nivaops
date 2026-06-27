@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NivaLogo, NivaWordmark } from './components/NivaLogo';
-import { Check, Home, Users, IndianRupee, BarChart2, Menu, X } from 'lucide-react';
+import { Check, Menu, X } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PHONE MOCKUP
@@ -273,71 +273,56 @@ export default function LandingPage({ onShowAuth }) {
       </nav>
 
       {/* ── 1. HERO ─────────────────────────────────────────────────────────── */}
-      <section className="pt-36 pb-24 px-6 bg-white">
-        <div className="max-w-3xl mx-auto text-center">
+      <section className="pt-32 pb-16 px-6 bg-white">
+        <div className="max-w-2xl mx-auto text-center">
 
-          <h1 className="text-[52px] sm:text-[72px] font-bold text-charcoal tracking-[-2.5px] leading-[1.06] mb-6">
-            Your entire hostel.{' '}
-            <span className="text-green">One screen.</span>
+          <h1 className="text-[46px] sm:text-[62px] font-bold text-charcoal tracking-[-2px] leading-[1.08] mb-5">
+            Stop running your PG on WhatsApp.
           </h1>
 
-          <p className="text-[18px] sm:text-[20px] text-slate leading-[1.6] max-w-md mx-auto mb-10">
-            Beds, rent, and finances — managed from anywhere, in minutes.
+          <p className="text-[17px] text-slate leading-[1.7] max-w-sm mx-auto mb-8">
+            Rent dues in your head. Payments scattered across chats. Tenants tracked in a notebook. There's a better way.
           </p>
 
-          <div className="flex items-center justify-center">
-            <a href={REQUEST_ACCESS_URL} target="_blank" rel="noopener noreferrer"
-              className="bg-green hover:bg-green-hover text-white font-semibold text-sm px-6 py-3 rounded-lg transition-colors duration-150 text-center">
-              Request access
-            </a>
-          </div>
+          <a href={REQUEST_ACCESS_URL} target="_blank" rel="noopener noreferrer"
+            className="inline-block bg-green hover:bg-green-hover text-white font-semibold text-sm px-6 py-3 rounded-lg transition-colors duration-150">
+            Request access
+          </a>
 
-          <div className="mt-20 flex justify-center">
+          <div className="mt-14 flex justify-center">
             <PhoneMockup />
           </div>
         </div>
       </section>
 
-      {/* ── 2. CORE WORKFLOWS ───────────────────────────────────────────────── */}
-      <section id="features" className="py-28 px-6 bg-white">
-        <div className="max-w-5xl mx-auto">
+      {/* ── 2. WHAT IT DOES ─────────────────────────────────────────────────── */}
+      <section id="features" className="py-16 px-6 border-t border-border">
+        <div className="max-w-2xl mx-auto">
 
-          <h2 className="text-[38px] sm:text-[48px] font-bold text-charcoal tracking-[-1px] leading-[1.08] text-center mb-20">
-            Built for hostel operators.{' '}
-            <span className="text-green">Nothing extra.</span>
-          </h2>
+          <p className="text-xs font-semibold text-muted uppercase tracking-[1.5px] mb-10">What NivaOps does</p>
 
-          <div className="grid sm:grid-cols-2 gap-x-16 gap-y-14">
+          <div className="grid sm:grid-cols-2 gap-x-12 gap-y-9">
             {[
               {
-                Icon: IndianRupee,
-                title: 'Rent Collection',
-                body: 'Send WhatsApp reminders with UPI links in one tap. Know who paid, who\'s late, and who needs a follow-up.',
+                title: 'Know who paid — without calling anyone',
+                body: 'Every tenant\'s rent status is visible the moment you open the app. Overdue, pending, paid — no chasing needed.',
               },
               {
-                Icon: Users,
-                title: 'Tenant Tracking',
-                body: 'Every tenant\'s details, documents, and payment history in one place. Nothing lost in WhatsApp threads again.',
+                title: 'Send a reminder with UPI link in one tap',
+                body: 'WhatsApp message with the amount, room number, and your UPI ID — ready to send. Tenants pay, you mark it done.',
               },
               {
-                Icon: Home,
-                title: 'Room Management',
-                body: 'See every bed — occupied, vacant, or under maintenance. Move tenants and track joining dates instantly.',
+                title: 'Every bed and tenant in one view',
+                body: 'See which beds are occupied, vacant, or under maintenance. Joining dates, deposits, ID photos — all stored.',
               },
               {
-                Icon: BarChart2,
-                title: 'Expense Tracking',
-                body: 'Log maintenance, utilities, and staff costs. See exactly where every rupee goes each month.',
+                title: 'See where every rupee went',
+                body: 'Log maintenance, electricity, and staff costs against each property. Income and expenses side by side.',
               },
-            ].map(({ Icon, title, body }) => (
-              <div key={title} className="flex gap-5">
-                <div className="shrink-0 mt-0.5">
-                  <Icon size={18} className="text-green" />
-                </div>
-                <div>
-                  <h3 className="text-[18px] font-semibold text-charcoal mb-2">{title}</h3>
-                  <p className="text-[15px] text-slate leading-[1.65]">{body}</p>
-                </div>
+            ].map(({ title, body }) => (
+              <div key={title}>
+                <h3 className="text-[15px] font-semibold text-charcoal mb-1.5 leading-snug">{title}</h3>
+                <p className="text-[14px] text-slate leading-[1.65]">{body}</p>
               </div>
             ))}
           </div>
@@ -345,16 +330,15 @@ export default function LandingPage({ onShowAuth }) {
         </div>
       </section>
 
-      {/* ── 4. PRICING ──────────────────────────────────────────────────────── */}
-      <section id="pricing" className="py-28 px-6 bg-light">
+      {/* ── 3. PRICING ──────────────────────────────────────────────────────── */}
+      <section id="pricing" className="py-16 px-6 bg-light border-t border-border">
         <div className="max-w-3xl mx-auto">
 
-          <div className="text-center mb-16">
-            <h2 className="text-[38px] sm:text-[48px] font-bold text-charcoal tracking-[-1px] leading-[1.08] mb-3">
-              Simple pricing.{' '}
-              <span className="text-green">No surprises.</span>
+          <div className="text-center mb-12">
+            <h2 className="text-[32px] sm:text-[40px] font-bold text-charcoal tracking-[-1px] leading-[1.08] mb-2">
+              Pricing
             </h2>
-            <p className="text-[16px] text-muted">Competitors charge ₹4,599–₹10,899/month for the same.</p>
+            <p className="text-[15px] text-muted">Other hostel software charges ₹4,599–₹10,899/month for the same thing.</p>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-5">
