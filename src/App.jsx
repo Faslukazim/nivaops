@@ -1775,7 +1775,7 @@ function SetupChecklist({ totalBeds, tenantCount, upiId, onGoToRooms, onAddTenan
 
 // ─── root ────────────────────────────────────────────────────────────────────
 
-export default function App({ session, organizationName, plan = 'starter', onSignOut, isAdmin, onOpenAdmin } = {}) {
+export default function App({ session, organizationName, organizationId: orgIdProp, plan = 'starter', onSignOut, isAdmin, onOpenAdmin } = {}) {
   const [page, setPage] = useState(() => {
     const saved = localStorage.getItem('stayops_page');
     // 'payments' is now 'finance' — migrate old saved value
@@ -2172,7 +2172,7 @@ export default function App({ session, organizationName, plan = 'starter', onSig
       )}
       {showAddProperty && (
         <AddPropertyModal
-          organizationId={properties[0]?.organization_id ?? null}
+          organizationId={properties[0]?.organization_id ?? orgIdProp ?? null}
           onCreated={prop => {
             setShowAddProperty(false);
             loadProperties().then(() => setSelectedPropertyId(prop.id));

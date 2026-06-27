@@ -110,6 +110,7 @@ export default function Root() {
     <App
       session={session}
       organizationName={activeOrg?.name}
+      organizationId={activeOrg?.organizationId}
       plan={activeOrg?.plan ?? 'starter'}
       membershipError={membershipError}
       onSignOut={signOut}
