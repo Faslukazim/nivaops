@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   Loader2, CheckCircle2, Trash2, RefreshCw, LayoutDashboard,
   Plus, X, Eye, EyeOff, Copy, Check, ChevronDown, ChevronUp,
-  Ban, ShieldCheck, KeyRound, Building2, Users, BedDouble, Clock, AlertCircle, Sparkles, BookmarkPlus,
+  Ban, ShieldCheck, KeyRound, Building2, Users, BedDouble, Clock, AlertCircle, Sparkles, BookmarkPlus, Mail,
 } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { SignOutBtn } from './components/ui';
@@ -266,17 +266,83 @@ function PasswordResetPanel({ userId, ownerEmail, onClose, onPasswordSaved, onTo
   );
 }
 
+// ── EmailChangePanel ──────────────────────────────────────────────────────────
+
+function EmailChangePanel({ userId, currentEmail, onClose, onEmailChanged, onToast }) {
+  const [email, setEmail] = useState('');
+  const [busy, setBusy]   = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    const trimmed = email.trim();
+    if (!trimmed) { setError('Enter a new email'); return; }
+    if (trimmed === currentEmail) { setError('That\'s the same email'); return; }
+    setBusy(true);
+    setError('');
+    try {
+      const { error: err } = await supabase.rpc('admin_update_user_email', {
+        p_user_id: userId,
+        p_email: trimmed,
+      });
+      if (err) throw new Error(toMsg(err));
+      onEmailChanged?.(trimmed);
+      onToast?.({ message: `Email changed to ${trimmed}`, type: 'success' });
+      onClose();
+    } catch (err) {
+      setError(toMsg(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="rounded-xl border border-border bg-white p-4 flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold text-ink">Change email</p>
+        <button type="button" onClick={onClose} className="text-slate2 hover:text-ink"><X className="h-4 w-4" /></button>
+      </div>
+      <p className="text-xs text-slate2">Current: <span className="font-semibold text-ink">{currentEmail}</span></p>
+
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg bg-coral/5 border border-coral/20 px-3 py-2">
+          <AlertCircle className="h-3.5 w-3.5 text-coral shrink-0" />
+          <p className="text-xs text-coral">{error}</p>
+        </div>
+      )}
+
+      <input
+        autoFocus
+        type="text"
+        inputMode="email"
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+        placeholder="New email address"
+        className="w-full rounded-xl border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-green"
+      />
+
+      <button type="submit" disabled={busy}
+        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-green text-white py-2.5 text-sm font-bold hover:bg-green-hover transition-colors disabled:opacity-60">
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+        Update email
+      </button>
+    </form>
+  );
+}
+
 // ── OrgCard ───────────────────────────────────────────────────────────────────
 
 function OrgCard({ org, onApprove, onReject, onBan, onPlanChange, busy, onToast }) {
   const [open, setOpen]             = useState(false);
   const [showReset, setShowReset]   = useState(false);
   const [showCreds, setShowCreds]   = useState(false);
+  const [showEmailChange, setShowEmailChange] = useState(false);
   const [banConfirm, setBanConfirm] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [planConfirm, setPlanConfirm]     = useState(false);
   const [localEmail, setLocalEmail]       = useState(org.last_email);
   const [localPassword, setLocalPassword] = useState(org.last_password);
+  const [ownerEmail, setOwnerEmail]       = useState(org.owner_email);
 
   const isPending = !org.approved;
   const isBusy    = busy === org.org_id;
@@ -284,6 +350,7 @@ function OrgCard({ org, onApprove, onReject, onBan, onPlanChange, busy, onToast 
   function closeActions() {
     setShowReset(false);
     setShowCreds(false);
+    setShowEmailChange(false);
     setBanConfirm(false);
     setDeleteConfirm(false);
     setPlanConfirm(false);
@@ -292,6 +359,7 @@ function OrgCard({ org, onApprove, onReject, onBan, onPlanChange, busy, onToast 
   function toggleSection(section) {
     const isOpen = (section === 'reset'  && showReset)
                 || (section === 'creds'  && showCreds)
+                || (section === 'email'  && showEmailChange)
                 || (section === 'ban'    && banConfirm)
                 || (section === 'delete' && deleteConfirm)
                 || (section === 'plan'   && planConfirm);
@@ -299,6 +367,7 @@ function OrgCard({ org, onApprove, onReject, onBan, onPlanChange, busy, onToast 
     if (!isOpen) {
       if (section === 'reset')  setShowReset(true);
       if (section === 'creds')  setShowCreds(true);
+      if (section === 'email')  setShowEmailChange(true);
       if (section === 'ban')    setBanConfirm(true);
       if (section === 'delete') setDeleteConfirm(true);
       if (section === 'plan')   setPlanConfirm(true);
@@ -327,7 +396,7 @@ function OrgCard({ org, onApprove, onReject, onBan, onPlanChange, busy, onToast 
               : <span className="text-[10px] font-bold text-slate2 bg-border rounded-full px-2 py-0.5">Starter</span>
             }
           </div>
-          <p className="text-xs text-slate2 mt-0.5 truncate">{org.owner_email}</p>
+          <p className="text-xs text-slate2 mt-0.5 truncate">{ownerEmail}</p>
           <div className="flex items-center gap-3 mt-2 flex-wrap">
             <span className="inline-flex items-center gap-1 text-xs text-slate2">
               <Building2 className="h-3 w-3" />{org.property_count} {org.property_count === 1 ? 'property' : 'properties'}
@@ -382,6 +451,10 @@ function OrgCard({ org, onApprove, onReject, onBan, onPlanChange, busy, onToast 
               className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${showReset ? 'bg-ink text-white' : 'bg-white border border-border text-ink hover:bg-mist'}`}>
               <KeyRound className="h-3.5 w-3.5" /> Reset password
             </button>
+            <button onClick={() => toggleSection('email')}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${showEmailChange ? 'bg-ink text-white' : 'bg-white border border-border text-ink hover:bg-mist'}`}>
+              <Mail className="h-3.5 w-3.5" /> Change email
+            </button>
             <button onClick={() => toggleSection('plan')}
               className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${
                 planConfirm ? 'bg-ink text-white'
@@ -425,9 +498,19 @@ function OrgCard({ org, onApprove, onReject, onBan, onPlanChange, busy, onToast 
             {showReset && (
               <PasswordResetPanel
                 userId={org.owner_id}
-                ownerEmail={org.owner_email}
+                ownerEmail={ownerEmail}
                 onClose={() => setShowReset(false)}
-                onPasswordSaved={p => { setLocalPassword(p); setLocalEmail(org.owner_email); }}
+                onPasswordSaved={p => { setLocalPassword(p); setLocalEmail(ownerEmail); }}
+                onToast={onToast}
+              />
+            )}
+
+            {showEmailChange && (
+              <EmailChangePanel
+                userId={org.owner_id}
+                currentEmail={ownerEmail}
+                onClose={() => setShowEmailChange(false)}
+                onEmailChanged={e => setOwnerEmail(e)}
                 onToast={onToast}
               />
             )}
@@ -501,7 +584,7 @@ function OrgCard({ org, onApprove, onReject, onBan, onPlanChange, busy, onToast 
               </div>
             )}
 
-            {!showCreds && !showReset && !banConfirm && !deleteConfirm && !planConfirm && (
+            {!showCreds && !showReset && !showEmailChange && !banConfirm && !deleteConfirm && !planConfirm && (
               <p className="text-xs text-slate2">
                 Joined {new Date(org.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
               </p>
