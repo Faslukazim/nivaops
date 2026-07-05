@@ -27,7 +27,9 @@ function OccBar({ occupied, capacity }) {
 
 function RoomCard({ room, isSelected, onClick }) {
   const occupied = room.beds.filter(b => b.tenant).length;
+  const reserved = room.beds.filter(b => !b.tenant && b.booking).length;
   const capacity = room.beds.length;
+  const vacant = capacity - occupied - reserved;
   const unpaid = room.beds.filter(b => b.occupancy?.payment_status === 'Unpaid').length;
   const isEmpty = occupied === 0;
   const isFull = occupied === capacity;
@@ -56,7 +58,7 @@ function RoomCard({ room, isSelected, onClick }) {
       </div>
 
       <p className="mt-1 text-slate text-sm">
-        {occupied} Occupied · {capacity - occupied} Vacant
+        {occupied} Occupied · {vacant} Vacant{reserved > 0 ? ` · ${reserved} Reserved` : ''}
       </p>
 
       <OccBar occupied={occupied} capacity={capacity} />
@@ -423,7 +425,9 @@ function BedRow({ bed, roomNumber, roomId, rooms, upiId, onMarkPaid, onMarkUnpai
 function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, onClose, onAssign, onAssignBed, onRoomUpdate, onViewTenant, onDeleteRoom, onConvertBooking }) {
   const toast = useToast();
   const occupied = room.beds.filter(b => b.tenant).length;
+  const reserved = room.beds.filter(b => !b.tenant && b.booking).length;
   const capacity = room.beds.length;
+  const vacant = capacity - occupied - reserved;
   const unpaid = room.beds.filter(b => b.occupancy?.payment_status === 'Unpaid').length;
   const revenue = room.beds.reduce((s, b) => s + Number(b.occupancy?.monthly_rent || 0), 0);
   const pendingAmt = room.beds
@@ -574,7 +578,7 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
             )}
           </div>
           <p className="mt-0.5 text-sm text-slate2 tabular-nums">
-            {occupied} occupied · {capacity - occupied} vacant{capacity > 0 ? ` · ${Math.round((occupied / capacity) * 100)}% full` : ''}
+            {occupied} occupied · {vacant} vacant{reserved > 0 ? ` · ${reserved} reserved` : ''}{capacity > 0 ? ` · ${Math.round((occupied / capacity) * 100)}% full` : ''}
             {revenue > 0 && ` · ${fmt(revenue)}/mo`}
             {unpaid > 0 && <> · <span className="text-coral">{fmt(pendingAmt)} pending</span></>}
           </p>
@@ -779,8 +783,9 @@ export default function RoomsPage({ selectedPropertyId, organizationId, upiId, o
   const stats = useMemo(() => {
     const totalBeds = rooms.reduce((s, r) => s + r.beds.length, 0);
     const occupied = rooms.reduce((s, r) => s + r.beds.filter(b => b.tenant).length, 0);
+    const reserved = rooms.reduce((s, r) => s + r.beds.filter(b => !b.tenant && b.booking).length, 0);
     const unpaidRooms = rooms.filter(r => r.beds.some(b => b.occupancy?.payment_status === 'Unpaid')).length;
-    return { totalBeds, occupied, unpaidRooms };
+    return { totalBeds, occupied, reserved, unpaidRooms };
   }, [rooms]);
 
   function handleAssign(room) {
@@ -822,7 +827,7 @@ export default function RoomsPage({ selectedPropertyId, organizationId, upiId, o
       <StatStrip stats={[
         { label: 'Total rooms',     value: rooms.length,                          color: 'text-ink' },
         { label: 'Occupancy',       value: `${Math.round((stats.occupied / (stats.totalBeds || 1)) * 100)}%` },
-        { label: 'Vacant beds',     value: stats.totalBeds - stats.occupied,      color: (stats.totalBeds - stats.occupied) > 0 ? 'text-amber' : 'text-success' },
+        { label: 'Vacant beds',     value: stats.totalBeds - stats.occupied - stats.reserved,      color: (stats.totalBeds - stats.occupied - stats.reserved) > 0 ? 'text-amber' : 'text-success' },
         { label: 'Rooms Pending', value: stats.unpaidRooms,                     color: stats.unpaidRooms > 0 ? 'text-coral' : 'text-success' },
       ]} />
       </div>
