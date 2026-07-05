@@ -87,9 +87,9 @@ function MoveBedForm({ tenant, fromRoomId, rooms, onConfirm, onCancel, saving })
   const [destRoomId, setDestRoomId] = useState('');
   const [destBedId, setDestBedId] = useState('');
 
-  const eligibleRooms = rooms.filter(r => r.id !== fromRoomId && r.beds.some(b => !b.tenant));
+  const eligibleRooms = rooms.filter(r => r.id !== fromRoomId && r.beds.some(b => !b.tenant && !b.booking));
   const destRoom = rooms.find(r => r.id === destRoomId);
-  const availableBeds = destRoom?.beds?.filter(b => !b.tenant) ?? [];
+  const availableBeds = destRoom?.beds?.filter(b => !b.tenant && !b.booking) ?? [];
 
   const selectCls = 'w-full appearance-none rounded-lg border border-border bg-white px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink disabled:bg-mist disabled:text-slate2';
 
@@ -113,7 +113,7 @@ function MoveBedForm({ tenant, fromRoomId, rooms, onConfirm, onCancel, saving })
               >
                 <option value="">Select room</option>
                 {eligibleRooms.map(r => {
-                  const free = r.beds.filter(b => !b.tenant).length;
+                  const free = r.beds.filter(b => !b.tenant && !b.booking).length;
                   return <option key={r.id} value={r.id}>Room {r.room_number} ({free} free)</option>;
                 })}
               </select>
@@ -784,7 +784,7 @@ export default function RoomsPage({ selectedPropertyId, organizationId, upiId, o
   }, [rooms]);
 
   function handleAssign(room) {
-    const availableBed = room.beds.find(b => !b.tenant);
+    const availableBed = room.beds.find(b => !b.tenant && !b.booking);
     onAssignBed({ propertyId: selectedPropertyId, roomId: room.id, bedId: availableBed?.id ?? '' });
   }
 
