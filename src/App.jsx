@@ -965,6 +965,7 @@ function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMa
   const daysOverdue = !isPaid && tenantStatus === STATUS.OVERDUE ? tenantDaysOverdue(tenant) : 0;
 
   return (
+    <>
     <div
       className={`relative overflow-hidden rounded-xl border border-border bg-white shadow-card${flashPaid ? ' flash-paid' : ''}`}
       onTouchStart={onTouchStart}
@@ -1046,20 +1047,18 @@ function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMa
         )}
 
         {tenant.admissionFee > 0 && (
-          <div className="mt-2 flex items-center justify-between rounded-lg border border-border px-3 py-2">
-            <div className="flex items-center gap-3">
-              <div>
-                <Label>Admission</Label>
-                <p className="mt-0.5 text-sm font-semibold tabular-nums">{fmt(tenant.admissionFee)}</p>
-              </div>
-              {tenant.moveInCollection > 0 && (
-                <div>
-                  <Label>Move-In Collected</Label>
-                  <p className="mt-0.5 text-sm font-semibold tabular-nums">{fmt(tenant.moveInCollection)}</p>
-                </div>
-              )}
+          <div className="mt-2 flex items-center gap-3 rounded-lg border border-border px-3 py-2">
+            <div>
+              <Label>Admission</Label>
+              <p className="mt-0.5 text-sm font-semibold tabular-nums">{fmt(tenant.admissionFee)}</p>
+              <p className="text-xs text-slate2">non-refundable</p>
             </div>
-            <span className="text-xs font-semibold text-slate2">Non-refundable</span>
+            {tenant.moveInCollection > 0 && (
+              <div>
+                <Label>Move-In Collected</Label>
+                <p className="mt-0.5 text-sm font-semibold tabular-nums">{fmt(tenant.moveInCollection)}</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -1114,21 +1113,22 @@ function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMa
         </div>
       </div>
 
-      {vacating && (
-        <VacateModal
-          tenant={tenant}
-          saving={vacateSaving}
-          onCancel={() => setVacating(false)}
-          onConfirm={async opts => {
-            setVacateSaving(true);
-            await onVacate(tenant, opts);
-            setVacateSaving(false);
-            setVacating(false);
-          }}
-        />
-      )}
       </div>{/* end sliding content */}
     </div>
+    {vacating && (
+      <VacateModal
+        tenant={tenant}
+        saving={vacateSaving}
+        onCancel={() => setVacating(false)}
+        onConfirm={async opts => {
+          setVacateSaving(true);
+          await onVacate(tenant, opts);
+          setVacateSaving(false);
+          setVacating(false);
+        }}
+      />
+    )}
+    </>
   );
 }
 
