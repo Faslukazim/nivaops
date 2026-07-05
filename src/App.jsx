@@ -927,14 +927,11 @@ function fmtShortDate(iso) {
   return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(m)-1] + ' ' + Number(d);
 }
 
-function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMarkPaid, onMarkUnpaid, onReturnDeposit, onForfeitDeposit }) {
+function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMarkPaid, onMarkUnpaid }) {
   const [confirmUnpaid, setConfirmUnpaid] = useState(false);
   const isPaid = tenant.paymentStatus === 'Paid';
   const hasDeposit = tenant.depositAmount > 0;
   const depositHeld = hasDeposit && tenant.depositStatus === 'held';
-  const depositReturned = hasDeposit && tenant.depositStatus === 'returned';
-  const depositForfeited = hasDeposit && tenant.depositStatus === 'forfeited';
-  const [confirmingForfeit, setConfirmingForfeit] = useState(false);
   const [vacating, setVacating] = useState(false);
   const [vacateSaving, setVacateSaving] = useState(false);
 
@@ -1042,48 +1039,10 @@ function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMa
           )}
         </div>
 
-        {hasDeposit && (
-          confirmingForfeit ? (
-            <div className="mt-2 rounded-lg overflow-hidden">
-              <ConfirmInline
-                message={<>Mark {fmt(tenant.depositAmount)} deposit as not refundable for <span className="font-semibold">{tenant.name}</span>?</>}
-                confirmLabel="Confirm"
-                onCancel={() => setConfirmingForfeit(false)}
-                onConfirm={() => { onForfeitDeposit(tenant); setConfirmingForfeit(false); }}
-              />
-            </div>
-          ) : (
-            <div className="mt-2 flex items-center justify-between rounded-lg border border-border px-3 py-2">
-              <div>
-                <Label>Deposit</Label>
-                <p className="mt-0.5 text-sm font-semibold tabular-nums">{fmt(tenant.depositAmount)}</p>
-              </div>
-              {depositHeld && (
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => onReturnDeposit(tenant)}
-                    className="text-xs font-semibold text-amber hover:text-amber/80 border border-amber/30 rounded-lg px-2.5 py-1.5 hover:bg-amber/5 transition-colors"
-                  >
-                    Return Deposit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmingForfeit(true)}
-                    className="text-xs font-semibold text-coral hover:text-coral/80 border border-coral/30 rounded-lg px-2.5 py-1.5 hover:bg-coral/5 transition-colors"
-                  >
-                    Not Refundable
-                  </button>
-                </div>
-              )}
-              {depositReturned && (
-                <span className="text-xs font-semibold text-success">Returned</span>
-              )}
-              {depositForfeited && (
-                <span className="text-xs font-semibold text-coral">Deposit Not Refundable</span>
-              )}
-            </div>
-          )
+        {hasDeposit && depositHeld && (
+          <p className="mt-2 text-xs text-slate2">
+            Deposit {fmt(tenant.depositAmount)} held <span className="text-slate2/70">· settled on move-out</span>
+          </p>
         )}
 
         {tenant.admissionFee > 0 && (
@@ -1226,7 +1185,11 @@ function MoveInHealth({ tenants }) {
   const newThisMonth = tenants.filter(t => t.joinDate?.startsWith(currentYM));
   const moveInTotal = newThisMonth.reduce((s, t) => s + Number(t.moveInCollection || 0), 0);
   const admissionTotal = newThisMonth.reduce((s, t) => s + Number(t.admissionFee || 0), 0);
-  const depositsHeld = tenants.filter(t => t.depositStatus === 'held').reduce((s, t) => s + Number(t.depositAmount || 0), 0);
+  // Deposits collected before pre-accounted (already distributed as profit
+  // in a past accounting period) are excluded from the liability total —
+  // the tenant is still owed the money on move-out, but it's not sitting
+  // in the bank waiting to be refunded, so it shouldn't count as "held".
+  const depositsHeld = tenants.filter(t => t.depositStatus === 'held' && !t.depositPreAccounted).reduce((s, t) => s + Number(t.depositAmount || 0), 0);
   const depositsReturned = tenants.filter(t => t.depositStatus === 'returned').reduce((s, t) => s + Number(t.depositAmount || 0), 0);
   const depositsForfeited = tenants.filter(t => t.depositStatus === 'forfeited').reduce((s, t) => s + Number(t.depositAmount || 0), 0);
   const depositsSettled = depositsReturned + depositsForfeited;
@@ -1793,8 +1756,6 @@ function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, sa
                     onVacate={onVacate}
                     onMarkPaid={onMarkPaid}
                     onMarkUnpaid={onMarkUnpaid}
-                    onReturnDeposit={onReturnDeposit}
-                    onForfeitDeposit={onForfeitDeposit}
                   />
                 </div>
               ))}

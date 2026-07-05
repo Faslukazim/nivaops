@@ -62,6 +62,7 @@ function toUiTenant(occupancy) {
     paymentDate: occupancy.payment_date ?? '',
     depositAmount: Number(occupancy.deposit_amount ?? 0),
     depositStatus: occupancy.deposit_status ?? 'none',
+    depositPreAccounted: occupancy.deposit_pre_accounted ?? false,
     admissionFee: Number(occupancy.admission_fee ?? 0),
     moveInCollection: Number(occupancy.move_in_collection ?? 0),
     id_photo_url: occupancy.tenant.id_photo_url ?? null,
