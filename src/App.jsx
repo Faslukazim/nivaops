@@ -1192,21 +1192,17 @@ function MoveInHealth({ tenants }) {
   const newThisMonth = tenants.filter(t => t.joinDate?.startsWith(currentYM));
   const moveInTotal = newThisMonth.reduce((s, t) => s + Number(t.moveInCollection || 0), 0);
   const admissionTotal = newThisMonth.reduce((s, t) => s + Number(t.admissionFee || 0), 0);
-  // Deposits collected before pre-accounted (already distributed as profit
-  // in a past accounting period) are excluded from the liability total —
-  // the tenant is still owed the money on move-out, but it's not sitting
-  // in the bank waiting to be refunded, so it shouldn't count as "held".
-  const depositsHeld = tenants.filter(t => t.depositStatus === 'held' && !t.depositPreAccounted).reduce((s, t) => s + Number(t.depositAmount || 0), 0);
-  const depositsReturned = tenants.filter(t => t.depositStatus === 'returned').reduce((s, t) => s + Number(t.depositAmount || 0), 0);
-  const depositsForfeited = tenants.filter(t => t.depositStatus === 'forfeited').reduce((s, t) => s + Number(t.depositAmount || 0), 0);
-  const depositsSettled = depositsReturned + depositsForfeited;
+  // Deposits are treated as cash-basis income/expense (see P&L tab), not a
+  // tracked liability — this widget just shows this month's deposit intake.
+  // Pre-accounted (legacy) deposits are excluded since that cash was already
+  // distributed in a prior accounting period.
+  const depositsCollected = newThisMonth.filter(t => !t.depositPreAccounted).reduce((s, t) => s + Number(t.depositAmount || 0), 0);
 
   return (
     <StatStrip stats={[
       { label: 'Move-In This Month', value: fmt(moveInTotal),    sub: `${newThisMonth.length} new tenant${newThisMonth.length !== 1 ? 's' : ''}`, color: moveInTotal > 0 ? 'text-success' : 'text-slate2' },
       { label: 'Admission Revenue',  value: fmt(admissionTotal), sub: 'non-refundable fees',  color: admissionTotal > 0 ? 'text-ink' : 'text-slate2' },
-      { label: 'Deposits Held',      value: fmt(depositsHeld),   sub: 'refundable liability', color: depositsHeld > 0 ? 'text-amber' : 'text-success' },
-      { label: 'Deposits Settled',   value: fmt(depositsSettled),sub: depositsForfeited > 0 ? `${fmt(depositsForfeited)} forfeited` : 'returned', color: 'text-slate2' },
+      { label: 'Deposits Collected', value: fmt(depositsCollected), sub: 'counted in P&L this month', color: depositsCollected > 0 ? 'text-ink' : 'text-slate2' },
     ]} />
   );
 }

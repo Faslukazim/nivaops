@@ -28,6 +28,7 @@ import {
 import {
   INCOME_CATEGORIES, fetchIncomeRecords, addIncomeRecord, deleteIncomeRecord, uploadIdPhoto,
 } from './services/incomeService';
+import { fetchDepositSettlementsForMonth } from './services/tenantService';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -872,6 +873,7 @@ function PLTab({ selectedPropertyId, tenants }) {
   const [records, setRecords] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [incomeRecs, setIncomeRecs] = useState([]);
+  const [depositSettlements, setDepositSettlements] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -881,8 +883,9 @@ function PLTab({ selectedPropertyId, tenants }) {
       fetchPaymentRecords(selectedPropertyId, ym),
       fetchExpenses(selectedPropertyId, ym),
       fetchIncomeRecords(selectedPropertyId, ym),
+      fetchDepositSettlementsForMonth(selectedPropertyId, ym),
     ])
-      .then(([recs, exps, incs]) => { setRecords(recs); setExpenses(exps); setIncomeRecs(incs); })
+      .then(([recs, exps, incs, deposits]) => { setRecords(recs); setExpenses(exps); setIncomeRecs(incs); setDepositSettlements(deposits); })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [selectedPropertyId, ym]);
@@ -896,10 +899,19 @@ function PLTab({ selectedPropertyId, tenants }) {
   const newThisMonth = tenants.filter(t => t.joinDate?.startsWith(ym));
   const admissionIncome = newThisMonth.reduce((s, t) => s + Number(t.admissionFee || 0), 0);
   const otherIncome = incomeRecs.reduce((s, r) => s + Number(r.amount), 0);
-  const totalIncome = rentCollected + admissionIncome + otherIncome;
+
+  // Deposits — treated as cash-basis income/expense (per operator's request):
+  // collected this month = income, returned this month = expense, forfeited
+  // this month = income (you kept it). Pre-accounted legacy deposits are
+  // excluded server-side already.
+  const depositCollected = newThisMonth.filter(t => !t.depositPreAccounted).reduce((s, t) => s + Number(t.depositAmount || 0), 0);
+  const depositForfeited = depositSettlements.filter(d => d.deposit_status === 'forfeited').reduce((s, d) => s + Number(d.deposit_amount || 0), 0);
+  const depositReturned = depositSettlements.filter(d => d.deposit_status === 'returned').reduce((s, d) => s + Number(d.deposit_amount || 0), 0);
+
+  const totalIncome = rentCollected + admissionIncome + otherIncome + depositCollected + depositForfeited;
 
   // Expenses
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
+  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0) + depositReturned;
   const byCategory = EXPENSE_CATEGORIES.map(cat => ({
     ...cat,
     total: expenses.filter(e => e.category === cat.id).reduce((s, e) => s + e.amount, 0),
@@ -970,6 +982,24 @@ function PLTab({ selectedPropertyId, tenants }) {
                   <span className="text-sm font-semibold tabular-nums text-ink">{fmt(otherIncome)}</span>
                 </div>
               )}
+              {depositCollected > 0 && (
+                <div className="flex items-center justify-between px-4 py-3">
+                  <div>
+                    <p className="text-sm text-ink">Deposits Collected</p>
+                    <p className="text-xs text-slate2">from new tenants this month</p>
+                  </div>
+                  <span className="text-sm font-semibold tabular-nums text-ink">{fmt(depositCollected)}</span>
+                </div>
+              )}
+              {depositForfeited > 0 && (
+                <div className="flex items-center justify-between px-4 py-3">
+                  <div>
+                    <p className="text-sm text-ink">Deposits Forfeited</p>
+                    <p className="text-xs text-slate2">kept from tenants who moved out</p>
+                  </div>
+                  <span className="text-sm font-semibold tabular-nums text-ink">{fmt(depositForfeited)}</span>
+                </div>
+              )}
             </div>
           </Card>
 
@@ -991,6 +1021,15 @@ function PLTab({ selectedPropertyId, tenants }) {
                     <span className="text-sm font-semibold tabular-nums text-coral">{fmt(cat.total)}</span>
                   </div>
                 ))}
+                {depositReturned > 0 && (
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <div>
+                      <p className="text-sm text-ink">Deposits Returned</p>
+                      <p className="text-xs text-slate2">refunded to tenants who moved out</p>
+                    </div>
+                    <span className="text-sm font-semibold tabular-nums text-coral">{fmt(depositReturned)}</span>
+                  </div>
+                )}
               </div>
             )}
           </Card>
