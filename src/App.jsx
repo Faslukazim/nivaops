@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useToast } from './lib/toast.jsx';
 import {
   BarChart2, BedDouble, Camera, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight,
@@ -762,7 +763,12 @@ function VacateModal({ tenant, onConfirm, onCancel, saving }) {
 
   const inputCls = 'w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink bg-white';
 
-  return (
+  // Rendered via portal into document.body — this modal is triggered from
+  // inside TenantCard's swipe wrapper, which has a permanent CSS transform
+  // on it. A transform on any ancestor traps position:fixed children inside
+  // that ancestor's box instead of the viewport, so without the portal this
+  // modal would render squeezed inside the card instead of full-screen.
+  return createPortal(
     <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onCancel} />
       <div className="relative w-full sm:max-w-sm bg-white rounded-t-2xl sm:rounded-2xl shadow-xl overflow-hidden">
@@ -847,7 +853,8 @@ function VacateModal({ tenant, onConfirm, onCancel, saving }) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
