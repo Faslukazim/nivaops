@@ -2221,7 +2221,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
       const bed = room?.beds?.find(b => b.id === booking.bed_id);
       if (!bed) { toast.error('This bed no longer exists.'); return; }
     } catch { /* non-critical — proceed */ }
-    try { await convertBooking(booking.id); } catch (e) { toast.error(e.message); return; }
+    try { await convertBooking(booking.id, booking.bed_id); } catch (e) { toast.error(e.message); return; }
     // Pre-fill the add-tenant form. Use roomPrefill (no initialTenant) so
     // TenantForm enters "new tenant" mode with name/phone as separate state.
     setRoomPrefill({
