@@ -1214,7 +1214,7 @@ function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMa
             rent={tenant.monthlyRent}
             upiId={upiId}
           />
-          <PaymentLinkBtn propertyId={tenant.propertyId} tenantId={tenant.id} phone={tenant.phone} name={tenant.name} label="Pay" />
+          <PaymentLinkBtn propertyId={tenant.propertyId} tenantId={tenant.id} phone={tenant.phone} name={tenant.name} label="Pay Link" />
           <IconBtn variant="ghost" onClick={() => onEdit(tenant)} title="Edit">
             <Pencil className="h-4 w-4" />
           </IconBtn>
@@ -1480,7 +1480,7 @@ function AttentionRequired({ tenants, upiId, onMarkPaid, onViewTenant }) {
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <WhatsAppLink name={t.name} phone={t.phone} roomNumber={t.roomNumber} bedNumber={t.bedNumber} rent={t.monthlyRent} upiId={upiId} />
-                  <PaymentLinkBtn propertyId={t.propertyId} tenantId={t.id} phone={t.phone} name={t.name} label="Pay" />
+                  <PaymentLinkBtn propertyId={t.propertyId} tenantId={t.id} phone={t.phone} name={t.name} label="Pay Link" />
                   <Btn size="sm" variant="filled-success" onClick={() => onMarkPaid(t)}>Mark Paid</Btn>
                 </div>
               </div>
