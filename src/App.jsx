@@ -103,7 +103,7 @@ function RenamePropertyModal({ currentName, onSave, onClose }) {
   );
 }
 
-function PropertyPill({ properties, selectedId, onChange, loading, canAddProperty, onAddProperty, onDeleteProperty, onRenameProperty }) {
+function PropertyPill({ properties, selectedId, onChange, loading, canAddProperty, onAddProperty, onDeleteProperty, onRenameProperty, fullWidth }) {
   const [showRename, setShowRename] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
@@ -126,13 +126,13 @@ function PropertyPill({ properties, selectedId, onChange, loading, canAddPropert
     );
   }
   return (
-    <div className="flex items-center gap-1.5">
+    <div className={`flex items-center gap-1.5 ${fullWidth ? 'w-full' : ''}`}>
       {properties.length > 0 && (
-        <div className="relative">
+        <div className={`relative ${fullWidth ? 'flex-1 min-w-0' : ''}`}>
           <select
             value={selectedId}
             onChange={e => onChange(e.target.value)}
-            className="appearance-none rounded-lg bg-mist pl-3 pr-7 py-1.5 text-sm font-semibold text-ink border border-border focus:outline-none focus:ring-2 focus:ring-ink/20 cursor-pointer"
+            className={`appearance-none rounded-lg bg-mist pl-3 pr-7 py-1.5 text-sm font-semibold text-ink border border-border focus:outline-none focus:ring-2 focus:ring-ink/20 cursor-pointer ${fullWidth ? 'w-full' : ''}`}
           >
             {properties.map(p => (
               <option key={p.id} value={p.id}>{p.name}</option>
@@ -330,6 +330,7 @@ function Header({ properties, selectedPropertyId, onPropertyChange, loadingPrope
                   onAddProperty={onAddProperty}
                   onDeleteProperty={onDeleteProperty}
                   onRenameProperty={onRenameProperty}
+                  fullWidth
                 />
               </div>
               {isAdmin && (
