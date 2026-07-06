@@ -1214,7 +1214,7 @@ function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMa
             rent={tenant.monthlyRent}
             upiId={upiId}
           />
-          <PaymentLinkBtn propertyId={tenant.propertyId} tenantId={tenant.id} phone={tenant.phone} name={tenant.name} label="Pay Link" />
+          <PaymentLinkBtn propertyId={tenant.propertyId} tenantId={tenant.id} phone={tenant.phone} name={tenant.name} />
           <IconBtn variant="ghost" onClick={() => onEdit(tenant)} title="Edit">
             <Pencil className="h-4 w-4" />
           </IconBtn>
@@ -1453,7 +1453,7 @@ function AttentionRequired({ tenants, upiId, onMarkPaid, onViewTenant }) {
             const today = new Date().getDate();
             const daysUntil = Math.max(0, dueDay - today);
             return (
-              <div key={t.id} className="flex items-center justify-between gap-3 px-4 py-3">
+              <div key={t.id} className="flex flex-col gap-2.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <button
@@ -1478,10 +1478,10 @@ function AttentionRequired({ tenants, upiId, onMarkPaid, onViewTenant }) {
                     <p className={`text-xs font-semibold ${meta.labelColor}`}>Due today</p>
                   )}
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0 justify-end">
                   <WhatsAppLink name={t.name} phone={t.phone} roomNumber={t.roomNumber} bedNumber={t.bedNumber} rent={t.monthlyRent} upiId={upiId} />
                   <PaymentLinkBtn propertyId={t.propertyId} tenantId={t.id} phone={t.phone} name={t.name} label="Pay Link" />
-                  <Btn size="sm" variant="filled-success" onClick={() => onMarkPaid(t)}>Mark Paid</Btn>
+                  <Btn size="sm" variant="filled-success" onClick={() => onMarkPaid(t)} className="ml-auto sm:ml-0">Mark Paid</Btn>
                 </div>
               </div>
             );

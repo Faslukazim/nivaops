@@ -362,7 +362,7 @@ function BedRow({ bed, roomNumber, roomId, rooms, propertyId, upiId, onMarkPaid,
       </div>
 
       {/* Bottom row: secondary actions aligned under name */}
-      <div className="flex items-center gap-1 mt-1.5 pl-11">
+      <div className="flex flex-wrap items-center gap-1 mt-1.5 pl-11">
         <WhatsAppLink
           name={tenant.name}
           phone={tenant.phone}

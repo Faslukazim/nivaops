@@ -232,30 +232,39 @@ export function PaymentLinkBtn({ propertyId, tenantId, phone, name, label, class
   const [busy, setBusy] = useState(false);
   const [link, setLink] = useState(null);
   const [failed, setFailed] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   if (!phone) return null;
 
   async function handle() {
-    if (link) { navigator.clipboard?.writeText(link); return; }
+    // Copying must happen synchronously inside the click handler with no
+    // `await` before it — iOS Safari silently drops clipboard permission
+    // once a promise has resolved, so a copy attempted right after an
+    // async fetch/create-link call fails invisibly. So: the click that
+    // generates the link only generates it; copying always happens on a
+    // fresh, later click once `link` is already known.
+    if (link) {
+      try {
+        await navigator.clipboard.writeText(link);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch {
+        setFailed(true);
+      }
+      return;
+    }
     setBusy(true);
     setFailed(false);
     try {
       const record = await fetchCurrentMonthPaymentRecord(propertyId, tenantId);
       if (!record) throw new Error('No rent record found for this tenant.');
-      if (record.payment_link) {
-        setLink(record.payment_link);
-        navigator.clipboard?.writeText(record.payment_link);
-        return;
-      }
-      const url = await createPaymentLink({
+      setLink(record.payment_link || await createPaymentLink({
         paymentRecordId: record.id,
         tenantName: name,
         phone,
         amount: record.amount,
         description: 'Monthly rent',
-      });
-      setLink(url);
-      navigator.clipboard?.writeText(url);
+      }));
     } catch (err) {
       console.error('PaymentLinkBtn failed:', err.message);
       setFailed(true);
@@ -269,13 +278,13 @@ export function PaymentLinkBtn({ propertyId, tenantId, phone, name, label, class
       type="button"
       onClick={handle}
       disabled={busy}
-      title={link ? 'Copy payment link' : failed ? 'Could not generate link — try again' : 'Generate Razorpay payment link'}
+      title={link ? 'Tap to copy payment link' : failed ? 'Could not generate link — try again' : 'Generate Razorpay payment link'}
       className={`inline-flex items-center justify-center gap-1.5 rounded-lg transition-colors ${
         link ? 'bg-leaf/10 text-leaf hover:bg-leaf/20' : failed ? 'text-coral hover:bg-coral/10' : 'text-slate2 hover:bg-mist hover:text-ink'
       } ${label ? 'px-2.5 py-2 text-xs font-semibold' : 'p-2.5'} ${className}`}
     >
       {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
-      {label && <span>{link ? 'Copy link' : failed ? 'Retry' : label}</span>}
+      {label && <span>{copied ? 'Copied!' : link ? 'Copy link' : failed ? 'Retry' : label}</span>}
     </button>
   );
 }
