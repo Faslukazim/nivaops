@@ -3,6 +3,7 @@
 // This is the primary decision-making module for hostel operators.
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useToast } from './lib/toast.jsx';
 import {
   ChevronLeft, ChevronRight, CheckCircle2, Plus, Trash2,
   Loader2, CreditCard, TrendingUp, TrendingDown, Calendar,
@@ -149,6 +150,7 @@ function PaymentLinkBtn({ record, onGenerated }) {
 }
 
 function RentStatusRow({ r, ym, onMarkPaid, onMarkUnpaid, onViewTenant, upiId, onPaymentLink }) {
+  const [confirmUndo, setConfirmUndo] = useState(false);
   const st = computeRecordStatus(r, ym);
   const daysOd = recordDaysOverdue(r, ym);
   const daysUntil = recordDaysUntilDue(r);
@@ -194,10 +196,16 @@ function RentStatusRow({ r, ym, onMarkPaid, onMarkUnpaid, onViewTenant, upiId, o
             )}
             <Btn size="sm" variant="filled-success" onClick={() => onMarkPaid(r)}>Mark Paid</Btn>
           </>
+        ) : confirmUndo ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate2">Undo payment?</span>
+            <button type="button" onClick={() => { onMarkUnpaid(r); setConfirmUndo(false); }} className="text-xs font-semibold text-coral hover:underline">Yes</button>
+            <button type="button" onClick={() => setConfirmUndo(false)} className="text-xs text-slate2 hover:underline">No</button>
+          </div>
         ) : (
           <>
             <StatusBadge status="paid" />
-            <Btn size="sm" variant="ghost" onClick={() => onMarkUnpaid(r)}>Undo</Btn>
+            <Btn size="sm" variant="ghost" onClick={() => setConfirmUndo(true)}>Undo</Btn>
           </>
         )}
       </div>
@@ -369,6 +377,7 @@ function saveBudgets(propertyId, budgets) {
 }
 
 function ExpensesTab({ selectedPropertyId }) {
+  const toast = useToast();
   const [ym, setYm] = useState(ymNow);
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -406,14 +415,17 @@ function ExpensesTab({ selectedPropertyId }) {
 
   async function handleAdd(e) {
     e.preventDefault();
-    if (!form.category || !form.amount || !form.expenseDate) return;
+    if (!form.category) { toast.error('Please select a category.'); return; }
+    if (!form.amount || Number(form.amount) <= 0) { toast.error('Enter an amount greater than 0.'); return; }
+    if (!form.expenseDate) { toast.error('Please select a date.'); return; }
     setSaving(true);
     try {
       const item = await addExpense(selectedPropertyId, { ...form, amount: Number(form.amount) });
       setExpenses(prev => [item, ...prev].sort((a, b) => b.expenseDate.localeCompare(a.expenseDate)));
       setForm(EMPTY_EXPENSE);
       setShowForm(false);
-    } catch (err) { console.error(err); }
+      toast.success('Expense added');
+    } catch (err) { toast.error(err.message); }
     finally { setSaving(false); }
   }
 
@@ -422,7 +434,8 @@ function ExpensesTab({ selectedPropertyId }) {
     try {
       await deleteExpense(id);
       setExpenses(prev => prev.filter(e => e.id !== id));
-    } catch (err) { console.error(err); }
+      toast.success('Expense removed');
+    } catch (err) { toast.error(err.message); }
     finally { setDeletingId(null); }
   }
 
@@ -630,6 +643,7 @@ const EMPTY_INCOME_FORM = {
 };
 
 function IncomeTab({ selectedPropertyId, organizationId, tenants }) {
+  const toast = useToast();
   const [ym, setYm] = useState(ymNow);
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -662,6 +676,15 @@ function IncomeTab({ selectedPropertyId, organizationId, tenants }) {
 
   async function handleAdd(e) {
     e.preventDefault();
+    if (isDayGuest) {
+      if (!form.name?.trim()) { toast.error('Please enter the guest\'s name.'); return; }
+      if (!form.daily_rate || Number(form.daily_rate) <= 0) { toast.error('Enter a daily rate greater than 0.'); return; }
+      if (!form.days || Number(form.days) <= 0) { toast.error('Enter the number of days.'); return; }
+    } else {
+      if (!form.typeChip) { toast.error('Please select a category.'); return; }
+      if (!form.amount || Number(form.amount) <= 0) { toast.error('Enter an amount greater than 0.'); return; }
+    }
+    if (!form.date) { toast.error('Please select a date.'); return; }
     setSaving(true);
     try {
       let rec;
@@ -688,7 +711,8 @@ function IncomeTab({ selectedPropertyId, organizationId, tenants }) {
       }
       setRecords(prev => [rec, ...prev].sort((a, b) => b.date.localeCompare(a.date)));
       setForm(EMPTY_INCOME_FORM); setPhotoFile(null); setPhotoPreview(null); setShowForm(false);
-    } catch (err) { console.error(err); }
+      toast.success('Income recorded');
+    } catch (err) { toast.error(err.message); }
     finally { setSaving(false); }
   }
 
@@ -697,7 +721,7 @@ function IncomeTab({ selectedPropertyId, organizationId, tenants }) {
     try {
       await deleteIncomeRecord(id);
       setRecords(prev => prev.filter(r => r.id !== id));
-    } catch (err) { console.error(err); }
+    } catch (err) { toast.error(err.message); }
     finally { setDeletingId(null); }
   }
 

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useToast } from './lib/toast.jsx';
 import {
   BarChart2, BedDouble, Camera, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight,
-  Home, Loader2, LogOut, MessageCircle, Pencil, Plus, Save, ShieldCheck, Sparkles, Trash2, UserMinus, UserPlus, Users, X,
+  Home, Loader2, LogOut, Menu, MessageCircle, Pencil, Plus, Save, ShieldCheck, Sparkles, Trash2, UserMinus, UserPlus, Users, X,
 } from 'lucide-react';
 import { createTenant, deleteTenant, vacateTenant, fetchTenants, fetchVacatedTenants, fetchPendingDeposits, fetchMovedOutThisMonth, forfeitDeposit, returnDeposit, updateTenant } from './services/tenantService';
 import { addIncomeRecord, uploadIdPhoto, saveTenantIdPhoto } from './services/incomeService';
@@ -234,35 +234,54 @@ function AppLogo() {
 }
 
 function Header({ properties, selectedPropertyId, onPropertyChange, loadingProperties, onSignOut, isAdmin, onOpenAdmin, canAddProperty, onAddProperty, onDeleteProperty, onRenameProperty }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const actions = (
+    <>
+      <PropertyPill
+        properties={properties}
+        selectedId={selectedPropertyId}
+        onChange={onPropertyChange}
+        loading={loadingProperties}
+        canAddProperty={canAddProperty}
+        onAddProperty={onAddProperty}
+        onDeleteProperty={onDeleteProperty}
+        onRenameProperty={onRenameProperty}
+      />
+      {isAdmin && (
+        <button
+          type="button"
+          onClick={onOpenAdmin}
+          title="Admin panel"
+          className="inline-flex items-center justify-center rounded-lg bg-mist p-2 text-slate2 border border-border hover:bg-border hover:text-ink transition-colors"
+        >
+          <ShieldCheck className="h-4 w-4" />
+        </button>
+      )}
+      {onSignOut && <SignOutBtn onSignOut={onSignOut} />}
+    </>
+  );
+
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-border px-4 py-3 sm:px-6" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}>
       <div className="mx-auto max-w-5xl">
         <div className="flex items-center justify-between gap-4">
           <AppLogo />
-          <div className="flex items-center gap-2">
-            <PropertyPill
-              properties={properties}
-              selectedId={selectedPropertyId}
-              onChange={onPropertyChange}
-              loading={loadingProperties}
-              canAddProperty={canAddProperty}
-              onAddProperty={onAddProperty}
-              onDeleteProperty={onDeleteProperty}
-              onRenameProperty={onRenameProperty}
-            />
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={onOpenAdmin}
-                title="Admin panel"
-                className="inline-flex items-center justify-center rounded-lg bg-mist p-2 text-slate2 border border-border hover:bg-border hover:text-ink transition-colors"
-              >
-                <ShieldCheck className="h-4 w-4" />
-              </button>
-            )}
-            {onSignOut && <SignOutBtn onSignOut={onSignOut} />}
-          </div>
+          <div className="hidden sm:flex items-center gap-2">{actions}</div>
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(v => !v)}
+            className="sm:hidden inline-flex items-center justify-center rounded-lg p-2 text-slate2 hover:bg-mist transition-colors"
+            aria-label="Menu"
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
+        {mobileMenuOpen && (
+          <div className="sm:hidden mt-3 pt-3 border-t border-border flex flex-col items-stretch gap-2">
+            {actions}
+          </div>
+        )}
       </div>
     </header>
   );
@@ -449,10 +468,12 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
   const [guestError, setGuestError] = useState('');
   const [guestPhotoFile, setGuestPhotoFile] = useState(null);
   const [guestPhotoPreview, setGuestPhotoPreview] = useState(null);
+  const [advanceAlreadyPaid, setAdvanceAlreadyPaid] = useState(0);
 
   useEffect(() => {
     if (initialTenant) {
       setPhoneError('');
+      setAdvanceAlreadyPaid(0);
       setForm({
         name: initialTenant.name,
         phone: initialTenant.phone,
@@ -471,7 +492,9 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
       });
     } else if (prefill) {
       setForm({ ...emptyForm, propertyId: prefill.propertyId ?? '', roomId: prefill.roomId ?? '', bedId: prefill.bedId ?? '', name: prefill.prefillName ?? '', phone: prefill.prefillPhone ?? '' });
+      setAdvanceAlreadyPaid(Number(prefill.advanceAmount || 0));
     } else {
+      setAdvanceAlreadyPaid(0);
       setForm({ ...emptyForm, propertyId: defaultPropertyId ?? '' });
     }
   }, [initialTenant, defaultPropertyId, prefill]);
@@ -482,8 +505,9 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
     const rent = Number(form.monthlyRent || 0);
     const fee = Number(form.admissionFee || 0);
     const dep = Number(form.depositAmount || 0);
-    setForm(f => ({ ...f, moveInCollection: String(rent + fee + dep) }));
-  }, [form.monthlyRent, form.admissionFee, form.depositAmount]);
+    const remaining = Math.max(0, rent + fee + dep - advanceAlreadyPaid);
+    setForm(f => ({ ...f, moveInCollection: String(remaining) }));
+  }, [form.monthlyRent, form.admissionFee, form.depositAmount, advanceAlreadyPaid]);
 
   function handlePhotoChange(e) {
     const file = e.target.files?.[0];
@@ -523,6 +547,10 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
     }
     if (!isValidPhone(form.phone)) {
       setPhoneError('Enter a valid 10-digit Indian mobile number (e.g. 9876543210)');
+      return;
+    }
+    if (!form.propertyId || !form.roomId || !form.bedId) {
+      setPhoneError('Please select a property, room, and bed before continuing.');
       return;
     }
     const rent = Number(form.monthlyRent);
@@ -716,6 +744,11 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
               <span className="text-xs text-slate2">Rent + Admission + Deposit (auto)</span>
             </div>
             <p className="text-base font-bold text-ink tabular-nums">{fmt(Number(form.moveInCollection || 0))}</p>
+            {advanceAlreadyPaid > 0 && (
+              <p className="mt-1 text-xs text-amber">
+                {fmt(advanceAlreadyPaid)} advance already collected at booking — deducted from the amount above. Only collect the remaining balance.
+              </p>
+            )}
           </div>
         )}
 
@@ -2194,6 +2227,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
       bedId: booking.bed_id,
       prefillName: booking.name,
       prefillPhone: booking.phone,
+      advanceAmount: Number(booking.advance_amount || 0),
     });
     setEditingTenant(null);
     fetchBookings(selectedPropertyId).then(setPendingBookings).catch(() => {});

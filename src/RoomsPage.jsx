@@ -541,9 +541,16 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
 
   async function handleMove(tenantId, destRoomId, destBedId, destRoomNumber, fromBedNumber) {
     const bed = room.beds.find(b => b.tenant?.id === tenantId);
-    await moveTenant(tenantId, { roomId: destRoomId, bedId: destBedId });
-    logActivity(selectedPropertyId, 'tenant_moved', `${bed?.tenant?.name ?? 'Tenant'} moved from Room ${room.room_number} Bed ${fromBedNumber} → Room ${destRoomNumber}`);
-    onRoomUpdate();
+    const name = bed?.tenant?.name ?? 'Tenant';
+    try {
+      await moveTenant(tenantId, { roomId: destRoomId, bedId: destBedId });
+      logActivity(selectedPropertyId, 'tenant_moved', `${name} moved from Room ${room.room_number} Bed ${fromBedNumber} → Room ${destRoomNumber}`);
+      toast.success(`${name} moved to Room ${destRoomNumber}`);
+      onRoomUpdate();
+    } catch (e) {
+      toast.error(e.message);
+      throw e;
+    }
   }
 
   return (
