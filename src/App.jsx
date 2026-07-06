@@ -293,46 +293,65 @@ function Header({ properties, selectedPropertyId, onPropertyChange, loadingPrope
           <div className="hidden sm:flex items-center gap-2">{actions}</div>
           <button
             type="button"
-            onClick={() => setMobileMenuOpen(v => !v)}
+            onClick={() => setMobileMenuOpen(true)}
             className="sm:hidden inline-flex items-center justify-center rounded-lg p-2 text-slate2 hover:bg-mist transition-colors"
             aria-label="Menu"
           >
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            <Menu className="h-5 w-5" />
           </button>
         </div>
-        {mobileMenuOpen && (
-          <div className="sm:hidden mt-3 pt-3 border-t border-border flex flex-col gap-3">
-            <div className="rounded-lg bg-white border border-border px-3 py-2.5">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate2 mb-1.5">Property</p>
-              <PropertyPill
-                properties={properties}
-                selectedId={selectedPropertyId}
-                onChange={onPropertyChange}
-                loading={loadingProperties}
-                canAddProperty={canAddProperty}
-                onAddProperty={onAddProperty}
-                onDeleteProperty={onDeleteProperty}
-                onRenameProperty={onRenameProperty}
-              />
-            </div>
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={onOpenAdmin}
-                className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-2.5 text-sm font-semibold text-ink hover:bg-mist transition-colors"
-              >
-                <ShieldCheck className="h-4 w-4 text-slate2" />
-                Admin panel
-              </button>
-            )}
-            {onSignOut && (
-              <div className="pt-1 border-t border-border">
-                <SignOutBtn onSignOut={onSignOut} className="pt-2" />
-              </div>
-            )}
-          </div>
-        )}
       </div>
+
+      {mobileMenuOpen && createPortal(
+        <>
+          <div
+            className="fixed inset-0 z-[90] bg-ink/40 backdrop-blur-sm sm:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div
+            className="fixed left-0 right-0 z-[95] bg-white rounded-b-2xl shadow-xl sm:hidden"
+            style={{ top: 0, paddingTop: 'env(safe-area-inset-top, 0px)' }}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <AppLogo />
+              <IconBtn variant="ghost" onClick={() => setMobileMenuOpen(false)}>
+                <X className="h-5 w-5" />
+              </IconBtn>
+            </div>
+            <div className="p-4 flex flex-col gap-3">
+              <div className="rounded-lg bg-white border border-border px-3 py-2.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate2 mb-1.5">Property</p>
+                <PropertyPill
+                  properties={properties}
+                  selectedId={selectedPropertyId}
+                  onChange={onPropertyChange}
+                  loading={loadingProperties}
+                  canAddProperty={canAddProperty}
+                  onAddProperty={onAddProperty}
+                  onDeleteProperty={onDeleteProperty}
+                  onRenameProperty={onRenameProperty}
+                />
+              </div>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => { setMobileMenuOpen(false); onOpenAdmin(); }}
+                  className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-2.5 text-sm font-semibold text-ink hover:bg-mist transition-colors"
+                >
+                  <ShieldCheck className="h-4 w-4 text-slate2" />
+                  Admin panel
+                </button>
+              )}
+              {onSignOut && (
+                <div className="pt-2 border-t border-border">
+                  <SignOutBtn onSignOut={onSignOut} className="pt-2" />
+                </div>
+              )}
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
     </header>
   );
 }
