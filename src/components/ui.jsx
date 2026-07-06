@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Loader2, MessageCircle, CheckCircle2, ChevronDown, LogOut, Link2 } from 'lucide-react';
 import { createPaymentLink } from '../services/paymentLinkService';
 import { fetchCurrentMonthPaymentRecord } from '../services/paymentService';
+import { useToast } from '../lib/toast.jsx';
 
 // ─── SignOutBtn ───────────────────────────────────────────────────────────────
 // Opens a modal confirmation dialog before signing out.
@@ -229,6 +230,7 @@ export function WhatsAppLink({ name, phone, roomNumber, bedNumber, rent, label, 
 // or the tenant has no phone on file.
 
 export function PaymentLinkBtn({ propertyId, tenantId, phone, name, label, className = '' }) {
+  const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [link, setLink] = useState(null);
   const [failed, setFailed] = useState(false);
@@ -247,9 +249,11 @@ export function PaymentLinkBtn({ propertyId, tenantId, phone, name, label, class
       try {
         await navigator.clipboard.writeText(link);
         setCopied(true);
+        toast.success(`Payment link copied for ${name}`);
         setTimeout(() => setCopied(false), 2000);
       } catch {
         setFailed(true);
+        toast.error('Could not copy — try again');
       }
       return;
     }
@@ -265,9 +269,11 @@ export function PaymentLinkBtn({ propertyId, tenantId, phone, name, label, class
         amount: record.amount,
         description: 'Monthly rent',
       }));
+      toast.success(`Payment link ready for ${name} — tap again to copy`);
     } catch (err) {
       console.error('PaymentLinkBtn failed:', err.message);
       setFailed(true);
+      toast.error(err.message || 'Could not generate payment link');
     } finally {
       setBusy(false);
     }
