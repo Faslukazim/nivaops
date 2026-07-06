@@ -256,7 +256,8 @@ export function PaymentLinkBtn({ propertyId, tenantId, phone, name, label, class
       });
       setLink(url);
       navigator.clipboard?.writeText(url);
-    } catch {
+    } catch (err) {
+      console.error('PaymentLinkBtn failed:', err.message);
       setFailed(true);
     } finally {
       setBusy(false);

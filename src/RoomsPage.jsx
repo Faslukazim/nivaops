@@ -372,7 +372,7 @@ function BedRow({ bed, roomNumber, roomId, rooms, propertyId, upiId, onMarkPaid,
           label="Remind"
           upiId={upiId}
         />
-        <PaymentLinkBtn propertyId={propertyId} tenantId={tenant.id} phone={tenant.phone} name={tenant.name} />
+        <PaymentLinkBtn propertyId={propertyId} tenantId={tenant.id} phone={tenant.phone} name={tenant.name} label="Pay" />
         <button
           type="button"
           title="Move tenant to another bed"
