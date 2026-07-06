@@ -103,7 +103,7 @@ function RenamePropertyModal({ currentName, onSave, onClose }) {
   );
 }
 
-function PropertyPill({ properties, selectedId, onChange, loading, canAddProperty, onAddProperty, onDeleteProperty, onRenameProperty, fullWidth }) {
+function PropertyPill({ properties, selectedId, onChange, loading, canAddProperty, onAddProperty, onDeleteProperty, onRenameProperty }) {
   const [showRename, setShowRename] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
@@ -126,13 +126,13 @@ function PropertyPill({ properties, selectedId, onChange, loading, canAddPropert
     );
   }
   return (
-    <div className={`flex items-center gap-1.5 ${fullWidth ? 'w-full' : ''}`}>
+    <div className="flex items-center gap-1.5">
       {properties.length > 0 && (
-        <div className={`relative ${fullWidth ? 'flex-1' : ''}`}>
+        <div className="relative">
           <select
             value={selectedId}
             onChange={e => onChange(e.target.value)}
-            className={`appearance-none rounded-lg bg-mist pl-3 pr-7 py-1.5 text-sm font-semibold text-ink border border-border focus:outline-none focus:ring-2 focus:ring-ink/20 cursor-pointer ${fullWidth ? 'w-full' : ''}`}
+            className="appearance-none rounded-lg bg-mist pl-3 pr-7 py-1.5 text-sm font-semibold text-ink border border-border focus:outline-none focus:ring-2 focus:ring-ink/20 cursor-pointer"
           >
             {properties.map(p => (
               <option key={p.id} value={p.id}>{p.name}</option>
@@ -302,7 +302,7 @@ function Header({ properties, selectedPropertyId, onPropertyChange, loadingPrope
         </div>
         {mobileMenuOpen && (
           <div className="sm:hidden mt-3 pt-3 border-t border-border flex flex-col gap-3">
-            <div>
+            <div className="rounded-lg bg-white border border-border px-3 py-2.5">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-slate2 mb-1.5">Property</p>
               <PropertyPill
                 properties={properties}
@@ -313,7 +313,6 @@ function Header({ properties, selectedPropertyId, onPropertyChange, loadingPrope
                 onAddProperty={onAddProperty}
                 onDeleteProperty={onDeleteProperty}
                 onRenameProperty={onRenameProperty}
-                fullWidth
               />
             </div>
             {isAdmin && (
