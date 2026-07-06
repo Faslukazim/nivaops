@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useToast } from './lib/toast.jsx';
 import {
   BarChart2, BedDouble, Camera, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight,
-  Home, Loader2, LogOut, Menu, MessageCircle, Pencil, Plus, Save, ShieldCheck, Sparkles, Trash2, UserMinus, UserPlus, Users, X,
+  Home, Loader2, LogOut, Menu, MessageCircle, MoreVertical, Pencil, Plus, Save, ShieldCheck, Sparkles, Trash2, UserMinus, UserPlus, Users, X,
 } from 'lucide-react';
 import { createTenant, deleteTenant, vacateTenant, fetchTenants, fetchVacatedTenants, fetchPendingDeposits, fetchMovedOutThisMonth, forfeitDeposit, returnDeposit, updateTenant } from './services/tenantService';
 import { addIncomeRecord, uploadIdPhoto, saveTenantIdPhoto } from './services/incomeService';
@@ -105,7 +105,18 @@ function RenamePropertyModal({ currentName, onSave, onClose }) {
 
 function PropertyPill({ properties, selectedId, onChange, loading, canAddProperty, onAddProperty, onDeleteProperty, onRenameProperty }) {
   const [showRename, setShowRename] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef(null);
   const selectedProperty = properties.find(p => p.id === selectedId);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    function onClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [showMenu]);
 
   if (loading) {
     return (
@@ -130,16 +141,6 @@ function PropertyPill({ properties, selectedId, onChange, loading, canAddPropert
           <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate2" />
         </div>
       )}
-      {selectedId && properties.length > 0 && (
-        <button
-          type="button"
-          onClick={() => setShowRename(true)}
-          title="Rename property"
-          className="inline-flex items-center justify-center rounded-lg bg-mist border border-border p-1.5 text-slate2 hover:bg-border hover:text-ink transition-colors"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-        </button>
-      )}
       {canAddProperty && (
         <button
           type="button"
@@ -151,14 +152,36 @@ function PropertyPill({ properties, selectedId, onChange, loading, canAddPropert
         </button>
       )}
       {selectedId && properties.length > 0 && (
-        <button
-          type="button"
-          onClick={onDeleteProperty}
-          title="Delete property"
-          className="inline-flex items-center justify-center rounded-lg bg-mist border border-border p-1.5 text-slate2 hover:bg-coral/10 hover:border-coral/30 hover:text-coral transition-colors"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        <div className="relative" ref={menuRef}>
+          <button
+            type="button"
+            onClick={() => setShowMenu(v => !v)}
+            title="More options"
+            className="inline-flex items-center justify-center rounded-lg bg-mist border border-border p-1.5 text-slate2 hover:bg-border hover:text-ink transition-colors"
+          >
+            <MoreVertical className="h-3.5 w-3.5" />
+          </button>
+          {showMenu && (
+            <div className="absolute right-0 top-full mt-1 w-40 rounded-xl border border-border bg-white shadow-lift py-1 z-50">
+              <button
+                type="button"
+                onClick={() => { setShowRename(true); setShowMenu(false); }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-ink hover:bg-mist transition-colors text-left"
+              >
+                <Pencil className="h-3.5 w-3.5 text-slate2" />
+                Rename
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowMenu(false); onDeleteProperty(); }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-coral hover:bg-coral/5 transition-colors text-left"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete property
+              </button>
+            </div>
+          )}
+        </div>
       )}
       {showRename && selectedProperty && (
         <RenamePropertyModal
@@ -278,8 +301,35 @@ function Header({ properties, selectedPropertyId, onPropertyChange, loadingPrope
           </button>
         </div>
         {mobileMenuOpen && (
-          <div className="sm:hidden mt-3 pt-3 border-t border-border flex flex-col items-stretch gap-2">
-            {actions}
+          <div className="sm:hidden mt-3 pt-3 border-t border-border flex flex-col gap-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate2 mb-1.5">Property</p>
+              <PropertyPill
+                properties={properties}
+                selectedId={selectedPropertyId}
+                onChange={onPropertyChange}
+                loading={loadingProperties}
+                canAddProperty={canAddProperty}
+                onAddProperty={onAddProperty}
+                onDeleteProperty={onDeleteProperty}
+                onRenameProperty={onRenameProperty}
+              />
+            </div>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={onOpenAdmin}
+                className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-2.5 text-sm font-semibold text-ink hover:bg-mist transition-colors"
+              >
+                <ShieldCheck className="h-4 w-4 text-slate2" />
+                Admin panel
+              </button>
+            )}
+            {onSignOut && (
+              <div className="pt-1 border-t border-border">
+                <SignOutBtn onSignOut={onSignOut} className="pt-2" />
+              </div>
+            )}
           </div>
         )}
       </div>
