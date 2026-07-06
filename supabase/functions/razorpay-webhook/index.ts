@@ -32,10 +32,26 @@ Deno.serve(async (req: Request) => {
           Deno.env.get('SUPABASE_URL')!,
           Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
         );
-        await supabase
+        const { data: record, error: updateErr } = await supabase
           .from('payment_records')
           .update({ status: 'paid', paid_at: new Date().toISOString() })
-          .eq('payment_link_id', linkId);
+          .eq('payment_link_id', linkId)
+          .select('tenant_id')
+          .maybeSingle();
+        if (updateErr) console.error('payment_records update failed', updateErr);
+
+        // Keep occupancies.payment_status in sync — this is what the
+        // Tenants tab and Dashboard actually read from. Without this, a
+        // payment marked paid via webhook silently disagrees with the rest
+        // of the app until the tenant's next manual mark-paid/unpaid.
+        if (record?.tenant_id) {
+          const { error: occErr } = await supabase
+            .from('occupancies')
+            .update({ payment_status: 'Paid', payment_date: new Date().toISOString().slice(0, 10) })
+            .eq('tenant_id', record.tenant_id)
+            .eq('status', 'active');
+          if (occErr) console.error('occupancies sync failed', occErr);
+        }
       }
     }
     return new Response('ok');
