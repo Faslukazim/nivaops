@@ -8,7 +8,7 @@ import { markTenantRecordPaid } from './services/paymentService';
 import { logActivity } from './services/activityService';
 import {
   fmt, Label, Card, SectionHeader, Btn, IconBtn,
-  StatusBadge, PaymentToggleBtn, WhatsAppLink,
+  StatusBadge, PaymentToggleBtn, WhatsAppLink, PaymentLinkBtn,
   PageLoader, StatStrip, ConfirmInline, EmptyState, CollectModal,
 } from './components/ui';
 
@@ -206,7 +206,7 @@ function BookBedForm({ bedNumber, onSave, onCancel }) {
 
 // ─── Bed row ──────────────────────────────────────────────────────────────────
 
-function BedRow({ bed, roomNumber, roomId, rooms, upiId, onMarkPaid, onMarkUnpaid, onVacate, onMove, onViewTenant, onDeleteBed, onBook, onCancelBooking, onConvertBooking, onAssign }) {
+function BedRow({ bed, roomNumber, roomId, rooms, propertyId, upiId, onMarkPaid, onMarkUnpaid, onVacate, onMove, onViewTenant, onDeleteBed, onBook, onCancelBooking, onConvertBooking, onAssign }) {
   const occ = bed.occupancy;
   const tenant = bed.tenant;
   const booking = bed.booking;
@@ -372,6 +372,7 @@ function BedRow({ bed, roomNumber, roomId, rooms, upiId, onMarkPaid, onMarkUnpai
           label="Remind"
           upiId={upiId}
         />
+        <PaymentLinkBtn propertyId={propertyId} tenantId={tenant.id} phone={tenant.phone} name={tenant.name} />
         <button
           type="button"
           title="Move tenant to another bed"
@@ -638,6 +639,7 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
             roomNumber={room.room_number}
             roomId={room.id}
             rooms={rooms}
+            propertyId={selectedPropertyId}
             upiId={upiId}
             onMarkPaid={handleMarkPaid}
             onMarkUnpaid={handleMarkUnpaid}

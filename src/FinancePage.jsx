@@ -7,12 +7,11 @@ import { useToast } from './lib/toast.jsx';
 import {
   ChevronLeft, ChevronRight, CheckCircle2, Plus, Trash2,
   Loader2, CreditCard, TrendingUp, TrendingDown, Calendar,
-  AlertCircle, ArrowDownCircle, ArrowUpCircle, Camera, User, Link2,
+  AlertCircle, ArrowDownCircle, ArrowUpCircle, Camera, User,
 } from 'lucide-react';
-import { createPaymentLink } from './services/paymentLinkService';
 import {
   fmt, Label, Card, SectionHeader, Btn, IconBtn,
-  StatusBadge, WhatsAppLink, StatStrip, EmptyState, CollectModal, MoneyInput,
+  StatusBadge, WhatsAppLink, PaymentLinkBtn, StatStrip, EmptyState, CollectModal, MoneyInput,
 } from './components/ui';
 import {
   ensurePaymentRecords, fetchPaymentRecords,
@@ -110,46 +109,7 @@ const STATUS_META = {
   [STATUS.UPCOMING]: { label: 'New Tenants (Grace Period)', bg: 'bg-mist', border: 'border-border', text: 'text-slate2', dot: 'bg-slate2/40' },
 };
 
-function PaymentLinkBtn({ record, onGenerated }) {
-  const [busy, setBusy] = useState(false);
-  const [link, setLink] = useState(record.payment_link ?? null);
-
-  async function handle() {
-    if (link) { navigator.clipboard?.writeText(link); return; }
-    setBusy(true);
-    try {
-      const url = await createPaymentLink({
-        paymentRecordId: record.id,
-        tenantName: record.name,
-        phone: record.phone,
-        amount: record.amount,
-        description: `Monthly rent`,
-      });
-      setLink(url);
-      onGenerated?.(url);
-      navigator.clipboard?.writeText(url);
-    } catch {
-      // Razorpay not configured — silent fail; button stays available
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={handle}
-      disabled={busy}
-      title={link ? 'Copy payment link' : 'Generate Razorpay payment link'}
-      className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-xs font-semibold transition-colors ${link ? 'bg-leaf/10 text-leaf hover:bg-leaf/20' : 'text-slate2 hover:bg-mist hover:text-ink'}`}
-    >
-      {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
-      {link ? 'Copy link' : 'Pay link'}
-    </button>
-  );
-}
-
-function RentStatusRow({ r, ym, onMarkPaid, onMarkUnpaid, onViewTenant, upiId, onPaymentLink }) {
+function RentStatusRow({ r, ym, propertyId, onMarkPaid, onMarkUnpaid, onViewTenant, upiId }) {
   const [confirmUndo, setConfirmUndo] = useState(false);
   const st = computeRecordStatus(r, ym);
   const daysOd = recordDaysOverdue(r, ym);
@@ -191,9 +151,7 @@ function RentStatusRow({ r, ym, onMarkPaid, onMarkUnpaid, onViewTenant, upiId, o
         {st !== STATUS.PAID ? (
           <>
             <WhatsAppLink name={r.name} phone={r.phone} roomNumber={r.roomNumber} bedNumber={r.bedNumber} rent={r.amount} label="Remind" upiId={upiId} />
-            {onPaymentLink && (
-              <PaymentLinkBtn record={r} onGenerated={link => onPaymentLink(r, link)} />
-            )}
+            <PaymentLinkBtn propertyId={propertyId} tenantId={r.tenantId} phone={r.phone} name={r.name} label="Pay link" />
             <Btn size="sm" variant="filled-success" onClick={() => onMarkPaid(r)}>Mark Paid</Btn>
           </>
         ) : confirmUndo ? (
@@ -213,7 +171,7 @@ function RentStatusRow({ r, ym, onMarkPaid, onMarkUnpaid, onViewTenant, upiId, o
   );
 }
 
-function RentSection({ title, meta, records, ym, onMarkPaid, onMarkUnpaid, onViewTenant, upiId, onPaymentLink }) {
+function RentSection({ title, meta, records, ym, propertyId, onMarkPaid, onMarkUnpaid, onViewTenant, upiId }) {
   if (records.length === 0) return null;
   return (
     <div className={`rounded-xl border overflow-hidden ${meta.border}`}>
@@ -226,7 +184,7 @@ function RentSection({ title, meta, records, ym, onMarkPaid, onMarkUnpaid, onVie
       </div>
       <div className="divide-y divide-border bg-white">
         {records.map(r => (
-          <RentStatusRow key={r.id} r={r} ym={ym} onMarkPaid={onMarkPaid} onMarkUnpaid={onMarkUnpaid} onViewTenant={onViewTenant} upiId={upiId} onPaymentLink={onPaymentLink} />
+          <RentStatusRow key={r.id} r={r} ym={ym} propertyId={propertyId} onMarkPaid={onMarkPaid} onMarkUnpaid={onMarkUnpaid} onViewTenant={onViewTenant} upiId={upiId} />
         ))}
       </div>
     </div>
@@ -293,10 +251,6 @@ function RentTab({ selectedPropertyId, onViewTenant, upiId }) {
     }
   }
 
-  function handlePaymentLink(record, link) {
-    setRecords(rs => rs.map(r => r.id === record.id ? { ...r, payment_link: link } : r));
-  }
-
   async function handleUnpaid(r) {
     setRecords(rs => rs.map(x => x.id === r.id
       ? { ...x, status: 'unpaid', paidAt: null, amountCollected: null, deductionReason: null }
@@ -340,11 +294,11 @@ function RentTab({ selectedPropertyId, onViewTenant, upiId }) {
         <Card><EmptyState icon={CreditCard} title="No records for this month" body="Records auto-create when you add tenants. Add your first tenant to start tracking rent." /></Card>
       ) : (
         <>
-          <RentSection title="Overdue"   meta={STATUS_META[STATUS.OVERDUE]}   records={overdue}   ym={ym} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} onViewTenant={onViewTenant} upiId={upiId} onPaymentLink={handlePaymentLink} />
-          <RentSection title="Due Today" meta={STATUS_META[STATUS.DUE_TODAY]} records={dueToday}  ym={ym} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} onViewTenant={onViewTenant} upiId={upiId} onPaymentLink={handlePaymentLink} />
-          <RentSection title="Due Soon"  meta={STATUS_META[STATUS.DUE_SOON]}  records={dueSoon}   ym={ym} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} onViewTenant={onViewTenant} upiId={upiId} onPaymentLink={handlePaymentLink} />
-          <RentSection title="Paid"      meta={STATUS_META[STATUS.PAID]}      records={paid}      ym={ym} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} onViewTenant={onViewTenant} upiId={upiId} />
-          <RentSection title="New Tenants (Grace Period)" meta={STATUS_META[STATUS.UPCOMING]} records={grouped[STATUS.UPCOMING]} ym={ym} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} onViewTenant={onViewTenant} upiId={upiId} />
+          <RentSection title="Overdue"   meta={STATUS_META[STATUS.OVERDUE]}   records={overdue}   ym={ym} propertyId={selectedPropertyId} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} onViewTenant={onViewTenant} upiId={upiId} />
+          <RentSection title="Due Today" meta={STATUS_META[STATUS.DUE_TODAY]} records={dueToday}  ym={ym} propertyId={selectedPropertyId} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} onViewTenant={onViewTenant} upiId={upiId} />
+          <RentSection title="Due Soon"  meta={STATUS_META[STATUS.DUE_SOON]}  records={dueSoon}   ym={ym} propertyId={selectedPropertyId} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} onViewTenant={onViewTenant} upiId={upiId} />
+          <RentSection title="Paid"      meta={STATUS_META[STATUS.PAID]}      records={paid}      ym={ym} propertyId={selectedPropertyId} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} onViewTenant={onViewTenant} upiId={upiId} />
+          <RentSection title="New Tenants (Grace Period)" meta={STATUS_META[STATUS.UPCOMING]} records={grouped[STATUS.UPCOMING]} ym={ym} propertyId={selectedPropertyId} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} onViewTenant={onViewTenant} upiId={upiId} />
         </>
       )}
 

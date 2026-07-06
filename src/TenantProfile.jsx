@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { X, Phone, MessageCircle, CheckCircle2, Pencil, Trash2, Loader2, Save } from 'lucide-react';
-import { fmt, Label, Btn, IconBtn, ConfirmInline, CollectModal, MoneyInput } from './components/ui';
+import { fmt, Label, Btn, IconBtn, ConfirmInline, CollectModal, MoneyInput, PaymentLinkBtn } from './components/ui';
 import { fetchTenantPaymentHistory } from './services/paymentService';
 import { getIdPhotoUrl } from './services/incomeService';
 import { updateTenant } from './services/tenantService';
@@ -134,6 +134,14 @@ export default function TenantProfile({ tenant, properties, onClose, onCollect, 
                 <MessageCircle className="h-4 w-4" />
                 WhatsApp
               </a>
+              <PaymentLinkBtn
+                propertyId={tenant.propertyId}
+                tenantId={tenant.id}
+                phone={tenant.phone}
+                name={tenant.name}
+                label="Pay link"
+                className="flex-1 justify-center border border-border"
+              />
             </div>
           </div>
 

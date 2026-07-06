@@ -3,7 +3,9 @@
 // Import from here, never redefine inline.
 
 import { useState } from 'react';
-import { Loader2, MessageCircle, CheckCircle2, ChevronDown, LogOut } from 'lucide-react';
+import { Loader2, MessageCircle, CheckCircle2, ChevronDown, LogOut, Link2 } from 'lucide-react';
+import { createPaymentLink } from '../services/paymentLinkService';
+import { fetchCurrentMonthPaymentRecord } from '../services/paymentService';
 
 // ─── SignOutBtn ───────────────────────────────────────────────────────────────
 // Opens a modal confirmation dialog before signing out.
@@ -215,6 +217,65 @@ export function WhatsAppLink({ name, phone, roomNumber, bedNumber, rent, label, 
       <MessageCircle className="h-4 w-4 shrink-0" />
       {label && <span>{label}</span>}
     </a>
+  );
+}
+
+// ─── PaymentLinkBtn ───────────────────────────────────────────────────────────
+// Generates (or reuses) a Razorpay payment link for a tenant's current-month
+// rent, and copies it to the clipboard. Drop-in anywhere a tenant/amount is
+// known — Tenants, Rooms, Dashboard, Finance, TenantProfile — it resolves
+// its own payment_records row on demand so callers don't need to already
+// have one. Silently disabled (renders nothing) if Razorpay isn't configured
+// or the tenant has no phone on file.
+
+export function PaymentLinkBtn({ propertyId, tenantId, phone, name, label, className = '' }) {
+  const [busy, setBusy] = useState(false);
+  const [link, setLink] = useState(null);
+  const [failed, setFailed] = useState(false);
+
+  if (!phone) return null;
+
+  async function handle() {
+    if (link) { navigator.clipboard?.writeText(link); return; }
+    setBusy(true);
+    setFailed(false);
+    try {
+      const record = await fetchCurrentMonthPaymentRecord(propertyId, tenantId);
+      if (!record) throw new Error('No rent record found for this tenant.');
+      if (record.payment_link) {
+        setLink(record.payment_link);
+        navigator.clipboard?.writeText(record.payment_link);
+        return;
+      }
+      const url = await createPaymentLink({
+        paymentRecordId: record.id,
+        tenantName: name,
+        phone,
+        amount: record.amount,
+        description: 'Monthly rent',
+      });
+      setLink(url);
+      navigator.clipboard?.writeText(url);
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handle}
+      disabled={busy}
+      title={link ? 'Copy payment link' : failed ? 'Could not generate link — try again' : 'Generate Razorpay payment link'}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-lg transition-colors ${
+        link ? 'bg-leaf/10 text-leaf hover:bg-leaf/20' : failed ? 'text-coral hover:bg-coral/10' : 'text-slate2 hover:bg-mist hover:text-ink'
+      } ${label ? 'px-2.5 py-2 text-xs font-semibold' : 'p-2.5'} ${className}`}
+    >
+      {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
+      {label && <span>{link ? 'Copy link' : failed ? 'Retry' : label}</span>}
+    </button>
   );
 }
 
