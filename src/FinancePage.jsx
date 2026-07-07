@@ -3,15 +3,15 @@
 // This is the primary decision-making module for hostel operators.
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useToast } from './lib/toast.jsx';
 import {
   ChevronLeft, ChevronRight, CheckCircle2, Plus, Trash2,
   Loader2, CreditCard, TrendingUp, TrendingDown, Calendar,
-  AlertCircle, ArrowDownCircle, ArrowUpCircle, Camera, User, Link2,
+  AlertCircle, ArrowDownCircle, ArrowUpCircle, Camera, User,
 } from 'lucide-react';
-import { createPaymentLink } from './services/paymentLinkService';
 import {
   fmt, Label, Card, SectionHeader, Btn, IconBtn,
-  StatusBadge, WhatsAppLink, StatStrip, EmptyState, CollectModal, MoneyInput,
+  StatusBadge, WhatsAppLink, PaymentLinkBtn, StatStrip, EmptyState, CollectModal, MoneyInput,
 } from './components/ui';
 import {
   ensurePaymentRecords, fetchPaymentRecords,
@@ -28,6 +28,7 @@ import {
 import {
   INCOME_CATEGORIES, fetchIncomeRecords, addIncomeRecord, deleteIncomeRecord, uploadIdPhoto,
 } from './services/incomeService';
+import { fetchDepositSettlementsForMonth } from './services/tenantService';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -108,46 +109,8 @@ const STATUS_META = {
   [STATUS.UPCOMING]: { label: 'New Tenants (Grace Period)', bg: 'bg-mist', border: 'border-border', text: 'text-slate2', dot: 'bg-slate2/40' },
 };
 
-function PaymentLinkBtn({ record, onGenerated }) {
-  const [busy, setBusy] = useState(false);
-  const [link, setLink] = useState(record.payment_link ?? null);
-
-  async function handle() {
-    if (link) { navigator.clipboard?.writeText(link); return; }
-    setBusy(true);
-    try {
-      const url = await createPaymentLink({
-        paymentRecordId: record.id,
-        tenantName: record.name,
-        phone: record.phone,
-        amount: record.amount,
-        description: `Monthly rent`,
-      });
-      setLink(url);
-      onGenerated?.(url);
-      navigator.clipboard?.writeText(url);
-    } catch {
-      // Razorpay not configured — silent fail; button stays available
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={handle}
-      disabled={busy}
-      title={link ? 'Copy payment link' : 'Generate Razorpay payment link'}
-      className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-xs font-semibold transition-colors ${link ? 'bg-leaf/10 text-leaf hover:bg-leaf/20' : 'text-slate2 hover:bg-mist hover:text-ink'}`}
-    >
-      {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
-      {link ? 'Copy link' : 'Pay link'}
-    </button>
-  );
-}
-
-function RentStatusRow({ r, ym, onMarkPaid, onMarkUnpaid, onViewTenant, upiId, onPaymentLink }) {
+function RentStatusRow({ r, ym, propertyId, onMarkPaid, onMarkUnpaid, onViewTenant, upiId }) {
+  const [confirmUndo, setConfirmUndo] = useState(false);
   const st = computeRecordStatus(r, ym);
   const daysOd = recordDaysOverdue(r, ym);
   const daysUntil = recordDaysUntilDue(r);
@@ -188,15 +151,19 @@ function RentStatusRow({ r, ym, onMarkPaid, onMarkUnpaid, onViewTenant, upiId, o
         {st !== STATUS.PAID ? (
           <>
             <WhatsAppLink name={r.name} phone={r.phone} roomNumber={r.roomNumber} bedNumber={r.bedNumber} rent={r.amount} label="Remind" upiId={upiId} />
-            {onPaymentLink && (
-              <PaymentLinkBtn record={r} onGenerated={link => onPaymentLink(r, link)} />
-            )}
+            <PaymentLinkBtn propertyId={propertyId} tenantId={r.tenantId} phone={r.phone} name={r.name} label="Pay link" />
             <Btn size="sm" variant="filled-success" onClick={() => onMarkPaid(r)}>Mark Paid</Btn>
           </>
+        ) : confirmUndo ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate2">Undo payment?</span>
+            <button type="button" onClick={() => { onMarkUnpaid(r); setConfirmUndo(false); }} className="text-xs font-semibold text-coral hover:underline">Yes</button>
+            <button type="button" onClick={() => setConfirmUndo(false)} className="text-xs text-slate2 hover:underline">No</button>
+          </div>
         ) : (
           <>
             <StatusBadge status="paid" />
-            <Btn size="sm" variant="ghost" onClick={() => onMarkUnpaid(r)}>Undo</Btn>
+            <Btn size="sm" variant="ghost" onClick={() => setConfirmUndo(true)}>Undo</Btn>
           </>
         )}
       </div>
@@ -204,7 +171,7 @@ function RentStatusRow({ r, ym, onMarkPaid, onMarkUnpaid, onViewTenant, upiId, o
   );
 }
 
-function RentSection({ title, meta, records, ym, onMarkPaid, onMarkUnpaid, onViewTenant, upiId, onPaymentLink }) {
+function RentSection({ title, meta, records, ym, propertyId, onMarkPaid, onMarkUnpaid, onViewTenant, upiId }) {
   if (records.length === 0) return null;
   return (
     <div className={`rounded-xl border overflow-hidden ${meta.border}`}>
@@ -217,7 +184,7 @@ function RentSection({ title, meta, records, ym, onMarkPaid, onMarkUnpaid, onVie
       </div>
       <div className="divide-y divide-border bg-white">
         {records.map(r => (
-          <RentStatusRow key={r.id} r={r} ym={ym} onMarkPaid={onMarkPaid} onMarkUnpaid={onMarkUnpaid} onViewTenant={onViewTenant} upiId={upiId} onPaymentLink={onPaymentLink} />
+          <RentStatusRow key={r.id} r={r} ym={ym} propertyId={propertyId} onMarkPaid={onMarkPaid} onMarkUnpaid={onMarkUnpaid} onViewTenant={onViewTenant} upiId={upiId} />
         ))}
       </div>
     </div>
@@ -284,10 +251,6 @@ function RentTab({ selectedPropertyId, onViewTenant, upiId }) {
     }
   }
 
-  function handlePaymentLink(record, link) {
-    setRecords(rs => rs.map(r => r.id === record.id ? { ...r, payment_link: link } : r));
-  }
-
   async function handleUnpaid(r) {
     setRecords(rs => rs.map(x => x.id === r.id
       ? { ...x, status: 'unpaid', paidAt: null, amountCollected: null, deductionReason: null }
@@ -328,14 +291,14 @@ function RentTab({ selectedPropertyId, onViewTenant, upiId }) {
       {loading ? (
         <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-slate2" /></div>
       ) : records.length === 0 ? (
-        <Card><EmptyState icon={CreditCard} title="No records for this month" body="Records are created automatically when tenants are active." /></Card>
+        <Card><EmptyState icon={CreditCard} title="No records for this month" body="Records auto-create when you add tenants. Add your first tenant to start tracking rent." /></Card>
       ) : (
         <>
-          <RentSection title="Overdue"   meta={STATUS_META[STATUS.OVERDUE]}   records={overdue}   ym={ym} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} onViewTenant={onViewTenant} upiId={upiId} onPaymentLink={handlePaymentLink} />
-          <RentSection title="Due Today" meta={STATUS_META[STATUS.DUE_TODAY]} records={dueToday}  ym={ym} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} onViewTenant={onViewTenant} upiId={upiId} onPaymentLink={handlePaymentLink} />
-          <RentSection title="Due Soon"  meta={STATUS_META[STATUS.DUE_SOON]}  records={dueSoon}   ym={ym} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} onViewTenant={onViewTenant} upiId={upiId} onPaymentLink={handlePaymentLink} />
-          <RentSection title="Paid"      meta={STATUS_META[STATUS.PAID]}      records={paid}      ym={ym} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} onViewTenant={onViewTenant} upiId={upiId} />
-          <RentSection title="New Tenants (Grace Period)" meta={STATUS_META[STATUS.UPCOMING]} records={grouped[STATUS.UPCOMING]} ym={ym} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} onViewTenant={onViewTenant} upiId={upiId} />
+          <RentSection title="Overdue"   meta={STATUS_META[STATUS.OVERDUE]}   records={overdue}   ym={ym} propertyId={selectedPropertyId} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} onViewTenant={onViewTenant} upiId={upiId} />
+          <RentSection title="Due Today" meta={STATUS_META[STATUS.DUE_TODAY]} records={dueToday}  ym={ym} propertyId={selectedPropertyId} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} onViewTenant={onViewTenant} upiId={upiId} />
+          <RentSection title="Due Soon"  meta={STATUS_META[STATUS.DUE_SOON]}  records={dueSoon}   ym={ym} propertyId={selectedPropertyId} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} onViewTenant={onViewTenant} upiId={upiId} />
+          <RentSection title="Paid"      meta={STATUS_META[STATUS.PAID]}      records={paid}      ym={ym} propertyId={selectedPropertyId} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} onViewTenant={onViewTenant} upiId={upiId} />
+          <RentSection title="New Tenants (Grace Period)" meta={STATUS_META[STATUS.UPCOMING]} records={grouped[STATUS.UPCOMING]} ym={ym} propertyId={selectedPropertyId} onMarkPaid={setCollecting} onMarkUnpaid={handleUnpaid} onViewTenant={onViewTenant} upiId={upiId} />
         </>
       )}
 
@@ -359,7 +322,16 @@ const EMPTY_EXPENSE = {
   expenseDate: new Date().toISOString().slice(0, 10),
 };
 
+function budgetKey(propertyId) { return `expense-budgets-${propertyId}`; }
+function loadBudgets(propertyId) {
+  try { return JSON.parse(localStorage.getItem(budgetKey(propertyId)) ?? '{}'); } catch { return {}; }
+}
+function saveBudgets(propertyId, budgets) {
+  localStorage.setItem(budgetKey(propertyId), JSON.stringify(budgets));
+}
+
 function ExpensesTab({ selectedPropertyId }) {
+  const toast = useToast();
   const [ym, setYm] = useState(ymNow);
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -367,6 +339,23 @@ function ExpensesTab({ selectedPropertyId }) {
   const [form, setForm] = useState(EMPTY_EXPENSE);
   const [showForm, setShowForm] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [budgets, setBudgets] = useState(() => loadBudgets(selectedPropertyId));
+  const [editingBudget, setEditingBudget] = useState(null);
+  const [budgetDraft, setBudgetDraft] = useState('');
+
+  useEffect(() => {
+    setBudgets(loadBudgets(selectedPropertyId));
+  }, [selectedPropertyId]);
+
+  function handleSetBudget(catId) {
+    const val = Number(budgetDraft);
+    const updated = { ...budgets, [catId]: val > 0 ? val : undefined };
+    if (val <= 0) delete updated[catId];
+    saveBudgets(selectedPropertyId, updated);
+    setBudgets(updated);
+    setEditingBudget(null);
+    setBudgetDraft('');
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -380,14 +369,17 @@ function ExpensesTab({ selectedPropertyId }) {
 
   async function handleAdd(e) {
     e.preventDefault();
-    if (!form.category || !form.amount || !form.expenseDate) return;
+    if (!form.category) { toast.error('Please select a category.'); return; }
+    if (!form.amount || Number(form.amount) <= 0) { toast.error('Enter an amount greater than 0.'); return; }
+    if (!form.expenseDate) { toast.error('Please select a date.'); return; }
     setSaving(true);
     try {
       const item = await addExpense(selectedPropertyId, { ...form, amount: Number(form.amount) });
       setExpenses(prev => [item, ...prev].sort((a, b) => b.expenseDate.localeCompare(a.expenseDate)));
       setForm(EMPTY_EXPENSE);
       setShowForm(false);
-    } catch (err) { console.error(err); }
+      toast.success('Expense added');
+    } catch (err) { toast.error(err.message); }
     finally { setSaving(false); }
   }
 
@@ -396,7 +388,8 @@ function ExpensesTab({ selectedPropertyId }) {
     try {
       await deleteExpense(id);
       setExpenses(prev => prev.filter(e => e.id !== id));
-    } catch (err) { console.error(err); }
+      toast.success('Expense removed');
+    } catch (err) { toast.error(err.message); }
     finally { setDeletingId(null); }
   }
 
@@ -404,7 +397,8 @@ function ExpensesTab({ selectedPropertyId }) {
   const byCategory = EXPENSE_CATEGORIES.map(cat => ({
     ...cat,
     total: expenses.filter(e => e.category === cat.id).reduce((s, e) => s + e.amount, 0),
-  })).filter(c => c.total > 0).sort((a, b) => b.total - a.total);
+    budget: budgets[cat.id] ?? 0,
+  })).filter(c => c.total > 0 || c.budget > 0).sort((a, b) => b.total - a.total);
 
   const catLabel = id => EXPENSE_CATEGORIES.find(c => c.id === id)?.label ?? id;
 
@@ -415,7 +409,7 @@ function ExpensesTab({ selectedPropertyId }) {
       <MonthNav ym={ym} onChange={setYm} />
 
       {/* Stats */}
-      {expenses.length > 0 && (
+      {(expenses.length > 0 || byCategory.length > 0) && (
         <Card className="overflow-hidden">
           <div className="px-4 py-3 flex items-center justify-between border-b border-border">
             <Label>Total Expenses</Label>
@@ -423,20 +417,53 @@ function ExpensesTab({ selectedPropertyId }) {
           </div>
           {byCategory.length > 0 && (
             <div className="divide-y divide-border">
-              {byCategory.map(cat => (
-                <div key={cat.id} className="flex items-center justify-between px-4 py-2.5">
-                  <span className="text-sm text-ink">{cat.label}</span>
-                  <div className="flex items-center gap-3">
-                    <div className="h-1.5 w-20 rounded-full bg-border overflow-hidden">
+              {byCategory.map(cat => {
+                const pct = cat.budget > 0 ? Math.min(100, Math.round((cat.total / cat.budget) * 100)) : Math.round((cat.total / total) * 100);
+                const overBudget = cat.budget > 0 && cat.total > cat.budget;
+                return (
+                  <div key={cat.id} className="px-4 py-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-ink">{cat.label}</span>
+                      <div className="flex items-center gap-2">
+                        {editingBudget === cat.id ? (
+                          <form onSubmit={e => { e.preventDefault(); handleSetBudget(cat.id); }} className="flex items-center gap-1">
+                            <input
+                              autoFocus
+                              type="number"
+                              min="0"
+                              value={budgetDraft}
+                              onChange={e => setBudgetDraft(e.target.value)}
+                              placeholder="Budget ₹"
+                              className="w-24 rounded border border-border px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-ink/20"
+                            />
+                            <button type="submit" className="text-xs text-leaf font-semibold px-1">Set</button>
+                            <button type="button" onClick={() => setEditingBudget(null)} className="text-xs text-slate2 px-1">✕</button>
+                          </form>
+                        ) : (
+                          <button
+                            onClick={() => { setEditingBudget(cat.id); setBudgetDraft(cat.budget > 0 ? String(cat.budget) : ''); }}
+                            className="text-[10px] text-slate2 hover:text-ink border border-dashed border-slate2/40 rounded px-1.5 py-0.5"
+                          >
+                            {cat.budget > 0 ? `Budget: ${fmt(cat.budget)}` : '+ Budget'}
+                          </button>
+                        )}
+                        <span className={`text-sm font-semibold tabular-nums w-20 text-right ${overBudget ? 'text-coral' : 'text-ink'}`}>{fmt(cat.total)}</span>
+                      </div>
+                    </div>
+                    <div className="mt-1.5 h-1.5 w-full rounded-full bg-border overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-coral/60"
-                        style={{ width: `${Math.round((cat.total / total) * 100)}%` }}
+                        className={`h-full rounded-full transition-all ${overBudget ? 'bg-coral' : cat.budget > 0 ? 'bg-amber' : 'bg-coral/50'}`}
+                        style={{ width: `${pct}%` }}
                       />
                     </div>
-                    <span className="text-sm font-semibold tabular-nums text-coral w-20 text-right">{fmt(cat.total)}</span>
+                    {cat.budget > 0 && (
+                      <p className={`mt-0.5 text-[10px] ${overBudget ? 'text-coral font-semibold' : 'text-slate2'}`}>
+                        {overBudget ? `Over by ${fmt(cat.total - cat.budget)}` : `${fmt(cat.budget - cat.total)} remaining`}
+                      </p>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </Card>
@@ -570,6 +597,7 @@ const EMPTY_INCOME_FORM = {
 };
 
 function IncomeTab({ selectedPropertyId, organizationId, tenants }) {
+  const toast = useToast();
   const [ym, setYm] = useState(ymNow);
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -579,6 +607,7 @@ function IncomeTab({ selectedPropertyId, organizationId, tenants }) {
   const [photoPreview, setPhotoPreview] = useState(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const isDayGuest = form.typeChip === 'Day Guest';
@@ -601,6 +630,15 @@ function IncomeTab({ selectedPropertyId, organizationId, tenants }) {
 
   async function handleAdd(e) {
     e.preventDefault();
+    if (isDayGuest) {
+      if (!form.name?.trim()) { toast.error('Please enter the guest\'s name.'); return; }
+      if (!form.daily_rate || Number(form.daily_rate) <= 0) { toast.error('Enter a daily rate greater than 0.'); return; }
+      if (!form.days || Number(form.days) <= 0) { toast.error('Enter the number of days.'); return; }
+    } else {
+      if (!form.typeChip) { toast.error('Please select a category.'); return; }
+      if (!form.amount || Number(form.amount) <= 0) { toast.error('Enter an amount greater than 0.'); return; }
+    }
+    if (!form.date) { toast.error('Please select a date.'); return; }
     setSaving(true);
     try {
       let rec;
@@ -627,7 +665,8 @@ function IncomeTab({ selectedPropertyId, organizationId, tenants }) {
       }
       setRecords(prev => [rec, ...prev].sort((a, b) => b.date.localeCompare(a.date)));
       setForm(EMPTY_INCOME_FORM); setPhotoFile(null); setPhotoPreview(null); setShowForm(false);
-    } catch (err) { console.error(err); }
+      toast.success('Income recorded');
+    } catch (err) { toast.error(err.message); }
     finally { setSaving(false); }
   }
 
@@ -636,7 +675,7 @@ function IncomeTab({ selectedPropertyId, organizationId, tenants }) {
     try {
       await deleteIncomeRecord(id);
       setRecords(prev => prev.filter(r => r.id !== id));
-    } catch (err) { console.error(err); }
+    } catch (err) { toast.error(err.message); }
     finally { setDeletingId(null); }
   }
 
@@ -788,9 +827,16 @@ function IncomeTab({ selectedPropertyId, organizationId, tenants }) {
                   </p>
                 </div>
                 <span className="text-sm font-bold tabular-nums text-leaf shrink-0">{fmt(r.amount)}</span>
-                <IconBtn variant="ghost" onClick={() => handleDelete(r.id)} disabled={deletingId === r.id} className="text-slate2 hover:text-coral">
-                  {deletingId === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                </IconBtn>
+                {confirmDeleteId === r.id ? (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button type="button" onClick={() => { handleDelete(r.id); setConfirmDeleteId(null); }} className="text-xs font-semibold text-coral hover:underline">Delete</button>
+                    <button type="button" onClick={() => setConfirmDeleteId(null)} className="text-xs text-slate2 hover:underline">Cancel</button>
+                  </div>
+                ) : (
+                  <IconBtn variant="ghost" onClick={() => setConfirmDeleteId(r.id)} disabled={deletingId === r.id} className="text-slate2 hover:text-coral">
+                    {deletingId === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  </IconBtn>
+                )}
               </div>
             ))}
           </div>
@@ -805,6 +851,7 @@ function PLTab({ selectedPropertyId, tenants }) {
   const [records, setRecords] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [incomeRecs, setIncomeRecs] = useState([]);
+  const [depositSettlements, setDepositSettlements] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -814,8 +861,9 @@ function PLTab({ selectedPropertyId, tenants }) {
       fetchPaymentRecords(selectedPropertyId, ym),
       fetchExpenses(selectedPropertyId, ym),
       fetchIncomeRecords(selectedPropertyId, ym),
+      fetchDepositSettlementsForMonth(selectedPropertyId, ym),
     ])
-      .then(([recs, exps, incs]) => { setRecords(recs); setExpenses(exps); setIncomeRecs(incs); })
+      .then(([recs, exps, incs, deposits]) => { setRecords(recs); setExpenses(exps); setIncomeRecs(incs); setDepositSettlements(deposits); })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [selectedPropertyId, ym]);
@@ -829,10 +877,19 @@ function PLTab({ selectedPropertyId, tenants }) {
   const newThisMonth = tenants.filter(t => t.joinDate?.startsWith(ym));
   const admissionIncome = newThisMonth.reduce((s, t) => s + Number(t.admissionFee || 0), 0);
   const otherIncome = incomeRecs.reduce((s, r) => s + Number(r.amount), 0);
-  const totalIncome = rentCollected + admissionIncome + otherIncome;
+
+  // Deposits — treated as cash-basis income/expense (per operator's request):
+  // collected this month = income, returned this month = expense, forfeited
+  // this month = income (you kept it). Pre-accounted legacy deposits are
+  // excluded server-side already.
+  const depositCollected = newThisMonth.filter(t => !t.depositPreAccounted).reduce((s, t) => s + Number(t.depositAmount || 0), 0);
+  const depositForfeited = depositSettlements.filter(d => d.deposit_status === 'forfeited').reduce((s, d) => s + Number(d.deposit_amount || 0), 0);
+  const depositReturned = depositSettlements.filter(d => d.deposit_status === 'returned').reduce((s, d) => s + Number(d.deposit_amount || 0), 0);
+
+  const totalIncome = rentCollected + admissionIncome + otherIncome + depositCollected + depositForfeited;
 
   // Expenses
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
+  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0) + depositReturned;
   const byCategory = EXPENSE_CATEGORIES.map(cat => ({
     ...cat,
     total: expenses.filter(e => e.category === cat.id).reduce((s, e) => s + e.amount, 0),
@@ -903,6 +960,24 @@ function PLTab({ selectedPropertyId, tenants }) {
                   <span className="text-sm font-semibold tabular-nums text-ink">{fmt(otherIncome)}</span>
                 </div>
               )}
+              {depositCollected > 0 && (
+                <div className="flex items-center justify-between px-4 py-3">
+                  <div>
+                    <p className="text-sm text-ink">Deposits Collected</p>
+                    <p className="text-xs text-slate2">from new tenants this month</p>
+                  </div>
+                  <span className="text-sm font-semibold tabular-nums text-ink">{fmt(depositCollected)}</span>
+                </div>
+              )}
+              {depositForfeited > 0 && (
+                <div className="flex items-center justify-between px-4 py-3">
+                  <div>
+                    <p className="text-sm text-ink">Deposits Forfeited</p>
+                    <p className="text-xs text-slate2">kept from tenants who moved out</p>
+                  </div>
+                  <span className="text-sm font-semibold tabular-nums text-ink">{fmt(depositForfeited)}</span>
+                </div>
+              )}
             </div>
           </Card>
 
@@ -924,6 +999,15 @@ function PLTab({ selectedPropertyId, tenants }) {
                     <span className="text-sm font-semibold tabular-nums text-coral">{fmt(cat.total)}</span>
                   </div>
                 ))}
+                {depositReturned > 0 && (
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <div>
+                      <p className="text-sm text-ink">Deposits Returned</p>
+                      <p className="text-xs text-slate2">refunded to tenants who moved out</p>
+                    </div>
+                    <span className="text-sm font-semibold tabular-nums text-coral">{fmt(depositReturned)}</span>
+                  </div>
+                )}
               </div>
             )}
           </Card>

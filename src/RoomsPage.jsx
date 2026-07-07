@@ -1,14 +1,14 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useToast } from './lib/toast.jsx';
-import { ArrowLeft, ArrowRightLeft, BedDouble, Bookmark, ChevronDown, Loader2, Plus, Trash2, UserPlus, X } from 'lucide-react';
-import { fetchRoomsWithOccupants, createRoom, deleteRoom, deleteBed } from './services/propertyService';
+import { ArrowLeft, ArrowRightLeft, BedDouble, Bookmark, Check, ChevronDown, Loader2, Pencil, Plus, Trash2, UserPlus, X } from 'lucide-react';
+import { fetchRoomsWithOccupants, createRoom, deleteRoom, deleteBed, updateRoomNumber } from './services/propertyService';
 import { deleteTenant, moveTenant, updateTenant } from './services/tenantService';
 import { createBooking, cancelBooking, convertBooking } from './services/bookingService';
 import { markTenantRecordPaid } from './services/paymentService';
 import { logActivity } from './services/activityService';
 import {
   fmt, Label, Card, SectionHeader, Btn, IconBtn,
-  StatusBadge, PaymentToggleBtn, WhatsAppLink,
+  StatusBadge, PaymentToggleBtn, WhatsAppLink, PaymentLinkBtn,
   PageLoader, StatStrip, ConfirmInline, EmptyState, CollectModal,
 } from './components/ui';
 
@@ -27,7 +27,9 @@ function OccBar({ occupied, capacity }) {
 
 function RoomCard({ room, isSelected, onClick }) {
   const occupied = room.beds.filter(b => b.tenant).length;
+  const reserved = room.beds.filter(b => !b.tenant && b.booking).length;
   const capacity = room.beds.length;
+  const vacant = capacity - occupied - reserved;
   const unpaid = room.beds.filter(b => b.occupancy?.payment_status === 'Unpaid').length;
   const isEmpty = occupied === 0;
   const isFull = occupied === capacity;
@@ -56,7 +58,7 @@ function RoomCard({ room, isSelected, onClick }) {
       </div>
 
       <p className="mt-1 text-slate text-sm">
-        {occupied} Occupied · {capacity - occupied} Vacant
+        {occupied} Occupied · {vacant} Vacant{reserved > 0 ? ` · ${reserved} Reserved` : ''}
       </p>
 
       <OccBar occupied={occupied} capacity={capacity} />
@@ -87,9 +89,9 @@ function MoveBedForm({ tenant, fromRoomId, rooms, onConfirm, onCancel, saving })
   const [destRoomId, setDestRoomId] = useState('');
   const [destBedId, setDestBedId] = useState('');
 
-  const eligibleRooms = rooms.filter(r => r.id !== fromRoomId && r.beds.some(b => !b.tenant));
+  const eligibleRooms = rooms.filter(r => r.id !== fromRoomId && r.beds.some(b => !b.tenant && !b.booking));
   const destRoom = rooms.find(r => r.id === destRoomId);
-  const availableBeds = destRoom?.beds?.filter(b => !b.tenant) ?? [];
+  const availableBeds = destRoom?.beds?.filter(b => !b.tenant && !b.booking) ?? [];
 
   const selectCls = 'w-full appearance-none rounded-lg border border-border bg-white px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink disabled:bg-mist disabled:text-slate2';
 
@@ -113,7 +115,7 @@ function MoveBedForm({ tenant, fromRoomId, rooms, onConfirm, onCancel, saving })
               >
                 <option value="">Select room</option>
                 {eligibleRooms.map(r => {
-                  const free = r.beds.filter(b => !b.tenant).length;
+                  const free = r.beds.filter(b => !b.tenant && !b.booking).length;
                   return <option key={r.id} value={r.id}>Room {r.room_number} ({free} free)</option>;
                 })}
               </select>
@@ -204,7 +206,7 @@ function BookBedForm({ bedNumber, onSave, onCancel }) {
 
 // ─── Bed row ──────────────────────────────────────────────────────────────────
 
-function BedRow({ bed, roomNumber, roomId, rooms, upiId, onMarkPaid, onMarkUnpaid, onVacate, onMove, onViewTenant, onDeleteBed, onBook, onCancelBooking, onConvertBooking, onAssign }) {
+function BedRow({ bed, roomNumber, roomId, rooms, propertyId, upiId, onMarkPaid, onMarkUnpaid, onVacate, onMove, onViewTenant, onDeleteBed, onBook, onCancelBooking, onConvertBooking, onAssign }) {
   const occ = bed.occupancy;
   const tenant = bed.tenant;
   const booking = bed.booking;
@@ -360,7 +362,7 @@ function BedRow({ bed, roomNumber, roomId, rooms, upiId, onMarkPaid, onMarkUnpai
       </div>
 
       {/* Bottom row: secondary actions aligned under name */}
-      <div className="flex items-center gap-1 mt-1.5 pl-11">
+      <div className="flex flex-wrap items-center gap-1 mt-1.5 pl-11">
         <WhatsAppLink
           name={tenant.name}
           phone={tenant.phone}
@@ -370,6 +372,7 @@ function BedRow({ bed, roomNumber, roomId, rooms, upiId, onMarkPaid, onMarkUnpai
           label="Remind"
           upiId={upiId}
         />
+        <PaymentLinkBtn propertyId={propertyId} tenantId={tenant.id} phone={tenant.phone} name={tenant.name} label="Pay Link" />
         <button
           type="button"
           title="Move tenant to another bed"
@@ -423,7 +426,9 @@ function BedRow({ bed, roomNumber, roomId, rooms, upiId, onMarkPaid, onMarkUnpai
 function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, onClose, onAssign, onAssignBed, onRoomUpdate, onViewTenant, onDeleteRoom, onConvertBooking }) {
   const toast = useToast();
   const occupied = room.beds.filter(b => b.tenant).length;
+  const reserved = room.beds.filter(b => !b.tenant && b.booking).length;
   const capacity = room.beds.length;
+  const vacant = capacity - occupied - reserved;
   const unpaid = room.beds.filter(b => b.occupancy?.payment_status === 'Unpaid').length;
   const revenue = room.beds.reduce((s, b) => s + Number(b.occupancy?.monthly_rent || 0), 0);
   const pendingAmt = room.beds
@@ -432,6 +437,41 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
   const [collectingBed, setCollectingBed] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editingRoomNumber, setEditingRoomNumber] = useState(false);
+  const [roomNumberDraft, setRoomNumberDraft] = useState(room.room_number);
+  const [savingRoomNumber, setSavingRoomNumber] = useState(false);
+  const [markingAllPaid, setMarkingAllPaid] = useState(false);
+
+  async function handleMarkAllPaid() {
+    const unpaidBeds = room.beds.filter(b => b.occupancy?.payment_status === 'Unpaid' && b.tenant);
+    if (unpaidBeds.length === 0) return;
+    setMarkingAllPaid(true);
+    const currentYM = new Date().toISOString().slice(0, 7);
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      await Promise.all(unpaidBeds.map(async bed => {
+        await updateTenant(bed.tenant.id, { paymentStatus: 'Paid', paymentDate: today });
+        await markTenantRecordPaid(bed.tenant.id, currentYM, bed.occupancy.monthly_rent, null).catch(() => {});
+      }));
+      logActivity(selectedPropertyId, 'payment_paid', `All unpaid beds in Room ${room.room_number} marked paid`);
+      toast.success(`${unpaidBeds.length} tenant${unpaidBeds.length > 1 ? 's' : ''} marked paid`);
+      onRoomUpdate();
+    } catch (e) { toast.error(e.message); }
+    finally { setMarkingAllPaid(false); }
+  }
+
+  async function handleSaveRoomNumber() {
+    const val = roomNumberDraft.trim();
+    if (!val || val === room.room_number) { setEditingRoomNumber(false); return; }
+    setSavingRoomNumber(true);
+    try {
+      await updateRoomNumber(room.id, val);
+      toast.success(`Room renamed to ${val}`);
+      onRoomUpdate();
+      setEditingRoomNumber(false);
+    } catch (e) { toast.error(e.message); }
+    finally { setSavingRoomNumber(false); }
+  }
 
   const hasAvailable = room.beds.some(b => !b.tenant);
 
@@ -445,7 +485,7 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
     try {
       const currentYM = new Date().toISOString().slice(0, 7);
       await updateTenant(tenantId, { paymentStatus: 'Paid', paymentDate: new Date().toISOString().slice(0, 10) });
-      markTenantRecordPaid(tenantId, currentYM, amountCollected, deductionReason).catch(console.error);
+      await markTenantRecordPaid(tenantId, currentYM, amountCollected, deductionReason).catch(console.error);
       logActivity(selectedPropertyId, 'payment_paid', `${name} marked paid — Room ${room.room_number}`);
       toast.success(`${name} marked paid`);
       onRoomUpdate();
@@ -502,9 +542,16 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
 
   async function handleMove(tenantId, destRoomId, destBedId, destRoomNumber, fromBedNumber) {
     const bed = room.beds.find(b => b.tenant?.id === tenantId);
-    await moveTenant(tenantId, { roomId: destRoomId, bedId: destBedId });
-    logActivity(selectedPropertyId, 'tenant_moved', `${bed?.tenant?.name ?? 'Tenant'} moved from Room ${room.room_number} Bed ${fromBedNumber} → Room ${destRoomNumber}`);
-    onRoomUpdate();
+    const name = bed?.tenant?.name ?? 'Tenant';
+    try {
+      await moveTenant(tenantId, { roomId: destRoomId, bedId: destBedId });
+      logActivity(selectedPropertyId, 'tenant_moved', `${name} moved from Room ${room.room_number} Bed ${fromBedNumber} → Room ${destRoomNumber}`);
+      toast.success(`${name} moved to Room ${destRoomNumber}`);
+      onRoomUpdate();
+    } catch (e) {
+      toast.error(e.message);
+      throw e;
+    }
   }
 
   return (
@@ -515,15 +562,42 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
             <IconBtn variant="ghost" onClick={onClose} className="sm:hidden">
               <ArrowLeft className="h-4 w-4" />
             </IconBtn>
-            <h2 className="font-semibold text-ink text-lg">Room {room.room_number}</h2>
+            {editingRoomNumber ? (
+              <div className="flex items-center gap-1">
+                <input
+                  autoFocus
+                  value={roomNumberDraft}
+                  onChange={e => setRoomNumberDraft(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSaveRoomNumber(); if (e.key === 'Escape') setEditingRoomNumber(false); }}
+                  className="w-24 rounded-lg border border-border px-2 py-1 text-sm font-semibold text-ink focus:outline-none focus:ring-2 focus:ring-ink/20"
+                />
+                <IconBtn variant="ghost" onClick={handleSaveRoomNumber} disabled={savingRoomNumber}>
+                  {savingRoomNumber ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-leaf" />}
+                </IconBtn>
+                <IconBtn variant="ghost" onClick={() => setEditingRoomNumber(false)}><X className="h-3.5 w-3.5" /></IconBtn>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 group">
+                <h2 className="font-semibold text-ink text-lg">Room {room.room_number}</h2>
+                <IconBtn variant="ghost" onClick={() => { setRoomNumberDraft(room.room_number); setEditingRoomNumber(true); }} className="opacity-0 group-hover:opacity-100 transition-opacity" title="Rename room">
+                  <Pencil className="h-3.5 w-3.5 text-slate2" />
+                </IconBtn>
+              </div>
+            )}
           </div>
           <p className="mt-0.5 text-sm text-slate2 tabular-nums">
-            {occupied} occupied · {capacity - occupied} vacant{capacity > 0 ? ` · ${Math.round((occupied / capacity) * 100)}% full` : ''}
+            {occupied} occupied · {vacant} vacant{reserved > 0 ? ` · ${reserved} reserved` : ''}{capacity > 0 ? ` · ${Math.round((occupied / capacity) * 100)}% full` : ''}
             {revenue > 0 && ` · ${fmt(revenue)}/mo`}
             {unpaid > 0 && <> · <span className="text-coral">{fmt(pendingAmt)} pending</span></>}
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {unpaid > 0 && (
+            <Btn variant="filled-success" size="sm" onClick={handleMarkAllPaid} disabled={markingAllPaid}>
+              {markingAllPaid ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+              Mark all paid
+            </Btn>
+          )}
           {hasAvailable && (
             <Btn variant="primary" size="sm" onClick={() => onAssign(room)}>
               <Plus className="h-4 w-4" />
@@ -565,6 +639,7 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
             roomNumber={room.room_number}
             roomId={room.id}
             rooms={rooms}
+            propertyId={selectedPropertyId}
             upiId={upiId}
             onMarkPaid={handleMarkPaid}
             onMarkUnpaid={handleMarkUnpaid}
@@ -625,7 +700,7 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
 
 // ─── Add room sheet ───────────────────────────────────────────────────────────
 
-function AddRoomSheet({ onSave, onCancel }) {
+function AddRoomSheet({ onSave, onCancel, existingRoomNumbers = [] }) {
   const [roomNumber, setRoomNumber] = useState('');
   const [beds, setBeds] = useState('2');
   const [saving, setSaving] = useState(false);
@@ -634,13 +709,16 @@ function AddRoomSheet({ onSave, onCancel }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!roomNumber.trim()) { setErr('Room number is required.'); return; }
+    const trimmed = roomNumber.trim();
+    if (!trimmed) { setErr('Room number is required.'); return; }
+    if (!/^[a-zA-Z0-9\-]+$/.test(trimmed)) { setErr('Room number can only contain letters, numbers, and hyphens.'); return; }
+    if (existingRoomNumbers.includes(trimmed)) { setErr(`Room ${trimmed} already exists.`); return; }
     const n = parseInt(beds, 10);
     if (!n || n < 1 || n > 20) { setErr('Beds must be 1–20.'); return; }
     setErr('');
     setSaving(true);
     try {
-      await onSave({ roomNumber: roomNumber.trim(), beds: n });
+      await onSave({ roomNumber: trimmed, beds: n });
     } catch (ex) {
       setErr(ex.message);
       setSaving(false);
@@ -714,12 +792,13 @@ export default function RoomsPage({ selectedPropertyId, organizationId, upiId, o
   const stats = useMemo(() => {
     const totalBeds = rooms.reduce((s, r) => s + r.beds.length, 0);
     const occupied = rooms.reduce((s, r) => s + r.beds.filter(b => b.tenant).length, 0);
+    const reserved = rooms.reduce((s, r) => s + r.beds.filter(b => !b.tenant && b.booking).length, 0);
     const unpaidRooms = rooms.filter(r => r.beds.some(b => b.occupancy?.payment_status === 'Unpaid')).length;
-    return { totalBeds, occupied, unpaidRooms };
+    return { totalBeds, occupied, reserved, unpaidRooms };
   }, [rooms]);
 
   function handleAssign(room) {
-    const availableBed = room.beds.find(b => !b.tenant);
+    const availableBed = room.beds.find(b => !b.tenant && !b.booking);
     onAssignBed({ propertyId: selectedPropertyId, roomId: room.id, bedId: availableBed?.id ?? '' });
   }
 
@@ -757,7 +836,7 @@ export default function RoomsPage({ selectedPropertyId, organizationId, upiId, o
       <StatStrip stats={[
         { label: 'Total rooms',     value: rooms.length,                          color: 'text-ink' },
         { label: 'Occupancy',       value: `${Math.round((stats.occupied / (stats.totalBeds || 1)) * 100)}%` },
-        { label: 'Vacant beds',     value: stats.totalBeds - stats.occupied,      color: (stats.totalBeds - stats.occupied) > 0 ? 'text-amber' : 'text-success' },
+        { label: 'Vacant beds',     value: stats.totalBeds - stats.occupied - stats.reserved,      color: (stats.totalBeds - stats.occupied - stats.reserved) > 0 ? 'text-amber' : 'text-success' },
         { label: 'Rooms Pending', value: stats.unpaidRooms,                     color: stats.unpaidRooms > 0 ? 'text-coral' : 'text-success' },
       ]} />
       </div>
@@ -800,7 +879,18 @@ export default function RoomsPage({ selectedPropertyId, organizationId, upiId, o
       <div className="hidden sm:grid sm:grid-cols-[300px_1fr] lg:grid-cols-[340px_1fr] gap-4">
         <div className="flex flex-col gap-2 max-h-[calc(100vh-220px)] overflow-y-auto pr-1">
           {rooms.length === 0 ? (
-            <Card><EmptyState icon={BedDouble} title="No rooms yet" body="Tap 'Add Room' above to set up your first room and beds." /></Card>
+            <Card>
+              <div className="flex flex-col items-center gap-3 py-8 px-4 text-center">
+                <BedDouble className="h-10 w-10 text-slate2/40" />
+                <div>
+                  <p className="font-semibold text-ink">No rooms yet</p>
+                  <p className="text-sm text-slate2 mt-1">Add your first room to start assigning beds to tenants.</p>
+                </div>
+                <button type="button" onClick={() => setAddingRoom(true)} className="flex items-center gap-2 rounded-xl bg-green text-white px-4 py-2.5 text-sm font-bold hover:bg-green-hover transition-colors">
+                  <Plus className="h-4 w-4" /> Add First Room
+                </button>
+              </div>
+            </Card>
           ) : rooms.map(room => (
             <RoomCard
               key={room.id}
@@ -840,7 +930,16 @@ export default function RoomsPage({ selectedPropertyId, organizationId, upiId, o
       <div className="sm:hidden flex flex-col gap-2">
         {rooms.length === 0 ? (
           <Card>
-            <EmptyState icon={BedDouble} title="No rooms yet" body="Tap 'Add Room' above to set up your first room and beds." />
+            <div className="flex flex-col items-center gap-3 py-10 px-4 text-center">
+              <BedDouble className="h-10 w-10 text-slate2/40" />
+              <div>
+                <p className="font-semibold text-ink">No rooms yet</p>
+                <p className="text-sm text-slate2 mt-1">Set up your rooms and beds to start managing tenants.</p>
+              </div>
+              <button type="button" onClick={() => setAddingRoom(true)} className="flex items-center gap-2 rounded-xl bg-green text-white px-4 py-2.5 text-sm font-bold hover:bg-green-hover transition-colors">
+                <Plus className="h-4 w-4" /> Add First Room
+              </button>
+            </div>
           </Card>
         ) : rooms.map(room => (
           <RoomCard
@@ -856,6 +955,7 @@ export default function RoomsPage({ selectedPropertyId, organizationId, upiId, o
         <AddRoomSheet
           onSave={handleAddRoom}
           onCancel={() => setAddingRoom(false)}
+          existingRoomNumbers={rooms.map(r => r.room_number)}
         />
       )}
     </div>

@@ -3,11 +3,27 @@ import { supabase } from '../lib/supabase';
 export async function fetchProperties() {
   const { data, error } = await supabase
     .from('properties')
-    .select('id, name, total_beds, address, status, is_demo, upi_id, organization_id')
+    .select('id, name, total_beds, address, status, is_demo, upi_id, organization_id, city, is_listed, locality, listing_description, cover_photo_url, gender_preference, amenities')
     .eq('status', 'active')
     .order('name');
   if (error) throw error;
   return data;
+}
+
+export async function updatePropertyName(propertyId, name) {
+  const { error } = await supabase
+    .from('properties')
+    .update({ name: name.trim() })
+    .eq('id', propertyId);
+  if (error) throw error;
+}
+
+export async function updateRoomNumber(roomId, roomNumber) {
+  const { error } = await supabase
+    .from('rooms')
+    .update({ room_number: roomNumber.trim() })
+    .eq('id', roomId);
+  if (error) throw error;
 }
 
 export async function deleteProperty(propertyId) {

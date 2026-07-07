@@ -62,6 +62,8 @@ function toUiTenant(occupancy) {
     paymentDate: occupancy.payment_date ?? '',
     depositAmount: Number(occupancy.deposit_amount ?? 0),
     depositStatus: occupancy.deposit_status ?? 'none',
+    depositPreAccounted: occupancy.deposit_pre_accounted ?? false,
+    depositSettledAt: occupancy.deposit_settled_at ?? null,
     admissionFee: Number(occupancy.admission_fee ?? 0),
     moveInCollection: Number(occupancy.move_in_collection ?? 0),
     id_photo_url: occupancy.tenant.id_photo_url ?? null,
@@ -231,7 +233,7 @@ export async function returnDeposit(id) {
   if (!hasSupabaseConfig) return updateTenant(id, { depositStatus: 'returned' });
   const { error } = await supabase
     .from('occupancies')
-    .update({ deposit_status: 'returned' })
+    .update({ deposit_status: 'returned', deposit_settled_at: new Date().toISOString() })
     .eq('tenant_id', id);
   if (error) throw error;
 }
@@ -240,7 +242,7 @@ export async function forfeitDeposit(id) {
   if (!hasSupabaseConfig) return updateTenant(id, { depositStatus: 'forfeited' });
   const { error } = await supabase
     .from('occupancies')
-    .update({ deposit_status: 'forfeited' })
+    .update({ deposit_status: 'forfeited', deposit_settled_at: new Date().toISOString() })
     .eq('tenant_id', id);
   if (error) throw error;
 }
@@ -291,6 +293,29 @@ export async function fetchPendingDeposits(propertyId) {
   return data.map(o => ({ ...toUiTenant(o), endDate: o.end_date ?? null, status: 'vacated' }));
 }
 
+// Deposits settled (returned or forfeited) within a given month.
+// Returned deposits are a cash-basis P&L expense (money leaving); forfeited
+// deposits are income (money kept). Pre-accounted (legacy) deposits are
+// excluded — that cash was already distributed in a prior period, so
+// settling it now isn't a new income/expense event.
+export async function fetchDepositSettlementsForMonth(propertyId, ym) {
+  if (!hasSupabaseConfig) return [];
+  const start = `${ym}-01T00:00:00.000Z`;
+  const [y, m] = ym.split('-').map(Number);
+  const end = new Date(Date.UTC(y, m, 1)).toISOString();
+  const query = supabase
+    .from('occupancies')
+    .select('id, deposit_amount, deposit_status, deposit_settled_at')
+    .in('deposit_status', ['returned', 'forfeited'])
+    .eq('deposit_pre_accounted', false)
+    .gte('deposit_settled_at', start)
+    .lt('deposit_settled_at', end);
+  if (propertyId) query.eq('property_id', propertyId);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data;
+}
+
 // P1: Tenants who vacated in the current calendar month
 export async function fetchMovedOutThisMonth(propertyId) {
   if (!hasSupabaseConfig) return [];
@@ -320,8 +345,8 @@ export async function vacateTenant(id, { endDate, depositAction = 'later' } = {}
   }
   const occupancy = await fetchOccupancyByTenantId(id);
   const patch = { status: 'ended', end_date: endDate || new Date().toISOString().slice(0, 10) };
-  if (depositAction === 'returned') patch.deposit_status = 'returned';
-  if (depositAction === 'forfeited') patch.deposit_status = 'forfeited';
+  if (depositAction === 'returned') { patch.deposit_status = 'returned'; patch.deposit_settled_at = new Date().toISOString(); }
+  if (depositAction === 'forfeited') { patch.deposit_status = 'forfeited'; patch.deposit_settled_at = new Date().toISOString(); }
 
   const { error: occErr } = await supabase.from('occupancies').update(patch).eq('id', occupancy.id);
   if (occErr) throw occErr;

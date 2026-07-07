@@ -51,8 +51,14 @@ export async function cancelBooking(bookingId, bedId) {
   await supabase.from('beds').update({ status: 'available' }).eq('id', bedId);
 }
 
-export async function convertBooking(bookingId) {
+export async function convertBooking(bookingId, bedId) {
   if (!hasSupabaseConfig) return;
   const { error } = await supabase.from('bookings').update({ status: 'converted' }).eq('id', bookingId);
   if (error) throw error;
+  // Booking is no longer pending, so it stops reserving the bed. The bed
+  // reverts to available until createTenant() marks it occupied on submit —
+  // this avoids a stuck 'reserved' status if the tenant form is abandoned.
+  if (bedId) {
+    await supabase.from('beds').update({ status: 'available' }).eq('id', bedId);
+  }
 }

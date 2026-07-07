@@ -8,16 +8,6 @@ const corsHeaders = {
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
-  const keyId = Deno.env.get('RAZORPAY_KEY_ID');
-  const keySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
-
-  if (!keyId || !keySecret) {
-    return new Response(
-      JSON.stringify({ error: 'Razorpay credentials not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in Supabase Edge Function secrets.' }),
-      { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    );
-  }
-
   const authHeader = req.headers.get('Authorization') ?? '';
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -34,6 +24,41 @@ Deno.serve(async (req: Request) => {
   const { paymentRecordId, tenantName, phone, amount, description } = await req.json();
   if (!paymentRecordId || !amount) {
     return new Response(JSON.stringify({ error: 'Missing paymentRecordId or amount' }), { status: 400, headers: corsHeaders });
+  }
+
+  const supabaseAdmin = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  );
+
+  // Resolve which organization this payment belongs to, then use that
+  // org's own Razorpay account if they've connected one — falls back to
+  // the platform-wide keys (this project's own account) for orgs that
+  // haven't connected their own yet.
+  const { data: record } = await supabaseAdmin
+    .from('payment_records')
+    .select('property_id, properties(organization_id)')
+    .eq('id', paymentRecordId)
+    .maybeSingle();
+  const orgId = (record as any)?.properties?.organization_id;
+
+  let keyId = Deno.env.get('RAZORPAY_KEY_ID');
+  let keySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
+
+  if (orgId) {
+    const { data: creds } = await supabaseAdmin.rpc('get_org_razorpay_credentials', { org_id: orgId });
+    const row = Array.isArray(creds) ? creds[0] : creds;
+    if (row?.key_id && row?.key_secret) {
+      keyId = row.key_id;
+      keySecret = row.key_secret;
+    }
+  }
+
+  if (!keyId || !keySecret) {
+    return new Response(
+      JSON.stringify({ error: 'Razorpay is not connected for this property. Add your Razorpay keys in Settings.' }),
+      { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
   }
 
   const credentials = btoa(`${keyId}:${keySecret}`);
@@ -67,11 +92,6 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: rzData.error?.description ?? 'Razorpay error' }), { status: 502, headers: corsHeaders });
   }
 
-  // Store the link on the payment record
-  const supabaseAdmin = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  );
   await supabaseAdmin
     .from('payment_records')
     .update({ payment_link: rzData.short_url, payment_link_id: rzData.id })

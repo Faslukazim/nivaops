@@ -82,8 +82,8 @@ function Toaster({ toasts, onRemove }) {
   if (!toasts.length) return null;
   return (
     <div
-      className="fixed z-[200] flex flex-col gap-2 w-full px-4 sm:px-0 sm:w-80 pointer-events-none"
-      style={{ bottom: 'max(1rem, env(safe-area-inset-bottom, 1rem))', right: 0, paddingRight: '1rem' }}
+      className="fixed z-[200] flex flex-col gap-2 w-full px-4 sm:px-0 sm:w-80 pointer-events-none bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] sm:bottom-4"
+      style={{ right: 0, paddingRight: '1rem' }}
     >
       {toasts.map(t => (
         <div key={t.id} className="pointer-events-auto">

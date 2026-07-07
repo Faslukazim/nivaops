@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useToast } from './lib/toast.jsx';
 import {
   BarChart2, BedDouble, Camera, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight,
-  Home, Loader2, LogOut, MessageCircle, Pencil, Plus, Save, ShieldCheck, Sparkles, Trash2, UserMinus, UserPlus, Users, X,
+  Home, Loader2, LogOut, Menu, MessageCircle, MoreVertical, Pencil, Plus, Save, ShieldCheck, Sparkles, Trash2, UserMinus, UserPlus, Users, X,
 } from 'lucide-react';
 import { createTenant, deleteTenant, vacateTenant, fetchTenants, fetchVacatedTenants, fetchPendingDeposits, fetchMovedOutThisMonth, forfeitDeposit, returnDeposit, updateTenant } from './services/tenantService';
 import { addIncomeRecord, uploadIdPhoto, saveTenantIdPhoto } from './services/incomeService';
 import { markTenantRecordPaid } from './services/paymentService';
 import { logActivity, fetchRecentActivity } from './services/activityService';
-import { fetchProperties, fetchRoomsWithBeds, updatePropertyUpiId, createProperty, deleteProperty } from './services/propertyService';
+import { fetchProperties, fetchRoomsWithBeds, updatePropertyUpiId, updatePropertyName, createProperty, deleteProperty } from './services/propertyService';
 import { readExpensesSync } from './services/financeService';
 import { seedSampleWorkspace, clearSampleWorkspace } from './services/seedService';
 import { fetchBookings, convertBooking } from './services/bookingService';
@@ -20,14 +21,15 @@ import TenantProfile from './TenantProfile';
 import { NivaLogo } from './components/NivaLogo';
 import {
   fmt, Label, Card, SectionHeader, Btn, IconBtn,
-  StatusBadge, WhatsAppLink,
+  StatusBadge, WhatsAppLink, PaymentLinkBtn,
   PageLoader, StatStrip, ConfirmInline, EmptyState, CollectModal,
   MoneyInput, normalizePhone, isValidPhone, SignOutBtn,
 } from './components/ui';
 
 
 
-function DeletePropertyModal({ propertyName, onConfirm, onClose, busy }) {
+function DeletePropertyModal({ propertyName, tenantCount, roomCount, onConfirm, onClose, busy }) {
+  const hasContent = tenantCount > 0 || roomCount > 0;
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center px-4"
       style={{ background: 'rgba(15,23,42,0.4)', backdropFilter: 'blur(4px)' }}
@@ -40,7 +42,12 @@ function DeletePropertyModal({ propertyName, onConfirm, onClose, busy }) {
           </div>
           <h2 className="text-sm font-bold text-ink">Delete "{propertyName}"?</h2>
         </div>
-        <p className="text-sm text-slate2 mb-5">All rooms, beds, tenants, and payments for this property will be hidden. This cannot be undone easily.</p>
+        {hasContent && (
+          <div className="rounded-lg bg-coral/5 border border-coral/20 px-3 py-2.5 mb-4 text-sm text-coral">
+            ⚠️ This property has <strong>{tenantCount} active tenant{tenantCount !== 1 ? 's' : ''}</strong> and <strong>{roomCount} room{roomCount !== 1 ? 's' : ''}</strong>. All data will be archived.
+          </div>
+        )}
+        <p className="text-sm text-slate2 mb-5">All rooms, beds, tenants, and payments will be hidden. This is difficult to undo — contact support if needed.</p>
         <div className="flex gap-2">
           <button onClick={onClose} className="flex-1 rounded-xl border border-border py-2.5 text-sm font-semibold text-slate2 hover:bg-mist transition-colors">
             Cancel
@@ -48,7 +55,7 @@ function DeletePropertyModal({ propertyName, onConfirm, onClose, busy }) {
           <button onClick={onConfirm} disabled={busy}
             className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-coral text-white py-2.5 text-sm font-bold hover:bg-coral/90 transition-colors disabled:opacity-50">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Delete
+            {hasContent ? 'Delete Anyway' : 'Delete'}
           </button>
         </div>
       </div>
@@ -56,7 +63,61 @@ function DeletePropertyModal({ propertyName, onConfirm, onClose, busy }) {
   );
 }
 
-function PropertyPill({ properties, selectedId, onChange, loading, canAddProperty, onAddProperty, onDeleteProperty }) {
+function RenamePropertyModal({ currentName, onSave, onClose }) {
+  const [name, setName] = useState(currentName);
+  const [busy, setBusy] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === currentName) { onClose(); return; }
+    setBusy(true);
+    try { await onSave(trimmed); onClose(); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center px-4"
+      style={{ background: 'rgba(15,23,42,0.4)', backdropFilter: 'blur(4px)' }}
+      onClick={onClose}>
+      <div className="w-full max-w-xs rounded-2xl bg-white border border-border shadow-xl p-6"
+        onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-bold text-ink">Rename property</h2>
+          <button onClick={onClose} className="text-slate2 hover:text-ink"><X className="h-4 w-4" /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <input
+            autoFocus
+            value={name}
+            onChange={e => setName(e.target.value)}
+            className="w-full rounded-xl border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-green"
+          />
+          <button type="submit" disabled={busy || !name.trim()}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-green text-white py-2.5 text-sm font-bold hover:bg-green-hover transition-colors disabled:opacity-50">
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function PropertyPill({ properties, selectedId, onChange, loading, canAddProperty, onAddProperty, onDeleteProperty, onRenameProperty, fullWidth }) {
+  const [showRename, setShowRename] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef(null);
+  const selectedProperty = properties.find(p => p.id === selectedId);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    function onClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [showMenu]);
+
   if (loading) {
     return (
       <div className="flex items-center gap-1.5 text-xs text-slate2">
@@ -65,13 +126,13 @@ function PropertyPill({ properties, selectedId, onChange, loading, canAddPropert
     );
   }
   return (
-    <div className="flex items-center gap-1.5">
+    <div className={`flex items-center gap-1.5 ${fullWidth ? 'w-full' : ''}`}>
       {properties.length > 0 && (
-        <div className="relative">
+        <div className={`relative ${fullWidth ? 'flex-1 min-w-0' : ''}`}>
           <select
             value={selectedId}
             onChange={e => onChange(e.target.value)}
-            className="appearance-none rounded-lg bg-mist pl-3 pr-7 py-1.5 text-sm font-semibold text-ink border border-border focus:outline-none focus:ring-2 focus:ring-ink/20 cursor-pointer"
+            className={`appearance-none rounded-lg bg-mist pl-3 pr-7 py-1.5 text-sm font-semibold text-ink border border-border focus:outline-none focus:ring-2 focus:ring-ink/20 cursor-pointer ${fullWidth ? 'w-full' : ''}`}
           >
             {properties.map(p => (
               <option key={p.id} value={p.id}>{p.name}</option>
@@ -91,14 +152,43 @@ function PropertyPill({ properties, selectedId, onChange, loading, canAddPropert
         </button>
       )}
       {selectedId && properties.length > 0 && (
-        <button
-          type="button"
-          onClick={onDeleteProperty}
-          title="Delete property"
-          className="inline-flex items-center justify-center rounded-lg bg-mist border border-border p-1.5 text-slate2 hover:bg-coral/10 hover:border-coral/30 hover:text-coral transition-colors"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        <div className="relative" ref={menuRef}>
+          <button
+            type="button"
+            onClick={() => setShowMenu(v => !v)}
+            title="More options"
+            className="inline-flex items-center justify-center rounded-lg bg-mist border border-border p-1.5 text-slate2 hover:bg-border hover:text-ink transition-colors"
+          >
+            <MoreVertical className="h-3.5 w-3.5" />
+          </button>
+          {showMenu && (
+            <div className="absolute right-0 top-full mt-1 w-40 rounded-xl border border-border bg-white shadow-lift py-1 z-50">
+              <button
+                type="button"
+                onClick={() => { setShowRename(true); setShowMenu(false); }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-ink hover:bg-mist transition-colors text-left"
+              >
+                <Pencil className="h-3.5 w-3.5 text-slate2" />
+                Rename
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowMenu(false); onDeleteProperty(); }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-coral hover:bg-coral/5 transition-colors text-left"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete property
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      {showRename && selectedProperty && (
+        <RenamePropertyModal
+          currentName={selectedProperty.name}
+          onSave={onRenameProperty}
+          onClose={() => setShowRename(false)}
+        />
       )}
     </div>
   );
@@ -166,36 +256,103 @@ function AppLogo() {
   );
 }
 
-function Header({ properties, selectedPropertyId, onPropertyChange, loadingProperties, onSignOut, isAdmin, onOpenAdmin, canAddProperty, onAddProperty, onDeleteProperty }) {
+function Header({ properties, selectedPropertyId, onPropertyChange, loadingProperties, onSignOut, isAdmin, onOpenAdmin, canAddProperty, onAddProperty, onDeleteProperty, onRenameProperty }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const actions = (
+    <>
+      <PropertyPill
+        properties={properties}
+        selectedId={selectedPropertyId}
+        onChange={onPropertyChange}
+        loading={loadingProperties}
+        canAddProperty={canAddProperty}
+        onAddProperty={onAddProperty}
+        onDeleteProperty={onDeleteProperty}
+        onRenameProperty={onRenameProperty}
+      />
+      {isAdmin && (
+        <button
+          type="button"
+          onClick={onOpenAdmin}
+          title="Admin panel"
+          className="inline-flex items-center justify-center rounded-lg bg-mist p-2 text-slate2 border border-border hover:bg-border hover:text-ink transition-colors"
+        >
+          <ShieldCheck className="h-4 w-4" />
+        </button>
+      )}
+      {onSignOut && <SignOutBtn onSignOut={onSignOut} />}
+    </>
+  );
+
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-border px-4 py-3 sm:px-6" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}>
       <div className="mx-auto max-w-5xl">
         <div className="flex items-center justify-between gap-4">
           <AppLogo />
-          <div className="flex items-center gap-2">
-            <PropertyPill
-              properties={properties}
-              selectedId={selectedPropertyId}
-              onChange={onPropertyChange}
-              loading={loadingProperties}
-              canAddProperty={canAddProperty}
-              onAddProperty={onAddProperty}
-              onDeleteProperty={onDeleteProperty}
-            />
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={onOpenAdmin}
-                title="Admin panel"
-                className="inline-flex items-center justify-center rounded-lg bg-mist p-2 text-slate2 border border-border hover:bg-border hover:text-ink transition-colors"
-              >
-                <ShieldCheck className="h-4 w-4" />
-              </button>
-            )}
-            {onSignOut && <SignOutBtn onSignOut={onSignOut} />}
-          </div>
+          <div className="hidden sm:flex items-center gap-2">{actions}</div>
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className="sm:hidden inline-flex items-center justify-center rounded-lg p-2 text-slate2 hover:bg-mist transition-colors"
+            aria-label="Menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
         </div>
       </div>
+
+      {mobileMenuOpen && createPortal(
+        <>
+          <div
+            className="fixed inset-0 z-[90] bg-ink/40 backdrop-blur-sm sm:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div
+            className="fixed left-0 right-0 z-[95] bg-white rounded-b-2xl shadow-xl sm:hidden"
+            style={{ top: 0, paddingTop: 'env(safe-area-inset-top, 0px)' }}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <AppLogo />
+              <IconBtn variant="ghost" onClick={() => setMobileMenuOpen(false)}>
+                <X className="h-5 w-5" />
+              </IconBtn>
+            </div>
+            <div className="p-4 flex flex-col gap-3">
+              <div className="rounded-lg bg-white border border-border px-3 py-2.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate2 mb-1.5">Property</p>
+                <PropertyPill
+                  properties={properties}
+                  selectedId={selectedPropertyId}
+                  onChange={onPropertyChange}
+                  loading={loadingProperties}
+                  canAddProperty={canAddProperty}
+                  onAddProperty={onAddProperty}
+                  onDeleteProperty={onDeleteProperty}
+                  onRenameProperty={onRenameProperty}
+                  fullWidth
+                />
+              </div>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => { setMobileMenuOpen(false); onOpenAdmin(); }}
+                  className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-2.5 text-sm font-semibold text-ink hover:bg-mist transition-colors"
+                >
+                  <ShieldCheck className="h-4 w-4 text-slate2" />
+                  Admin panel
+                </button>
+              )}
+              {onSignOut && (
+                <div className="pt-2 border-t border-border">
+                  <SignOutBtn onSignOut={onSignOut} className="pt-2" />
+                </div>
+              )}
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
     </header>
   );
 }
@@ -209,7 +366,7 @@ const PAGES = [
   { id: 'finance',   label: 'Finance',  icon: BarChart2 },
 ];
 
-function BottomNav({ active, onChange, bookingCount = 0 }) {
+function BottomNav({ active, onChange, bookingCount = 0, overdueCount = 0 }) {
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 bg-midnight border-t border-white/10 sm:hidden"
@@ -219,7 +376,10 @@ function BottomNav({ active, onChange, bookingCount = 0 }) {
         {PAGES.map(p => {
           const Icon = p.icon;
           const isActive = active === p.id;
-          const badge = p.id === 'rooms' && bookingCount > 0;
+          const badge = (p.id === 'rooms' && bookingCount > 0) ? bookingCount
+            : (p.id === 'finance' && overdueCount > 0) ? overdueCount
+            : 0;
+          const badgeColor = p.id === 'finance' ? 'bg-coral' : 'bg-amber';
           return (
             <button
               key={p.id}
@@ -234,7 +394,7 @@ function BottomNav({ active, onChange, bookingCount = 0 }) {
               )}
               <div className={`relative rounded-xl p-1 transition-colors ${isActive ? 'bg-green/10' : ''}`}>
                 <Icon className={`h-5 w-5 ${isActive ? 'text-green stroke-[2.5]' : 'text-white/40 stroke-[1.5]'}`} />
-                {badge && <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-amber text-white text-[8px] font-bold flex items-center justify-center">{bookingCount}</span>}
+                {badge > 0 && <span className={`absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full ${badgeColor} text-white text-[8px] font-bold flex items-center justify-center`}>{badge > 9 ? '9+' : badge}</span>}
               </div>
               {p.label}
             </button>
@@ -245,14 +405,17 @@ function BottomNav({ active, onChange, bookingCount = 0 }) {
   );
 }
 
-function TopNav({ active, onChange, bookingCount = 0 }) {
+function TopNav({ active, onChange, bookingCount = 0, overdueCount = 0 }) {
   return (
     <nav className="hidden sm:flex border-b border-border bg-white px-6">
       <div className="mx-auto max-w-5xl w-full flex gap-1">
         {PAGES.map(p => {
           const Icon = p.icon;
           const isActive = active === p.id;
-          const badge = p.id === 'rooms' && bookingCount > 0;
+          const badge = (p.id === 'rooms' && bookingCount > 0) ? bookingCount
+            : (p.id === 'finance' && overdueCount > 0) ? overdueCount
+            : 0;
+          const badgeColor = p.id === 'finance' ? 'bg-coral' : 'bg-amber';
           return (
             <button
               key={p.id}
@@ -266,7 +429,7 @@ function TopNav({ active, onChange, bookingCount = 0 }) {
             >
               <Icon className="h-4 w-4" />
               {p.label}
-              {badge && <span className="ml-0.5 h-4 w-4 rounded-full bg-amber text-white text-[9px] font-bold flex items-center justify-center">{bookingCount}</span>}
+              {badge > 0 && <span className={`ml-0.5 h-4 w-4 rounded-full ${badgeColor} text-white text-[9px] font-bold flex items-center justify-center`}>{badge > 9 ? '9+' : badge}</span>}
             </button>
           );
         })}
@@ -375,10 +538,12 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
   const [guestError, setGuestError] = useState('');
   const [guestPhotoFile, setGuestPhotoFile] = useState(null);
   const [guestPhotoPreview, setGuestPhotoPreview] = useState(null);
+  const [advanceAlreadyPaid, setAdvanceAlreadyPaid] = useState(0);
 
   useEffect(() => {
     if (initialTenant) {
       setPhoneError('');
+      setAdvanceAlreadyPaid(0);
       setForm({
         name: initialTenant.name,
         phone: initialTenant.phone,
@@ -397,7 +562,9 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
       });
     } else if (prefill) {
       setForm({ ...emptyForm, propertyId: prefill.propertyId ?? '', roomId: prefill.roomId ?? '', bedId: prefill.bedId ?? '', name: prefill.prefillName ?? '', phone: prefill.prefillPhone ?? '' });
+      setAdvanceAlreadyPaid(Number(prefill.advanceAmount || 0));
     } else {
+      setAdvanceAlreadyPaid(0);
       setForm({ ...emptyForm, propertyId: defaultPropertyId ?? '' });
     }
   }, [initialTenant, defaultPropertyId, prefill]);
@@ -408,8 +575,9 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
     const rent = Number(form.monthlyRent || 0);
     const fee = Number(form.admissionFee || 0);
     const dep = Number(form.depositAmount || 0);
-    setForm(f => ({ ...f, moveInCollection: String(rent + fee + dep) }));
-  }, [form.monthlyRent, form.admissionFee, form.depositAmount]);
+    const remaining = Math.max(0, rent + fee + dep - advanceAlreadyPaid);
+    setForm(f => ({ ...f, moveInCollection: String(remaining) }));
+  }, [form.monthlyRent, form.admissionFee, form.depositAmount, advanceAlreadyPaid]);
 
   function handlePhotoChange(e) {
     const file = e.target.files?.[0];
@@ -451,12 +619,27 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
       setPhoneError('Enter a valid 10-digit Indian mobile number (e.g. 9876543210)');
       return;
     }
+    if (!form.propertyId || !form.roomId || !form.bedId) {
+      setPhoneError('Please select a property, room, and bed before continuing.');
+      return;
+    }
+    const rent = Number(form.monthlyRent);
+    if (!rent || rent <= 0) {
+      setPhoneError('Monthly rent must be greater than 0');
+      return;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    if (form.joinDate > today) {
+      setPhoneError('Join date cannot be in the future');
+      return;
+    }
+    const dueDay = Math.min(Number(form.rentDueDay || form.joinDate?.slice(8, 10) || 1), 28);
     setPhoneError('');
     await onSubmit({
       ...form,
       phone: normalizePhone(form.phone),
-      monthlyRent: Number(form.monthlyRent),
-      rentDueDay: Number(form.rentDueDay || form.joinDate?.slice(8, 10) || 1),
+      monthlyRent: rent,
+      rentDueDay: dueDay,
       admissionFee: Number(form.admissionFee || 0),
       depositAmount: Number(form.depositAmount || 0),
       moveInCollection: Number(form.moveInCollection || 0),
@@ -583,10 +766,10 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
               required
               type="date"
               value={form.joinDate}
+              max={new Date().toISOString().slice(0, 10)}
               onChange={e => {
                 const d = e.target.value;
                 set('joinDate', d);
-                // Auto-sync rent due day for new tenants (operator can override)
                 if (!initialTenant && d) set('rentDueDay', String(Number(d.slice(8, 10))));
               }}
               className={inputCls}
@@ -596,14 +779,14 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
-            <Label>Rent Due Day <span className="text-slate2 font-normal">(day of month)</span></Label>
+            <Label>Rent Due Day <span className="text-slate2 font-normal">(1–28)</span></Label>
             <input
               required
               type="number"
               min="1"
               max="28"
               value={form.rentDueDay}
-              onChange={e => set('rentDueDay', e.target.value)}
+              onChange={e => set('rentDueDay', String(Math.min(Number(e.target.value), 28)))}
               className={`mt-1.5 ${inputCls}`}
               placeholder="e.g. 5"
             />
@@ -616,6 +799,7 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
           <label className="block">
             <Label>Admission Fee <span className="text-slate2 font-normal">(one-time)</span></Label>
             <MoneyInput value={form.admissionFee} onChange={v => set('admissionFee', v)} className="mt-1.5" />
+            {initialTenant && <p className="mt-1 text-xs text-slate2">One-time, already collected — for records only</p>}
           </label>
           <label className="block">
             <Label>Security Deposit <span className="text-slate2 font-normal">(refundable)</span></Label>
@@ -623,13 +807,20 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
           </label>
         </div>
 
-        <div className="rounded-lg bg-mist px-3 py-2.5">
-          <div className="flex items-center justify-between mb-1.5">
-            <Label>Move-In Collection</Label>
-            <span className="text-xs text-slate2">Rent + Admission + Deposit</span>
+        {!initialTenant && (
+          <div className="rounded-lg bg-mist px-3 py-2.5">
+            <div className="flex items-center justify-between mb-1.5">
+              <Label>Move-In Collection</Label>
+              <span className="text-xs text-slate2">Rent + Admission + Deposit (auto)</span>
+            </div>
+            <p className="text-base font-bold text-ink tabular-nums">{fmt(Number(form.moveInCollection || 0))}</p>
+            {advanceAlreadyPaid > 0 && (
+              <p className="mt-1 text-xs text-amber">
+                {fmt(advanceAlreadyPaid)} advance already collected at booking — deducted from the amount above. Only collect the remaining balance.
+              </p>
+            )}
           </div>
-          <MoneyInput value={form.moveInCollection} onChange={v => set('moveInCollection', v)} />
-        </div>
+        )}
 
         {/* ID Photo */}
         <div>
@@ -666,13 +857,21 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
 
 function VacateModal({ tenant, onConfirm, onCancel, saving }) {
   const today = new Date().toISOString().slice(0, 10);
+  const maxDate = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
   const [endDate, setEndDate] = useState(today);
   const [depositAction, setDepositAction] = useState('later');
-  const hasDeposit = tenant.depositAmount > 0 && tenant.depositStatus === 'held';
+  const hasDeposit = tenant.depositAmount > 0;
+  const depositAlreadySettled = hasDeposit && (tenant.depositStatus === 'returned' || tenant.depositStatus === 'forfeited');
+  const depositHeld = hasDeposit && tenant.depositStatus === 'held';
 
   const inputCls = 'w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink bg-white';
 
-  return (
+  // Rendered via portal into document.body — this modal is triggered from
+  // inside TenantCard's swipe wrapper, which has a permanent CSS transform
+  // on it. A transform on any ancestor traps position:fixed children inside
+  // that ancestor's box instead of the viewport, so without the portal this
+  // modal would render squeezed inside the card instead of full-screen.
+  return createPortal(
     <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onCancel} />
       <div className="relative w-full sm:max-w-sm bg-white rounded-t-2xl sm:rounded-2xl shadow-xl overflow-hidden">
@@ -692,14 +891,23 @@ function VacateModal({ tenant, onConfirm, onCancel, saving }) {
             <input
               type="date"
               value={endDate}
-              max={today}
+              max={maxDate}
               onChange={e => setEndDate(e.target.value)}
               className={`mt-1.5 ${inputCls}`}
             />
+            {endDate > today && <p className="mt-1 text-xs text-amber">Future date — bed stays occupied until then</p>}
           </label>
 
           {/* Deposit settlement */}
-          {hasDeposit && (
+          {depositAlreadySettled && (
+            <div className="rounded-lg bg-mist px-3 py-2.5 text-sm text-slate2">
+              Security deposit of <span className="font-semibold">{fmt(tenant.depositAmount)}</span> already{' '}
+              <span className={tenant.depositStatus === 'returned' ? 'text-leaf font-semibold' : 'text-coral font-semibold'}>
+                {tenant.depositStatus === 'returned' ? 'returned' : 'forfeited'}
+              </span>
+            </div>
+          )}
+          {depositHeld && (
             <div>
               <Label>Security Deposit — {fmt(tenant.depositAmount)}</Label>
               <div className="mt-1.5 flex flex-col gap-2">
@@ -729,9 +937,9 @@ function VacateModal({ tenant, onConfirm, onCancel, saving }) {
           {/* Summary */}
           <div className="rounded-lg bg-mist px-3 py-2.5 text-xs text-slate2 space-y-0.5">
             <p>· Bed {tenant.bedNumber} will be marked <span className="font-semibold text-ink">available</span></p>
-            {hasDeposit && depositAction === 'returned'  && <p>· Deposit <span className="font-semibold text-success">returned</span></p>}
-            {hasDeposit && depositAction === 'forfeited' && <p>· Deposit marked <span className="font-semibold text-coral">not refundable</span></p>}
-            {hasDeposit && depositAction === 'later'     && <p>· Deposit appears in <span className="font-semibold text-amber">Deposits to Review</span></p>}
+            {depositHeld && depositAction === 'returned'  && <p>· Deposit <span className="font-semibold text-success">returned</span></p>}
+            {depositHeld && depositAction === 'forfeited' && <p>· Deposit marked <span className="font-semibold text-coral">not refundable</span></p>}
+            {depositHeld && depositAction === 'later'     && <p>· Deposit appears in <span className="font-semibold text-amber">Deposits to Review</span></p>}
           </div>
 
           <div className="flex gap-2">
@@ -748,7 +956,8 @@ function VacateModal({ tenant, onConfirm, onCancel, saving }) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -828,13 +1037,11 @@ function fmtShortDate(iso) {
   return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(m)-1] + ' ' + Number(d);
 }
 
-function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMarkPaid, onMarkUnpaid, onReturnDeposit, onForfeitDeposit }) {
+function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMarkPaid, onMarkUnpaid }) {
+  const [confirmUnpaid, setConfirmUnpaid] = useState(false);
   const isPaid = tenant.paymentStatus === 'Paid';
   const hasDeposit = tenant.depositAmount > 0;
   const depositHeld = hasDeposit && tenant.depositStatus === 'held';
-  const depositReturned = hasDeposit && tenant.depositStatus === 'returned';
-  const depositForfeited = hasDeposit && tenant.depositStatus === 'forfeited';
-  const [confirmingForfeit, setConfirmingForfeit] = useState(false);
   const [vacating, setVacating] = useState(false);
   const [vacateSaving, setVacateSaving] = useState(false);
 
@@ -868,6 +1075,7 @@ function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMa
   const daysOverdue = !isPaid && tenantStatus === STATUS.OVERDUE ? tenantDaysOverdue(tenant) : 0;
 
   return (
+    <>
     <div
       className={`relative overflow-hidden rounded-xl border border-border bg-white shadow-card${flashPaid ? ' flash-paid' : ''}`}
       onTouchStart={onTouchStart}
@@ -942,65 +1150,25 @@ function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMa
           )}
         </div>
 
-        {hasDeposit && (
-          confirmingForfeit ? (
-            <div className="mt-2 rounded-lg overflow-hidden">
-              <ConfirmInline
-                message={<>Mark {fmt(tenant.depositAmount)} deposit as not refundable for <span className="font-semibold">{tenant.name}</span>?</>}
-                confirmLabel="Confirm"
-                onCancel={() => setConfirmingForfeit(false)}
-                onConfirm={() => { onForfeitDeposit(tenant); setConfirmingForfeit(false); }}
-              />
-            </div>
-          ) : (
-            <div className="mt-2 flex items-center justify-between rounded-lg border border-border px-3 py-2">
-              <div>
-                <Label>Deposit</Label>
-                <p className="mt-0.5 text-sm font-semibold tabular-nums">{fmt(tenant.depositAmount)}</p>
-              </div>
-              {depositHeld && (
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => onReturnDeposit(tenant)}
-                    className="text-xs font-semibold text-amber hover:text-amber/80 border border-amber/30 rounded-lg px-2.5 py-1.5 hover:bg-amber/5 transition-colors"
-                  >
-                    Return Deposit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmingForfeit(true)}
-                    className="text-xs font-semibold text-coral hover:text-coral/80 border border-coral/30 rounded-lg px-2.5 py-1.5 hover:bg-coral/5 transition-colors"
-                  >
-                    Not Refundable
-                  </button>
-                </div>
-              )}
-              {depositReturned && (
-                <span className="text-xs font-semibold text-success">Returned</span>
-              )}
-              {depositForfeited && (
-                <span className="text-xs font-semibold text-coral">Deposit Not Refundable</span>
-              )}
-            </div>
-          )
+        {hasDeposit && depositHeld && (
+          <p className="mt-2 text-xs text-slate2">
+            Deposit {fmt(tenant.depositAmount)} held <span className="text-slate2/70">· settled on move-out</span>
+          </p>
         )}
 
         {tenant.admissionFee > 0 && (
-          <div className="mt-2 flex items-center justify-between rounded-lg border border-border px-3 py-2">
-            <div className="flex items-center gap-3">
-              <div>
-                <Label>Admission</Label>
-                <p className="mt-0.5 text-sm font-semibold tabular-nums">{fmt(tenant.admissionFee)}</p>
-              </div>
-              {tenant.moveInCollection > 0 && (
-                <div>
-                  <Label>Move-In Collected</Label>
-                  <p className="mt-0.5 text-sm font-semibold tabular-nums">{fmt(tenant.moveInCollection)}</p>
-                </div>
-              )}
+          <div className="mt-2 flex items-center gap-3 rounded-lg border border-border px-3 py-2">
+            <div>
+              <Label>Admission</Label>
+              <p className="mt-0.5 text-sm font-semibold tabular-nums">{fmt(tenant.admissionFee)}</p>
+              <p className="text-xs text-slate2">non-refundable</p>
             </div>
-            <span className="text-xs font-semibold text-slate2">Non-refundable</span>
+            {tenant.moveInCollection > 0 && (
+              <div>
+                <Label>Move-In Collected</Label>
+                <p className="mt-0.5 text-sm font-semibold tabular-nums">{fmt(tenant.moveInCollection)}</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -1011,14 +1179,22 @@ function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMa
 
       <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-border">
         {isPaid ? (
-          <button
-            type="button"
-            onClick={() => onMarkUnpaid(tenant)}
-            className="flex items-center gap-1.5 text-xs text-slate2 hover:text-ink transition-colors py-1"
-          >
-            <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-            Paid · Undo
-          </button>
+          confirmUnpaid ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate2">Mark unpaid?</span>
+              <button type="button" onClick={() => { onMarkUnpaid(tenant); setConfirmUnpaid(false); }} className="text-xs font-semibold text-coral hover:underline">Yes</button>
+              <button type="button" onClick={() => setConfirmUnpaid(false)} className="text-xs text-slate2 hover:underline">No</button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmUnpaid(true)}
+              className="flex items-center gap-1.5 text-xs text-slate2 hover:text-ink transition-colors py-1"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+              Paid · Undo
+            </button>
+          )
         ) : (
           <button
             type="button"
@@ -1038,6 +1214,7 @@ function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMa
             rent={tenant.monthlyRent}
             upiId={upiId}
           />
+          <PaymentLinkBtn propertyId={tenant.propertyId} tenantId={tenant.id} phone={tenant.phone} name={tenant.name} />
           <IconBtn variant="ghost" onClick={() => onEdit(tenant)} title="Edit">
             <Pencil className="h-4 w-4" />
           </IconBtn>
@@ -1047,21 +1224,22 @@ function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMa
         </div>
       </div>
 
-      {vacating && (
-        <VacateModal
-          tenant={tenant}
-          saving={vacateSaving}
-          onCancel={() => setVacating(false)}
-          onConfirm={async opts => {
-            setVacateSaving(true);
-            await onVacate(tenant, opts);
-            setVacateSaving(false);
-            setVacating(false);
-          }}
-        />
-      )}
       </div>{/* end sliding content */}
     </div>
+    {vacating && (
+      <VacateModal
+        tenant={tenant}
+        saving={vacateSaving}
+        onCancel={() => setVacating(false)}
+        onConfirm={async opts => {
+          setVacateSaving(true);
+          await onVacate(tenant, opts);
+          setVacateSaving(false);
+          setVacating(false);
+        }}
+      />
+    )}
+    </>
   );
 }
 
@@ -1118,17 +1296,17 @@ function MoveInHealth({ tenants }) {
   const newThisMonth = tenants.filter(t => t.joinDate?.startsWith(currentYM));
   const moveInTotal = newThisMonth.reduce((s, t) => s + Number(t.moveInCollection || 0), 0);
   const admissionTotal = newThisMonth.reduce((s, t) => s + Number(t.admissionFee || 0), 0);
-  const depositsHeld = tenants.filter(t => t.depositStatus === 'held').reduce((s, t) => s + Number(t.depositAmount || 0), 0);
-  const depositsReturned = tenants.filter(t => t.depositStatus === 'returned').reduce((s, t) => s + Number(t.depositAmount || 0), 0);
-  const depositsForfeited = tenants.filter(t => t.depositStatus === 'forfeited').reduce((s, t) => s + Number(t.depositAmount || 0), 0);
-  const depositsSettled = depositsReturned + depositsForfeited;
+  // Deposits are treated as cash-basis income/expense (see P&L tab), not a
+  // tracked liability — this widget just shows this month's deposit intake.
+  // Pre-accounted (legacy) deposits are excluded since that cash was already
+  // distributed in a prior accounting period.
+  const depositsCollected = newThisMonth.filter(t => !t.depositPreAccounted).reduce((s, t) => s + Number(t.depositAmount || 0), 0);
 
   return (
     <StatStrip stats={[
       { label: 'Move-In This Month', value: fmt(moveInTotal),    sub: `${newThisMonth.length} new tenant${newThisMonth.length !== 1 ? 's' : ''}`, color: moveInTotal > 0 ? 'text-success' : 'text-slate2' },
       { label: 'Admission Revenue',  value: fmt(admissionTotal), sub: 'non-refundable fees',  color: admissionTotal > 0 ? 'text-ink' : 'text-slate2' },
-      { label: 'Deposits Held',      value: fmt(depositsHeld),   sub: 'refundable liability', color: depositsHeld > 0 ? 'text-amber' : 'text-success' },
-      { label: 'Deposits Settled',   value: fmt(depositsSettled),sub: depositsForfeited > 0 ? `${fmt(depositsForfeited)} forfeited` : 'returned', color: 'text-slate2' },
+      { label: 'Deposits Collected', value: fmt(depositsCollected), sub: 'counted in P&L this month', color: depositsCollected > 0 ? 'text-ink' : 'text-slate2' },
     ]} />
   );
 }
@@ -1275,7 +1453,7 @@ function AttentionRequired({ tenants, upiId, onMarkPaid, onViewTenant }) {
             const today = new Date().getDate();
             const daysUntil = Math.max(0, dueDay - today);
             return (
-              <div key={t.id} className="flex items-center justify-between gap-3 px-4 py-3">
+              <div key={t.id} className="flex flex-col gap-2.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <button
@@ -1300,9 +1478,10 @@ function AttentionRequired({ tenants, upiId, onMarkPaid, onViewTenant }) {
                     <p className={`text-xs font-semibold ${meta.labelColor}`}>Due today</p>
                   )}
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0 justify-end">
                   <WhatsAppLink name={t.name} phone={t.phone} roomNumber={t.roomNumber} bedNumber={t.bedNumber} rent={t.monthlyRent} upiId={upiId} />
-                  <Btn size="sm" variant="filled-success" onClick={() => onMarkPaid(t)}>Mark Paid</Btn>
+                  <PaymentLinkBtn propertyId={t.propertyId} tenantId={t.id} phone={t.phone} name={t.name} label="Pay Link" />
+                  <Btn size="sm" variant="filled-success" onClick={() => onMarkPaid(t)} className="ml-auto sm:ml-0">Mark Paid</Btn>
                 </div>
               </div>
             );
@@ -1472,11 +1651,11 @@ function MovedOutThisMonth({ tenants }) {
   );
 }
 
-function DashboardPage({ tenants, totalBeds, selectedPropertyId, upiId, pendingDeposits, movedOutThisMonth, pendingBookings, onGoToFinance, onGoToRooms, onAddTenant, onAssignTenant, onMarkPaid, onViewTenant, onReturnDeposit, onForfeitDeposit, onConvertBooking }) {
+function DashboardPage({ tenants, totalBeds, hasRooms, selectedPropertyId, upiId, pendingDeposits, movedOutThisMonth, pendingBookings, onGoToFinance, onGoToRooms, onAddTenant, onAssignTenant, onMarkPaid, onViewTenant, onReturnDeposit, onForfeitDeposit, onConvertBooking }) {
   return (
     <div className="flex flex-col gap-4">
       <SetupChecklist
-        totalBeds={totalBeds}
+        hasRooms={hasRooms}
         tenantCount={tenants.length}
         upiId={upiId}
         onGoToRooms={onGoToRooms}
@@ -1539,6 +1718,280 @@ function UpiSettings({ propertyId, upiId, onSave }) {
           </div>
         </label>
       </form>
+    </Card>
+  );
+}
+
+function RazorpaySettings({ organizationId }) {
+  const toast = useToast();
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [keyId, setKeyId] = useState('');
+  const [keySecret, setKeySecret] = useState('');
+  const [webhookSecret, setWebhookSecret] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!organizationId) return;
+    setLoading(true);
+    import('./services/paymentLinkService').then(({ fetchRazorpayStatus }) =>
+      fetchRazorpayStatus(organizationId).then(setStatus).catch(() => setStatus(null)).finally(() => setLoading(false))
+    );
+  }, [organizationId]);
+
+  async function handleSave(e) {
+    e.preventDefault();
+    if (!keyId.trim() || !keySecret.trim()) { toast.error('Enter both Key ID and Key Secret.'); return; }
+    setSaving(true);
+    try {
+      const { saveRazorpayCredentials, fetchRazorpayStatus } = await import('./services/paymentLinkService');
+      await saveRazorpayCredentials(organizationId, { keyId: keyId.trim(), keySecret: keySecret.trim(), webhookSecret: webhookSecret.trim() });
+      setStatus(await fetchRazorpayStatus(organizationId));
+      setEditing(false);
+      setKeyId(''); setKeySecret(''); setWebhookSecret('');
+      toast.success('Razorpay account connected — rent payments will go straight to your bank account.');
+    } catch (err) {
+      toast.error(err.message || 'Could not save Razorpay credentials');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card className="overflow-hidden">
+      <SectionHeader title="Payment Gateway" />
+      <div className="p-4 flex flex-col gap-3">
+        {loading ? (
+          <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-slate2" /></div>
+        ) : !editing ? (
+          <>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-ink">
+                  {status?.is_configured ? 'Razorpay connected' : 'Razorpay not connected'}
+                </p>
+                <p className="text-xs text-slate2 mt-0.5">
+                  {status?.is_configured
+                    ? `Key: ${status.key_id} — rent payments go directly to your bank account.`
+                    : 'Connect your own Razorpay account so tenant payments go straight to your bank, not through NivaOps.'}
+                </p>
+              </div>
+              {status?.is_configured && <span className="text-xs font-semibold px-2 py-1 rounded-full bg-leaf/10 text-leaf shrink-0">Active</span>}
+            </div>
+            <Btn variant="secondary" className="justify-center" onClick={() => setEditing(true)}>
+              {status?.is_configured ? 'Update Razorpay Keys' : 'Connect Razorpay'}
+            </Btn>
+          </>
+        ) : (
+          <form onSubmit={handleSave} className="flex flex-col gap-3">
+            <p className="text-xs text-slate2">
+              Get these from your Razorpay Dashboard → Settings → API Keys. Use Test keys (rzp_test_...) to try it safely first.
+            </p>
+            <label className="block">
+              <Label>Key ID</Label>
+              <input
+                type="text"
+                value={keyId}
+                onChange={e => setKeyId(e.target.value)}
+                placeholder="rzp_test_... or rzp_live_..."
+                className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+              />
+            </label>
+            <label className="block">
+              <Label>Key Secret</Label>
+              <input
+                type="password"
+                value={keySecret}
+                onChange={e => setKeySecret(e.target.value)}
+                placeholder="Key secret"
+                className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+              />
+            </label>
+            <label className="block">
+              <Label>Webhook Secret <span className="text-slate2 font-normal">(optional, for auto-marking rent paid)</span></Label>
+              <input
+                type="password"
+                value={webhookSecret}
+                onChange={e => setWebhookSecret(e.target.value)}
+                placeholder="From Razorpay → Settings → Webhooks"
+                className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+              />
+            </label>
+            <div className="flex gap-2">
+              <Btn variant="secondary" className="flex-1 justify-center" onClick={() => setEditing(false)}>Cancel</Btn>
+              <Btn variant="primary" className="flex-1 justify-center" disabled={saving} {...{ type: 'submit' }}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+              </Btn>
+            </div>
+          </form>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+const LISTING_AMENITIES = ['wifi', 'food', 'laundry', 'security', 'ac'];
+
+function ListingSettings({ property }) {
+  const toast = useToast();
+  const [isListed, setIsListed] = useState(property?.is_listed ?? false);
+  const [city, setCity] = useState(property?.city ?? '');
+  const [locality, setLocality] = useState(property?.locality ?? '');
+  const [description, setDescription] = useState(property?.listing_description ?? '');
+  const [coverPhotoUrl, setCoverPhotoUrl] = useState(property?.cover_photo_url ?? '');
+  const [genderPreference, setGenderPreference] = useState(property?.gender_preference ?? 'any');
+  const [amenities, setAmenities] = useState(property?.amenities ?? []);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setIsListed(property?.is_listed ?? false);
+    setCity(property?.city ?? '');
+    setLocality(property?.locality ?? '');
+    setDescription(property?.listing_description ?? '');
+    setCoverPhotoUrl(property?.cover_photo_url ?? '');
+    setGenderPreference(property?.gender_preference ?? 'any');
+    setAmenities(property?.amenities ?? []);
+  }, [property?.id]);
+
+  function toggleAmenity(a) {
+    setAmenities(list => list.includes(a) ? list.filter(x => x !== a) : [...list, a]);
+  }
+
+  async function handleSave(nextListed) {
+    if (!property?.id) return;
+    setSaving(true);
+    try {
+      const { saveListingSettings } = await import('./services/listingService');
+      if (nextListed && !city.trim()) { toast.error('Enter a city before listing.'); setSaving(false); return; }
+      await saveListingSettings(property.id, {
+        isListed: nextListed,
+        city,
+        locality,
+        description,
+        coverPhotoUrl,
+        genderPreference,
+        amenities,
+      });
+      setIsListed(nextListed);
+      toast.success(nextListed ? 'Live on the public listing page' : 'Removed from the public listing page');
+    } catch (err) {
+      toast.error(err.message || 'Could not save listing settings');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!property) return null;
+  const listingUrl = property.city ? `/pg/${encodeURIComponent(property.city.toLowerCase())}` : null;
+
+  return (
+    <Card className="overflow-hidden">
+      <SectionHeader title="Public Listing" />
+      <div className="p-4 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-ink">{isListed ? 'Listed publicly' : 'Not listed'}</p>
+            <p className="text-xs text-slate2 mt-0.5">
+              {isListed
+                ? 'Vacant beds from this property show up on the public discovery page.'
+                : 'Turn this on to surface vacant beds on the public discovery page.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => handleSave(!isListed)}
+            className={`shrink-0 w-11 h-6 rounded-full transition-colors relative ${isListed ? 'bg-leaf' : 'bg-border'}`}
+          >
+            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${isListed ? 'translate-x-5' : 'translate-x-0.5'}`} />
+          </button>
+        </div>
+
+        {isListed && listingUrl && (
+          <a href={listingUrl} target="_blank" rel="noreferrer" className="text-xs font-medium text-leaf hover:underline">
+            View live listing page →
+          </a>
+        )}
+
+        <label className="block">
+          <Label>City <span className="text-slate2 font-normal">(e.g. Kochi)</span></Label>
+          <input
+            type="text"
+            value={city}
+            onChange={e => setCity(e.target.value)}
+            className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+          />
+        </label>
+
+        <label className="block">
+          <Label>Locality <span className="text-slate2 font-normal">(e.g. Kakkanad)</span></Label>
+          <input
+            type="text"
+            value={locality}
+            onChange={e => setLocality(e.target.value)}
+            className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+          />
+        </label>
+
+        <label className="block">
+          <Label>Description</Label>
+          <textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            rows={3}
+            placeholder="What makes this place worth choosing?"
+            className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+          />
+        </label>
+
+        <label className="block">
+          <Label>Cover photo URL</Label>
+          <input
+            type="text"
+            value={coverPhotoUrl}
+            onChange={e => setCoverPhotoUrl(e.target.value)}
+            placeholder="https://..."
+            className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+          />
+        </label>
+
+        <div>
+          <Label>Who it's for</Label>
+          <div className="flex gap-2 mt-1.5">
+            {['any', 'male', 'female'].map(g => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setGenderPreference(g)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${genderPreference === g ? 'bg-ink text-white border-ink' : 'border-border text-slate2'}`}
+              >
+                {g === 'any' ? 'Anyone' : g === 'male' ? 'Men only' : 'Women only'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <Label>Amenities</Label>
+          <div className="flex gap-2 mt-1.5 flex-wrap">
+            {LISTING_AMENITIES.map(a => (
+              <button
+                key={a}
+                type="button"
+                onClick={() => toggleAmenity(a)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold border capitalize transition-colors ${amenities.includes(a) ? 'bg-leaf/10 text-leaf border-leaf' : 'border-border text-slate2'}`}
+              >
+                {a}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <Btn variant="primary" className="justify-center" disabled={saving} onClick={() => handleSave(isListed)}>
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save listing details'}
+        </Btn>
+      </div>
     </Card>
   );
 }
@@ -1685,8 +2138,6 @@ function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, sa
                     onVacate={onVacate}
                     onMarkPaid={onMarkPaid}
                     onMarkUnpaid={onMarkUnpaid}
-                    onReturnDeposit={onReturnDeposit}
-                    onForfeitDeposit={onForfeitDeposit}
                   />
                 </div>
               ))}
@@ -1756,57 +2207,108 @@ function EmptyWorkspace({ onSeed, seeding, onAddProperty, showDemo }) {
 
 // ─── setup checklist (shown on dashboard until all steps done) ────────────────
 
-function SetupChecklist({ totalBeds, tenantCount, upiId, onGoToRooms, onAddTenant, onGoToFinance }) {
+function SetupChecklist({ hasRooms, tenantCount, upiId, onGoToRooms, onAddTenant, onGoToFinance }) {
   const steps = [
     {
-      done: totalBeds > 0,
-      label: 'Add your rooms and beds',
-      sub: 'Go to Rooms → Add room',
+      done: hasRooms,
+      icon: '🛏️',
+      label: 'Add your rooms & beds',
+      sub: 'Set up your floor plan so you can assign tenants',
       action: onGoToRooms,
+      cta: 'Go to Rooms',
     },
     {
       done: tenantCount > 0,
+      icon: '👤',
       label: 'Add your first tenant',
-      sub: 'Go to Tenants → Add tenant',
+      sub: 'Assign a bed, set monthly rent, and track payments',
       action: onAddTenant,
+      cta: 'Add Tenant',
     },
     {
       done: !!upiId,
+      icon: '💳',
       label: 'Set your UPI ID',
-      sub: 'So tenants can pay directly via WhatsApp reminders',
+      sub: 'Tenants receive your UPI link via WhatsApp for easy payment',
       action: onGoToFinance,
+      cta: 'Set UPI',
     },
   ];
 
-  const allDone = steps.every(s => s.done);
+  const doneCount = steps.filter(s => s.done).length;
+  const allDone = doneCount === steps.length;
   if (allDone) return null;
+
+  const nextStep = steps.find(s => !s.done);
 
   return (
     <Card className="overflow-hidden">
-      <div className="px-4 pt-4 pb-1">
-        <p className="text-xs font-bold text-slate2 uppercase tracking-widest">Getting started</p>
-        <p className="text-sm font-semibold text-ink mt-0.5">Complete these steps to set up your workspace</p>
+      {/* Header */}
+      <div className="px-4 pt-4 pb-3 border-b border-border">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-bold text-slate2 uppercase tracking-widest">Getting started</p>
+          <span className="text-xs font-semibold text-leaf bg-leaf/10 px-2 py-0.5 rounded-full">{doneCount}/{steps.length} done</span>
+        </div>
+        {/* Progress bar */}
+        <div className="h-1.5 bg-border rounded-full overflow-hidden">
+          <div
+            className="h-full bg-leaf rounded-full transition-all duration-500"
+            style={{ width: `${(doneCount / steps.length) * 100}%` }}
+          />
+        </div>
+        {doneCount === 0 && (
+          <p className="text-sm font-semibold text-ink mt-2.5">Welcome! Let's get your hostel set up 🎉</p>
+        )}
+        {doneCount === 1 && (
+          <p className="text-sm font-semibold text-ink mt-2.5">Great start! Keep going 💪</p>
+        )}
+        {doneCount === 2 && (
+          <p className="text-sm font-semibold text-ink mt-2.5">Almost there — one step left!</p>
+        )}
       </div>
+
+      {/* Steps */}
       <div className="divide-y divide-border">
         {steps.map((step, i) => (
-          <button
+          <div
             key={i}
-            type="button"
-            onClick={step.done ? undefined : step.action}
-            disabled={step.done}
-            className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${step.done ? 'opacity-60' : 'hover:bg-mist'}`}
+            className={`flex items-center gap-3 px-4 py-3 ${!step.done && step === nextStep ? 'bg-leaf/[0.04]' : ''}`}
           >
-            <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
-              step.done ? 'border-leaf bg-leaf' : 'border-border bg-white'
+            {/* Icon / check */}
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-base transition-all ${
+              step.done ? 'bg-leaf/10' : step === nextStep ? 'bg-leaf/10' : 'bg-mist'
             }`}>
-              {step.done && <CheckCircle2 className="h-3.5 w-3.5 text-white" />}
+              {step.done
+                ? <CheckCircle2 className="h-5 w-5 text-leaf" />
+                : <span>{step.icon}</span>
+              }
             </div>
+
+            {/* Text */}
             <div className="flex-1 min-w-0">
-              <p className={`text-sm font-medium ${step.done ? 'line-through text-slate2' : 'text-ink'}`}>{step.label}</p>
-              {!step.done && <p className="text-xs text-slate2 mt-0.5">{step.sub}</p>}
+              <p className={`text-sm font-medium leading-tight ${step.done ? 'text-slate2 line-through' : 'text-ink'}`}>
+                {step.label}
+              </p>
+              {!step.done && (
+                <p className="text-xs text-slate2 mt-0.5 leading-snug">{step.sub}</p>
+              )}
             </div>
-            {!step.done && <ChevronRight className="h-4 w-4 text-slate2 shrink-0" />}
-          </button>
+
+            {/* CTA */}
+            {!step.done && (
+              <button
+                type="button"
+                onClick={step.action}
+                className={`shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                  step === nextStep
+                    ? 'bg-leaf text-white hover:bg-leaf/90'
+                    : 'bg-mist text-slate2 hover:bg-border'
+                }`}
+              >
+                {step.cta}
+              </button>
+            )}
+          </div>
         ))}
       </div>
     </Card>
@@ -1836,6 +2338,8 @@ export default function App({ session, organizationName, organizationId: orgIdPr
   const [mountedPages, setMountedPages] = useState(() => new Set([page]));
   const [enteringPage, setEnteringPage] = useState(page);
   const [roomsVersion, setRoomsVersion] = useState(0);
+  const [hasRooms, setHasRooms] = useState(false);
+  const [roomCount, setRoomCount] = useState(0);
   const [collectingTenant, setCollectingTenant] = useState(null);
   const [viewingTenantId, setViewingTenantId] = useState(null);
   const [vacatingTenant, setVacatingTenant] = useState(null);
@@ -1930,6 +2434,14 @@ export default function App({ session, organizationName, organizationId: orgIdPr
     if (roomsVersion > 0) loadProperties();
   }, [roomsVersion]); // eslint-disable-line
 
+  // Check if actual rooms exist in DB (distinct from onboarding total_beds estimate)
+  useEffect(() => {
+    if (!selectedPropertyId || !hasSupabaseConfig) return;
+    fetchRoomsWithBeds(selectedPropertyId)
+      .then(rooms => { setHasRooms(rooms.length > 0); setRoomCount(rooms.length); })
+      .catch(() => {});
+  }, [selectedPropertyId, roomsVersion]);
+
   const organizationId = useMemo(
     () => properties.find(p => p.id === selectedPropertyId)?.organization_id ?? null,
     [properties, selectedPropertyId],
@@ -1961,6 +2473,14 @@ export default function App({ session, organizationName, organizationId: orgIdPr
       await loadProperties();
     } catch (e) { setError(e.message); }
     finally { setSeeding(false); }
+  }
+
+  async function handleRenameProperty(newName) {
+    try {
+      await updatePropertyName(selectedPropertyId, newName);
+      setProperties(cur => cur.map(p => p.id === selectedPropertyId ? { ...p, name: newName } : p));
+      toast.success('Property renamed');
+    } catch (e) { toast.error(e.message); }
   }
 
   async function handleSaveUpi(newUpiId) {
@@ -2037,7 +2557,14 @@ export default function App({ session, organizationName, organizationId: orgIdPr
   }
 
   async function handleConvertBooking(booking) {
-    try { await convertBooking(booking.id); } catch (e) { toast.error(e.message); return; }
+    // Verify bed is still available before converting
+    try {
+      const rooms = await fetchRoomsWithBeds(selectedPropertyId);
+      const room = rooms.find(r => r.id === booking.room_id);
+      const bed = room?.beds?.find(b => b.id === booking.bed_id);
+      if (!bed) { toast.error('This bed no longer exists.'); return; }
+    } catch { /* non-critical — proceed */ }
+    try { await convertBooking(booking.id, booking.bed_id); } catch (e) { toast.error(e.message); return; }
     // Pre-fill the add-tenant form. Use roomPrefill (no initialTenant) so
     // TenantForm enters "new tenant" mode with name/phone as separate state.
     setRoomPrefill({
@@ -2046,6 +2573,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
       bedId: booking.bed_id,
       prefillName: booking.name,
       prefillPhone: booking.phone,
+      advanceAmount: Number(booking.advance_amount || 0),
     });
     setEditingTenant(null);
     fetchBookings(selectedPropertyId).then(setPendingBookings).catch(() => {});
@@ -2220,6 +2748,8 @@ export default function App({ session, organizationName, organizationId: orgIdPr
       {showDeleteProperty && (
         <DeletePropertyModal
           propertyName={properties.find(p => p.id === selectedPropertyId)?.name ?? 'this property'}
+          tenantCount={tenants.length}
+          roomCount={roomCount}
           busy={deletingProperty}
           onClose={() => setShowDeleteProperty(false)}
           onConfirm={async () => {
@@ -2257,8 +2787,9 @@ export default function App({ session, organizationName, organizationId: orgIdPr
         canAddProperty={canAddProperty}
         onAddProperty={() => setShowAddProperty(true)}
         onDeleteProperty={() => setShowDeleteProperty(true)}
+        onRenameProperty={handleRenameProperty}
       />
-      <TopNav active={page} onChange={navigateTo} bookingCount={pendingBookings.length} />
+      <TopNav active={page} onChange={navigateTo} bookingCount={pendingBookings.length} overdueCount={tenants.filter(t => computeTenantStatus(t) === STATUS.OVERDUE).length} />
 
       {(pullY > 0 || refreshing) && (
         <div
@@ -2301,6 +2832,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
                 <DashboardPage
                   tenants={tenants}
                   totalBeds={totalBeds}
+                  hasRooms={hasRooms}
                   selectedPropertyId={selectedPropertyId}
                   upiId={upiId}
                   pendingDeposits={pendingDeposits}
@@ -2362,8 +2894,10 @@ export default function App({ session, organizationName, organizationId: orgIdPr
                 {mountedPages.has('finance') && (
                   <>
                     <FinancePage selectedPropertyId={selectedPropertyId} organizationId={properties.find(p => p.id === selectedPropertyId)?.organization_id} tenants={tenants} onViewTenant={setViewingTenantId} upiId={upiId} />
-                    <div className="mt-4">
+                    <div className="mt-4 flex flex-col gap-4">
                       <UpiSettings propertyId={selectedPropertyId} upiId={upiId} onSave={handleSaveUpi} />
+                      <RazorpaySettings organizationId={properties.find(p => p.id === selectedPropertyId)?.organization_id} />
+                      <ListingSettings property={properties.find(p => p.id === selectedPropertyId)} />
                     </div>
                   </>
                 )}
@@ -2394,6 +2928,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
           onEdit={t => { setViewingTenantId(null); setEditingTenant(t); navigateTo('tenants'); }}
           onVacate={t => { setViewingTenantId(null); setVacatingTenant(t); }}
           onDelete={t => { setViewingTenantId(null); handleDelete(t); }}
+          onTenantUpdated={() => fetchTenants(selectedPropertyId || null).then(setTenants).catch(console.error)}
         />
       )}
 
@@ -2411,7 +2946,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
         />
       )}
 
-      <BottomNav active={page} onChange={navigateTo} bookingCount={pendingBookings.length} />
+      <BottomNav active={page} onChange={navigateTo} bookingCount={pendingBookings.length} overdueCount={tenants.filter(t => computeTenantStatus(t) === STATUS.OVERDUE).length} />
     </div>
   );
 }

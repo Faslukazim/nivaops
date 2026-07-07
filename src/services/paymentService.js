@@ -146,6 +146,35 @@ export async function fetchTenantPaymentHistory(tenantId, limit = 12) {
   return data;
 }
 
+// Resolves the current month's payment_records row for a tenant, creating
+// it first if it doesn't exist yet. Used by PaymentLinkBtn so it can be
+// dropped in anywhere (Tenants, Rooms, Dashboard) without every caller
+// having to already know the record id.
+export async function fetchCurrentMonthPaymentRecord(propertyId, tenantId) {
+  if (!hasSupabaseConfig) return null;
+  const yearMonth = new Date().toISOString().slice(0, 7);
+
+  let { data, error } = await supabase
+    .from('payment_records')
+    .select('id, amount, payment_link')
+    .eq('tenant_id', tenantId)
+    .eq('month', yearMonth)
+    .maybeSingle();
+  if (error) throw error;
+
+  if (!data) {
+    await ensurePaymentRecords(propertyId, yearMonth);
+    ({ data, error } = await supabase
+      .from('payment_records')
+      .select('id, amount, payment_link')
+      .eq('tenant_id', tenantId)
+      .eq('month', yearMonth)
+      .maybeSingle());
+    if (error) throw error;
+  }
+  return data;
+}
+
 export async function syncOccupancyPaymentStatus(tenantId, status) {
   if (!hasSupabaseConfig) return;
   const patch = status === 'Paid'
