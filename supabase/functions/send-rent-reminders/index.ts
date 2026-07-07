@@ -64,8 +64,23 @@ Deno.serve(async (req: Request) => {
   const supabase = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
   const fast2smsKey = Deno.env.get('FAST2SMS_API_KEY');
-  const razorpayKeyId = Deno.env.get('RAZORPAY_KEY_ID');
-  const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
+  const platformKeyId = Deno.env.get('RAZORPAY_KEY_ID');
+  const platformKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
+
+  // Cache resolved per-org credentials for this run — many tenants share
+  // the same property/org, no need to re-fetch Vault for each one.
+  const orgCredsCache = new Map<string, { keyId: string; keySecret: string } | null>();
+  async function resolveRazorpayCreds(orgId: string | undefined) {
+    if (!orgId) return platformKeyId && platformKeySecret ? { keyId: platformKeyId, keySecret: platformKeySecret } : null;
+    if (orgCredsCache.has(orgId)) return orgCredsCache.get(orgId)!;
+    const { data: creds } = await supabase.rpc('get_org_razorpay_credentials', { org_id: orgId });
+    const row = Array.isArray(creds) ? creds[0] : creds;
+    const resolved = row?.key_id && row?.key_secret
+      ? { keyId: row.key_id, keySecret: row.key_secret }
+      : (platformKeyId && platformKeySecret ? { keyId: platformKeyId, keySecret: platformKeySecret } : null);
+    orgCredsCache.set(orgId, resolved);
+    return resolved;
+  }
 
   const today = new Date();
   const ym = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
@@ -98,20 +113,25 @@ Deno.serve(async (req: Request) => {
     const tenant = r.tenant as any;
     const room = (r.occupancy as any)?.room;
     const bed = (r.occupancy as any)?.bed;
+    const orgId = (r.occupancy as any)?.property?.organization_id;
     if (!tenant?.phone) { results.push(`record ${r.id}: no phone on file`); continue; }
 
     // Reuse an existing link if one was already generated for this record,
-    // otherwise generate a fresh one via Razorpay.
+    // otherwise generate a fresh one via Razorpay — using this tenant's
+    // own organization's connected Razorpay account if they have one.
     let link = r.payment_link as string | null;
-    if (!link && razorpayKeyId && razorpayKeySecret) {
-      link = await createPaymentLink(razorpayKeyId, razorpayKeySecret, supabaseUrl, {
-        paymentRecordId: r.id,
-        tenantName: tenant.name,
-        phone: tenant.phone,
-        amount: r.amount,
-      });
-      if (link) {
-        await supabase.from('payment_records').update({ payment_link: link }).eq('id', r.id);
+    if (!link) {
+      const creds = await resolveRazorpayCreds(orgId);
+      if (creds) {
+        link = await createPaymentLink(creds.keyId, creds.keySecret, supabaseUrl, {
+          paymentRecordId: r.id,
+          tenantName: tenant.name,
+          phone: tenant.phone,
+          amount: r.amount,
+        });
+        if (link) {
+          await supabase.from('payment_records').update({ payment_link: link }).eq('id', r.id);
+        }
       }
     }
 

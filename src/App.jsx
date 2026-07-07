@@ -1722,6 +1722,115 @@ function UpiSettings({ propertyId, upiId, onSave }) {
   );
 }
 
+function RazorpaySettings({ organizationId }) {
+  const toast = useToast();
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [keyId, setKeyId] = useState('');
+  const [keySecret, setKeySecret] = useState('');
+  const [webhookSecret, setWebhookSecret] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!organizationId) return;
+    setLoading(true);
+    import('./services/paymentLinkService').then(({ fetchRazorpayStatus }) =>
+      fetchRazorpayStatus(organizationId).then(setStatus).catch(() => setStatus(null)).finally(() => setLoading(false))
+    );
+  }, [organizationId]);
+
+  async function handleSave(e) {
+    e.preventDefault();
+    if (!keyId.trim() || !keySecret.trim()) { toast.error('Enter both Key ID and Key Secret.'); return; }
+    setSaving(true);
+    try {
+      const { saveRazorpayCredentials, fetchRazorpayStatus } = await import('./services/paymentLinkService');
+      await saveRazorpayCredentials(organizationId, { keyId: keyId.trim(), keySecret: keySecret.trim(), webhookSecret: webhookSecret.trim() });
+      setStatus(await fetchRazorpayStatus(organizationId));
+      setEditing(false);
+      setKeyId(''); setKeySecret(''); setWebhookSecret('');
+      toast.success('Razorpay account connected — rent payments will go straight to your bank account.');
+    } catch (err) {
+      toast.error(err.message || 'Could not save Razorpay credentials');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card className="overflow-hidden">
+      <SectionHeader title="Payment Gateway" />
+      <div className="p-4 flex flex-col gap-3">
+        {loading ? (
+          <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-slate2" /></div>
+        ) : !editing ? (
+          <>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-ink">
+                  {status?.is_configured ? 'Razorpay connected' : 'Razorpay not connected'}
+                </p>
+                <p className="text-xs text-slate2 mt-0.5">
+                  {status?.is_configured
+                    ? `Key: ${status.key_id} — rent payments go directly to your bank account.`
+                    : 'Connect your own Razorpay account so tenant payments go straight to your bank, not through NivaOps.'}
+                </p>
+              </div>
+              {status?.is_configured && <span className="text-xs font-semibold px-2 py-1 rounded-full bg-leaf/10 text-leaf shrink-0">Active</span>}
+            </div>
+            <Btn variant="secondary" className="justify-center" onClick={() => setEditing(true)}>
+              {status?.is_configured ? 'Update Razorpay Keys' : 'Connect Razorpay'}
+            </Btn>
+          </>
+        ) : (
+          <form onSubmit={handleSave} className="flex flex-col gap-3">
+            <p className="text-xs text-slate2">
+              Get these from your Razorpay Dashboard → Settings → API Keys. Use Test keys (rzp_test_...) to try it safely first.
+            </p>
+            <label className="block">
+              <Label>Key ID</Label>
+              <input
+                type="text"
+                value={keyId}
+                onChange={e => setKeyId(e.target.value)}
+                placeholder="rzp_test_... or rzp_live_..."
+                className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+              />
+            </label>
+            <label className="block">
+              <Label>Key Secret</Label>
+              <input
+                type="password"
+                value={keySecret}
+                onChange={e => setKeySecret(e.target.value)}
+                placeholder="Key secret"
+                className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+              />
+            </label>
+            <label className="block">
+              <Label>Webhook Secret <span className="text-slate2 font-normal">(optional, for auto-marking rent paid)</span></Label>
+              <input
+                type="password"
+                value={webhookSecret}
+                onChange={e => setWebhookSecret(e.target.value)}
+                placeholder="From Razorpay → Settings → Webhooks"
+                className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+              />
+            </label>
+            <div className="flex gap-2">
+              <Btn variant="secondary" className="flex-1 justify-center" onClick={() => setEditing(false)}>Cancel</Btn>
+              <Btn variant="primary" className="flex-1 justify-center" disabled={saving} {...{ type: 'submit' }}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+              </Btn>
+            </div>
+          </form>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, saving, roomPrefill, upiId, flashPaidId, onAddTenant, onUpdateTenant, onCancelEdit, onEdit, onDelete, onVacate, onMarkPaid, onMarkUnpaid, onReturnDeposit, onForfeitDeposit, onAddDayGuest, selectedPropertyId }) {
   const [query, setQuery] = useState('');
   const [showPast, setShowPast] = useState(false);
@@ -2620,8 +2729,9 @@ export default function App({ session, organizationName, organizationId: orgIdPr
                 {mountedPages.has('finance') && (
                   <>
                     <FinancePage selectedPropertyId={selectedPropertyId} organizationId={properties.find(p => p.id === selectedPropertyId)?.organization_id} tenants={tenants} onViewTenant={setViewingTenantId} upiId={upiId} />
-                    <div className="mt-4">
+                    <div className="mt-4 flex flex-col gap-4">
                       <UpiSettings propertyId={selectedPropertyId} upiId={upiId} onSave={handleSaveUpi} />
+                      <RazorpaySettings organizationId={properties.find(p => p.id === selectedPropertyId)?.organization_id} />
                     </div>
                   </>
                 )}
