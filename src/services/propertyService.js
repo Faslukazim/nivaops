@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 export async function fetchProperties() {
   const { data, error } = await supabase
     .from('properties')
-    .select('id, name, total_beds, address, status, is_demo, upi_id, organization_id')
+    .select('id, name, total_beds, address, status, is_demo, upi_id, organization_id, city, is_listed, locality, listing_description, cover_photo_url, gender_preference, amenities')
     .eq('status', 'active')
     .order('name');
   if (error) throw error;

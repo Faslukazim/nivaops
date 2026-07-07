@@ -31,6 +31,32 @@
   animation-delay: calc(var(--i, 0) * 50ms);
 }
 
+/* ── Public listing page ─────────────────────────────────────────────────── */
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+.animate-rise {
+  opacity: 0;
+  animation: rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.animate-fadein { animation: fadein 0.2s ease-out both; }
+
+@keyframes slideup {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+.animate-slideup { animation: slideup 0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
 /* ── Green flash when rent is marked paid ───────────────────────────────── */
 
 @keyframes flash-paid {

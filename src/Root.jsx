@@ -8,6 +8,7 @@ import OnboardingPage from './OnboardingPage.jsx';
 import LandingPage from './LandingPage.jsx';
 import WaitlistPage from './WaitlistPage.jsx';
 import AdminPage from './AdminPage.jsx';
+import ListingPage from './ListingPage.jsx';
 
 function InstallBanner() {
   const [state, setState] = useState(null); // 'android' | 'ios' | null
@@ -109,7 +110,14 @@ function FullScreenLoader() {
   );
 }
 
+function usePgListingRoute() {
+  const match = /^\/pg\/?([^/]*)/.exec(window.location.pathname);
+  if (!match) return null;
+  return match[1] ? decodeURIComponent(match[1]) : '';
+}
+
 export default function Root() {
+  const pgCity = usePgListingRoute();
   const [session, setSession] = useState(undefined);
   const [memberships, setMemberships] = useState(undefined);
   const [membershipError, setMembershipError] = useState('');
@@ -144,6 +152,10 @@ export default function Root() {
     if (!hasSupabaseConfig) return;
     if (session && memberships === undefined) loadMemberships();
   }, [session, memberships, loadMemberships]);
+
+  if (pgCity !== null) {
+    return <ListingPage city={pgCity} onExit={() => { window.location.href = '/'; }} />;
+  }
 
   if (!hasSupabaseConfig) return <App />;
 

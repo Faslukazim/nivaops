@@ -4,5 +4,8 @@
       "path": "/api/cron/rent-reminders",
       "schedule": "30 3 * * *"
     }
+  ],
+  "rewrites": [
+    { "source": "/pg/:path*", "destination": "/index.html" }
   ]
 }

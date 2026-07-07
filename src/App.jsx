@@ -1831,6 +1831,171 @@ function RazorpaySettings({ organizationId }) {
   );
 }
 
+const LISTING_AMENITIES = ['wifi', 'food', 'laundry', 'security', 'ac'];
+
+function ListingSettings({ property }) {
+  const toast = useToast();
+  const [isListed, setIsListed] = useState(property?.is_listed ?? false);
+  const [city, setCity] = useState(property?.city ?? '');
+  const [locality, setLocality] = useState(property?.locality ?? '');
+  const [description, setDescription] = useState(property?.listing_description ?? '');
+  const [coverPhotoUrl, setCoverPhotoUrl] = useState(property?.cover_photo_url ?? '');
+  const [genderPreference, setGenderPreference] = useState(property?.gender_preference ?? 'any');
+  const [amenities, setAmenities] = useState(property?.amenities ?? []);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setIsListed(property?.is_listed ?? false);
+    setCity(property?.city ?? '');
+    setLocality(property?.locality ?? '');
+    setDescription(property?.listing_description ?? '');
+    setCoverPhotoUrl(property?.cover_photo_url ?? '');
+    setGenderPreference(property?.gender_preference ?? 'any');
+    setAmenities(property?.amenities ?? []);
+  }, [property?.id]);
+
+  function toggleAmenity(a) {
+    setAmenities(list => list.includes(a) ? list.filter(x => x !== a) : [...list, a]);
+  }
+
+  async function handleSave(nextListed) {
+    if (!property?.id) return;
+    setSaving(true);
+    try {
+      const { saveListingSettings } = await import('./services/listingService');
+      if (nextListed && !city.trim()) { toast.error('Enter a city before listing.'); setSaving(false); return; }
+      await saveListingSettings(property.id, {
+        isListed: nextListed,
+        city,
+        locality,
+        description,
+        coverPhotoUrl,
+        genderPreference,
+        amenities,
+      });
+      setIsListed(nextListed);
+      toast.success(nextListed ? 'Live on the public listing page' : 'Removed from the public listing page');
+    } catch (err) {
+      toast.error(err.message || 'Could not save listing settings');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!property) return null;
+  const listingUrl = property.city ? `/pg/${encodeURIComponent(property.city.toLowerCase())}` : null;
+
+  return (
+    <Card className="overflow-hidden">
+      <SectionHeader title="Public Listing" />
+      <div className="p-4 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-ink">{isListed ? 'Listed publicly' : 'Not listed'}</p>
+            <p className="text-xs text-slate2 mt-0.5">
+              {isListed
+                ? 'Vacant beds from this property show up on the public discovery page.'
+                : 'Turn this on to surface vacant beds on the public discovery page.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => handleSave(!isListed)}
+            className={`shrink-0 w-11 h-6 rounded-full transition-colors relative ${isListed ? 'bg-leaf' : 'bg-border'}`}
+          >
+            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${isListed ? 'translate-x-5' : 'translate-x-0.5'}`} />
+          </button>
+        </div>
+
+        {isListed && listingUrl && (
+          <a href={listingUrl} target="_blank" rel="noreferrer" className="text-xs font-medium text-leaf hover:underline">
+            View live listing page →
+          </a>
+        )}
+
+        <label className="block">
+          <Label>City <span className="text-slate2 font-normal">(e.g. Kochi)</span></Label>
+          <input
+            type="text"
+            value={city}
+            onChange={e => setCity(e.target.value)}
+            className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+          />
+        </label>
+
+        <label className="block">
+          <Label>Locality <span className="text-slate2 font-normal">(e.g. Kakkanad)</span></Label>
+          <input
+            type="text"
+            value={locality}
+            onChange={e => setLocality(e.target.value)}
+            className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+          />
+        </label>
+
+        <label className="block">
+          <Label>Description</Label>
+          <textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            rows={3}
+            placeholder="What makes this place worth choosing?"
+            className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+          />
+        </label>
+
+        <label className="block">
+          <Label>Cover photo URL</Label>
+          <input
+            type="text"
+            value={coverPhotoUrl}
+            onChange={e => setCoverPhotoUrl(e.target.value)}
+            placeholder="https://..."
+            className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+          />
+        </label>
+
+        <div>
+          <Label>Who it's for</Label>
+          <div className="flex gap-2 mt-1.5">
+            {['any', 'male', 'female'].map(g => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setGenderPreference(g)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${genderPreference === g ? 'bg-ink text-white border-ink' : 'border-border text-slate2'}`}
+              >
+                {g === 'any' ? 'Anyone' : g === 'male' ? 'Men only' : 'Women only'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <Label>Amenities</Label>
+          <div className="flex gap-2 mt-1.5 flex-wrap">
+            {LISTING_AMENITIES.map(a => (
+              <button
+                key={a}
+                type="button"
+                onClick={() => toggleAmenity(a)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold border capitalize transition-colors ${amenities.includes(a) ? 'bg-leaf/10 text-leaf border-leaf' : 'border-border text-slate2'}`}
+              >
+                {a}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <Btn variant="primary" className="justify-center" disabled={saving} onClick={() => handleSave(isListed)}>
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save listing details'}
+        </Btn>
+      </div>
+    </Card>
+  );
+}
+
 function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, saving, roomPrefill, upiId, flashPaidId, onAddTenant, onUpdateTenant, onCancelEdit, onEdit, onDelete, onVacate, onMarkPaid, onMarkUnpaid, onReturnDeposit, onForfeitDeposit, onAddDayGuest, selectedPropertyId }) {
   const [query, setQuery] = useState('');
   const [showPast, setShowPast] = useState(false);
@@ -2732,6 +2897,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
                     <div className="mt-4 flex flex-col gap-4">
                       <UpiSettings propertyId={selectedPropertyId} upiId={upiId} onSave={handleSaveUpi} />
                       <RazorpaySettings organizationId={properties.find(p => p.id === selectedPropertyId)?.organization_id} />
+                      <ListingSettings property={properties.find(p => p.id === selectedPropertyId)} />
                     </div>
                   </>
                 )}
