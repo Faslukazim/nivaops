@@ -1842,6 +1842,7 @@ function ListingSettings({ property }) {
   const [coverPhotoUrl, setCoverPhotoUrl] = useState(property?.cover_photo_url ?? '');
   const [genderPreference, setGenderPreference] = useState(property?.gender_preference ?? 'any');
   const [amenities, setAmenities] = useState(property?.amenities ?? []);
+  const [whatsappNumber, setWhatsappNumber] = useState(property?.whatsapp_number ?? '');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -1852,6 +1853,7 @@ function ListingSettings({ property }) {
     setCoverPhotoUrl(property?.cover_photo_url ?? '');
     setGenderPreference(property?.gender_preference ?? 'any');
     setAmenities(property?.amenities ?? []);
+    setWhatsappNumber(property?.whatsapp_number ?? '');
   }, [property?.id]);
 
   function toggleAmenity(a) {
@@ -1860,10 +1862,13 @@ function ListingSettings({ property }) {
 
   async function handleSave(nextListed) {
     if (!property?.id) return;
+    if (nextListed && !whatsappNumber.trim()) {
+      toast.error('Add a WhatsApp number so prospects can reach you before turning this on.');
+      return;
+    }
     setSaving(true);
     try {
       const { saveListingSettings } = await import('./services/listingService');
-      if (nextListed && !city.trim()) { toast.error('Enter a city before listing.'); setSaving(false); return; }
       await saveListingSettings(property.id, {
         isListed: nextListed,
         city,
@@ -1872,6 +1877,7 @@ function ListingSettings({ property }) {
         coverPhotoUrl,
         genderPreference,
         amenities,
+        whatsappNumber,
       });
       setIsListed(nextListed);
       toast.success(nextListed ? 'Live on the public listing page' : 'Removed from the public listing page');
@@ -1952,6 +1958,17 @@ function ListingSettings({ property }) {
             value={coverPhotoUrl}
             onChange={e => setCoverPhotoUrl(e.target.value)}
             placeholder="https://..."
+            className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+          />
+        </label>
+
+        <label className="block">
+          <Label>WhatsApp number <span className="text-slate2 font-normal">(prospects enquire here)</span></Label>
+          <input
+            type="text"
+            value={whatsappNumber}
+            onChange={e => setWhatsappNumber(e.target.value)}
+            placeholder="9876543210"
             className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
           />
         </label>

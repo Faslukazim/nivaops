@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { MapPin, Wifi, Utensils, Shirt, ShieldCheck, Wind, Search, X, ArrowRight, BedDouble, ArrowLeft } from 'lucide-react';
-import { fetchListedProperties, fetchListedPropertyBeds } from './services/listingService';
+import { MapPin, Wifi, Utensils, Shirt, ShieldCheck, Wind, Search, X, ArrowRight, BedDouble, ArrowLeft, MessageCircle } from 'lucide-react';
+import { fetchListedProperties } from './services/listingService';
 
 const AMENITY_ICON = {
   wifi: Wifi,
@@ -10,12 +10,6 @@ const AMENITY_ICON = {
   ac: Wind,
 };
 
-function fmtRent(min, max) {
-  if (!min && !max) return null;
-  if (min === max || !max) return `₹${Number(min).toLocaleString('en-IN')}`;
-  return `₹${Number(min).toLocaleString('en-IN')} – ₹${Number(max).toLocaleString('en-IN')}`;
-}
-
 function GenderTag({ value }) {
   if (value === 'any' || !value) return null;
   const label = value === 'male' ? 'Men only' : 'Women only';
@@ -24,6 +18,13 @@ function GenderTag({ value }) {
       {label}
     </span>
   );
+}
+
+function whatsappHref(property) {
+  const digits = String(property.whatsapp_number || '').replace(/\D/g, '').slice(-10);
+  if (!digits) return null;
+  const text = encodeURIComponent(`Hi, I'm interested in a vacant bed at ${property.name} (${property.locality || property.city}). Is it still available?`);
+  return `https://wa.me/91${digits}?text=${text}`;
 }
 
 function PropertyCard({ p, onOpen, index }) {
@@ -72,27 +73,13 @@ function PropertyCard({ p, onOpen, index }) {
             );
           })}
         </div>
-        {fmtRent(p.min_asking_rent, p.max_asking_rent) && (
-          <p className="mt-4 pt-4 border-t border-border text-[15px]">
-            <span className="font-extrabold text-ink">{fmtRent(p.min_asking_rent, p.max_asking_rent)}</span>
-            <span className="text-slate2 text-[13px]"> / month</span>
-          </p>
-        )}
       </div>
     </button>
   );
 }
 
 function PropertyDetail({ property, onClose }) {
-  const [beds, setBeds] = useState(null);
-
-  useEffect(() => {
-    let active = true;
-    fetchListedPropertyBeds(property.id).then(b => { if (active) setBeds(b); }).catch(() => setBeds([]));
-    return () => { active = false; };
-  }, [property.id]);
-
-  const whatsappHref = `https://wa.me/?text=${encodeURIComponent(`Hi, I'm interested in a vacant bed at ${property.name} (${property.locality || property.city}). Is it still available?`)}`;
+  const href = whatsappHref(property);
 
   return (
     <div className="fixed inset-0 z-[90] bg-ink/50 backdrop-blur-sm flex items-end sm:items-center justify-center animate-fadein">
@@ -128,37 +115,23 @@ function PropertyDetail({ property, onClose }) {
           )}
 
           <div className="mt-6 border-t border-border pt-5">
-            <p className="font-mono text-[11px] font-bold uppercase tracking-widest text-leaf mb-3">
+            <p className="font-mono text-[11px] font-bold uppercase tracking-widest text-leaf">
               {property.vacant_beds} bed{property.vacant_beds === 1 ? '' : 's'} available now
             </p>
-            {beds === null ? (
-              <div className="space-y-2">
-                {[0, 1].map(i => <div key={i} className="h-11 bg-mist rounded-xl animate-pulse" />)}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {beds.map((b, i) => (
-                  <div key={i} className="flex items-center justify-between px-4 py-3 rounded-xl border border-border bg-mist/50">
-                    <span className="text-sm font-medium text-ink">Room {b.room_number} · Bed {b.bed_number}</span>
-                    {b.asking_rent ? (
-                      <span className="text-sm font-bold text-ink">₹{Number(b.asking_rent).toLocaleString('en-IN')}/mo</span>
-                    ) : (
-                      <span className="text-xs text-slate2">Ask for rent</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
-          <a
-            href={whatsappHref}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-6 flex items-center justify-center gap-2 w-full bg-leaf text-white font-semibold py-3.5 rounded-2xl hover:bg-leaf/90 transition-colors"
-          >
-            Enquire on WhatsApp
-          </a>
+          {href ? (
+            <a
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-6 flex items-center justify-center gap-2 w-full bg-leaf text-white font-semibold py-3.5 rounded-2xl hover:bg-leaf/90 transition-colors"
+            >
+              <MessageCircle size={18} /> Enquire on WhatsApp
+            </a>
+          ) : (
+            <p className="mt-6 text-center text-sm text-slate2">Contact details unavailable for this listing.</p>
+          )}
         </div>
       </div>
     </div>
