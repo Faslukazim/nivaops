@@ -365,6 +365,39 @@ export function StatStrip({ stats }) {
   );
 }
 
+// ─── HeroStatStrip ────────────────────────────────────────────────────────────
+// Dark tinted variant of StatStrip for the Dashboard's primary "today" panel —
+// each tile tinted by meaning (green=good/money, amber=needs attention,
+// coral=urgent, neutral=informational). Pass stats as
+// [{ label, value, sub?, tint? }] where tint is 'neutral' | 'green' | 'amber' | 'coral'.
+
+const HERO_TINTS = {
+  neutral: { bg: 'bg-white/[0.06]', text: 'text-white', sub: 'text-white/40' },
+  green:   { bg: 'bg-leaf/[0.18]',  text: 'text-leaf',  sub: 'text-leaf/60' },
+  amber:   { bg: 'bg-amber/[0.14]', text: 'text-amber', sub: 'text-amber/60' },
+  coral:   { bg: 'bg-coral/[0.14]', text: 'text-coral', sub: 'text-coral/60' },
+};
+
+export function HeroStatStrip({ title = 'Today', stats }) {
+  return (
+    <div className="rounded-2xl bg-ink p-5">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/30 mb-4">{title}</p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {stats.map(s => {
+          const t = HERO_TINTS[s.tint ?? 'neutral'];
+          return (
+            <div key={s.label} className={`rounded-xl p-4 ${t.bg}`}>
+              <p className={`text-[11px] mb-1.5 ${t.sub}`}>{s.label}</p>
+              <p className={`text-2xl font-bold tabular-nums tracking-tight ${t.text}`}>{s.value}</p>
+              {s.sub && <p className={`text-[11px] mt-0.5 ${t.sub}`}>{s.sub}</p>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── ConfirmInline ────────────────────────────────────────────────────────────
 // Inline confirm row. Replaces one-off confirm patterns.
 // Wrap the normal row content and show this when confirming.

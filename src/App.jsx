@@ -22,7 +22,7 @@ import { NivaLogo } from './components/NivaLogo';
 import {
   fmt, Label, Card, SectionHeader, Btn, IconBtn,
   StatusBadge, WhatsAppLink, PaymentLinkBtn,
-  PageLoader, StatStrip, ConfirmInline, EmptyState, CollectModal,
+  PageLoader, StatStrip, HeroStatStrip, ConfirmInline, EmptyState, CollectModal,
   MoneyInput, normalizePhone, isValidPhone, SignOutBtn,
 } from './components/ui';
 
@@ -1260,30 +1260,30 @@ function BusinessHealth({ tenants, totalBeds }) {
   const revenue = tenants.reduce((s, t) => s + Number(t.monthlyRent || 0), 0);
 
   return (
-    <StatStrip stats={[
+    <HeroStatStrip stats={[
       {
         label: 'Occupancy',
         value: `${pct}%`,
         sub: `${occupied}/${totalBeds} beds`,
-        color: pct >= 80 ? 'text-success' : pct >= 50 ? 'text-amber' : 'text-coral',
+        tint: pct >= 80 ? 'green' : pct >= 50 ? 'amber' : 'coral',
       },
       {
         label: 'Vacant Beds',
         value: vacant,
         sub: `of ${totalBeds}`,
-        color: vacant > 0 ? 'text-amber' : 'text-success',
+        tint: vacant > 0 ? 'amber' : 'green',
       },
       {
         label: 'Pending Rent',
         value: fmt(pendingRent),
         sub: `${unpaid.length} unpaid`,
-        color: pendingRent > 0 ? 'text-coral' : 'text-success',
+        tint: pendingRent > 0 ? 'coral' : 'green',
       },
       {
         label: 'Potential Revenue',
         value: fmt(revenue),
         sub: `${tenants.length} occupied beds`,
-        color: 'text-ink',
+        tint: 'neutral',
       },
     ]} />
   );
