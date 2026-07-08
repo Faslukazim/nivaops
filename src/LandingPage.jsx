@@ -234,7 +234,7 @@ function scrollTo(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 }
 
-const REQUEST_ACCESS_URL = 'https://wa.me/919633310117?text=Hi%2C%20I%27d%20like%20to%20get%20access%20to%20NivaOps';
+const BOOK_DEMO_URL = 'https://wa.me/919633310117?text=Hi%2C%20I%27d%20like%20to%20book%20a%20demo%20of%20NivaOps';
 
 export default function LandingPage({ onShowAuth }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -245,29 +245,42 @@ export default function LandingPage({ onShowAuth }) {
       {/* NAV */}
       <nav className="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur-xl border-b border-border"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-6 h-14 grid grid-cols-[1fr_auto_1fr] items-center">
           <div className="flex items-center gap-2.5">
             <NivaLogo size={22} />
             <NivaWordmark size="base" />
           </div>
-          <div className="hidden sm:flex items-center gap-2">
-            <button onClick={onShowAuth} className="text-sm text-slate font-medium px-4 py-2 rounded-lg hover:bg-surface transition-colors">
-              Sign in
+
+          <div className="hidden sm:flex items-center gap-8">
+            <button onClick={() => scrollTo('features')} className="text-sm text-slate font-medium hover:text-charcoal transition-colors">
+              Features
             </button>
-            <a href={REQUEST_ACCESS_URL} target="_blank" rel="noopener noreferrer"
+            <button onClick={() => scrollTo('pricing')} className="text-sm text-slate font-medium hover:text-charcoal transition-colors">
+              Pricing
+            </button>
+          </div>
+
+          <div className="hidden sm:flex items-center justify-end gap-5">
+            <button onClick={onShowAuth} className="text-sm text-muted font-medium hover:text-slate transition-colors">
+              Sign In
+            </button>
+            <a href={BOOK_DEMO_URL} target="_blank" rel="noopener noreferrer"
               className="text-sm text-white font-semibold px-4 py-2 rounded-lg bg-green hover:bg-green-hover transition-colors">
-              Request access
+              Book Demo
             </a>
           </div>
-          <button className="sm:hidden p-2 text-muted" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+
+          <button className="sm:hidden col-start-3 justify-self-end p-2 text-muted" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
             {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
         </div>
         {mobileMenuOpen && (
           <div className="sm:hidden bg-white border-t border-border px-5 pb-5 pt-3 space-y-2">
-            <button onClick={onShowAuth} className="w-full py-2.5 border border-border rounded-lg text-sm font-semibold text-charcoal">Sign in</button>
-            <a href={REQUEST_ACCESS_URL} target="_blank" rel="noopener noreferrer"
-              className="block w-full py-2.5 bg-green hover:bg-green-hover rounded-lg text-sm font-semibold text-white text-center transition-colors">Request access</a>
+            <button onClick={() => { setMobileMenuOpen(false); scrollTo('features'); }} className="w-full text-left py-2 text-sm font-medium text-slate">Features</button>
+            <button onClick={() => { setMobileMenuOpen(false); scrollTo('pricing'); }} className="w-full text-left py-2 text-sm font-medium text-slate">Pricing</button>
+            <button onClick={onShowAuth} className="w-full py-2.5 border border-border rounded-lg text-sm font-semibold text-charcoal">Sign In</button>
+            <a href={BOOK_DEMO_URL} target="_blank" rel="noopener noreferrer"
+              className="block w-full py-2.5 bg-green hover:bg-green-hover rounded-lg text-sm font-semibold text-white text-center transition-colors">Book Demo</a>
           </div>
         )}
       </nav>
@@ -298,9 +311,9 @@ export default function LandingPage({ onShowAuth }) {
             Rent dues in your head. Payments scattered across chats. Tenants tracked in a notebook. There's a better way.
           </p>
 
-          <a href={REQUEST_ACCESS_URL} target="_blank" rel="noopener noreferrer"
+          <a href={BOOK_DEMO_URL} target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 bg-green hover:bg-green-hover text-white font-semibold text-sm px-6 py-3 rounded-lg transition-colors duration-150 shadow-[0_8px_24px_rgba(22,163,74,0.28)]">
-            Request access <ArrowUpRight size={15} />
+            Book Demo <ArrowUpRight size={15} />
           </a>
 
           <p className="mt-5 text-xs text-muted">
@@ -404,9 +417,9 @@ export default function LandingPage({ onShowAuth }) {
                   </li>
                 ))}
               </ul>
-              <a href={REQUEST_ACCESS_URL} target="_blank" rel="noopener noreferrer"
+              <a href={BOOK_DEMO_URL} target="_blank" rel="noopener noreferrer"
                 className="mt-8 w-full py-3 border border-border rounded-xl text-sm font-semibold text-charcoal hover:bg-surface transition-colors text-center block">
-                Request access
+                Book Demo
               </a>
             </div>
 
@@ -429,9 +442,9 @@ export default function LandingPage({ onShowAuth }) {
                   </li>
                 ))}
               </ul>
-              <a href={REQUEST_ACCESS_URL} target="_blank" rel="noopener noreferrer"
+              <a href={BOOK_DEMO_URL} target="_blank" rel="noopener noreferrer"
                 className="mt-8 w-full py-3 bg-green hover:bg-green-hover rounded-xl text-sm font-semibold text-white transition-colors text-center block">
-                Request access
+                Book Demo
               </a>
             </div>
 
@@ -452,7 +465,7 @@ export default function LandingPage({ onShowAuth }) {
           <div className="flex items-center gap-8">
             <button onClick={() => scrollTo('features')} className="text-sm text-white/35 hover:text-white/65 transition-colors">Features</button>
             <button onClick={() => scrollTo('pricing')} className="text-sm text-white/35 hover:text-white/65 transition-colors">Pricing</button>
-            <a href={REQUEST_ACCESS_URL} target="_blank" rel="noopener noreferrer" className="text-sm text-white/35 hover:text-white/65 transition-colors">Contact</a>
+            <a href={BOOK_DEMO_URL} target="_blank" rel="noopener noreferrer" className="text-sm text-white/35 hover:text-white/65 transition-colors">Contact</a>
           </div>
           <p className="text-xs text-white/25">© 2026 NivaOps</p>
         </div>
