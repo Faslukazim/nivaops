@@ -12,17 +12,9 @@ export const EXPENSE_CATEGORIES = [
   { id: 'misc',          label: 'Misc'          },
 ];
 
-export const CF_TYPES = [
-  { id: 'building_rent', label: 'Building Rent' },
-  { id: 'salary',        label: 'Salary'        },
-  { id: 'emi',           label: 'EMI / Loan'   },
-  { id: 'other',         label: 'Other'         },
-];
-
 // ─── LocalStorage helpers ─────────────────────────────────────────────────────
 
 const EXP_KEY = 'stayops_expenses';
-const CF_KEY  = 'stayops_cashflow';
 
 function readLocal(key) {
   try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
@@ -93,54 +85,6 @@ export async function deleteExpense(id) {
     return;
   }
   const { error } = await supabase.from('expenses').delete().eq('id', id);
-  if (error) throw error;
-}
-
-// ─── Cash Flow Items (recurring obligations) ──────────────────────────────────
-
-export function fetchCashFlowItemsSync(propertyId) {
-  return readLocal(CF_KEY).filter(cf => !propertyId || cf.propertyId === propertyId);
-}
-
-export async function fetchCashFlowItems(propertyId) {
-  if (!hasSupabaseConfig) return fetchCashFlowItemsSync(propertyId);
-  const q = supabase.from('cash_flow_items').select('*').eq('active', true);
-  if (propertyId) q.eq('property_id', propertyId);
-  const { data, error } = await q;
-  if (error) throw error;
-  return data.map(r => ({
-    id: r.id, propertyId: r.property_id, type: r.type,
-    label: r.label, amount: Number(r.amount), dueDay: r.due_day,
-  }));
-}
-
-export async function addCashFlowItem(propertyId, item) {
-  if (!hasSupabaseConfig) {
-    const newItem = { ...item, id: crypto.randomUUID(), propertyId };
-    writeLocal(CF_KEY, [...readLocal(CF_KEY), newItem]);
-    return newItem;
-  }
-  const { data, error } = await supabase
-    .from('cash_flow_items')
-    .insert({
-      property_id: propertyId || null,
-      type: item.type,
-      label: item.label,
-      amount: item.amount,
-      due_day: item.dueDay,
-      active: true,
-    })
-    .select().single();
-  if (error) throw error;
-  return { id: data.id, propertyId: data.property_id, type: data.type, label: data.label, amount: Number(data.amount), dueDay: data.due_day };
-}
-
-export async function deleteCashFlowItem(id) {
-  if (!hasSupabaseConfig) {
-    writeLocal(CF_KEY, readLocal(CF_KEY).filter(cf => cf.id !== id));
-    return;
-  }
-  const { error } = await supabase.from('cash_flow_items').update({ active: false }).eq('id', id);
   if (error) throw error;
 }
 

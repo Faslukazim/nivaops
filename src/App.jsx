@@ -1540,7 +1540,7 @@ function QuickActions({ onAssignTenant, onAddTenant, onOpenRooms, onOpenFinance 
     { label: 'Assign Tenant', sub: 'Move into a vacant bed', icon: UserPlus,  onClick: onAssignTenant },
     { label: 'Add Tenant',    sub: 'Register a new resident', icon: Plus,      onClick: onAddTenant },
     { label: 'Rooms',         sub: 'View beds & occupancy',  icon: BedDouble, onClick: onOpenRooms },
-    { label: 'Finance',       sub: 'Expenses, P&L, cashflow',icon: BarChart2, onClick: onOpenFinance },
+    { label: 'Finance',       sub: 'Expenses, P&L',icon: BarChart2, onClick: onOpenFinance },
   ];
 
   return (

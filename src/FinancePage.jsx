@@ -1,5 +1,5 @@
 // ─── Finance Page ─────────────────────────────────────────────────────────────
-// Four sub-tabs: Rent | Expenses | P&L | Cashflow
+// Sub-tabs: Rent | Income | Expenses | P&L
 // This is the primary decision-making module for hostel operators.
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -21,9 +21,8 @@ import {
   STATUS, computeRecordStatus, recordDaysOverdue, recordDaysUntilDue,
 } from './utils/paymentStatus';
 import {
-  EXPENSE_CATEGORIES, CF_TYPES,
+  EXPENSE_CATEGORIES,
   fetchExpenses, addExpense, deleteExpense,
-  fetchCashFlowItems, addCashFlowItem, deleteCashFlowItem,
 } from './services/financeService';
 import {
   INCOME_CATEGORIES, fetchIncomeRecords, addIncomeRecord, deleteIncomeRecord, uploadIdPhoto,
@@ -74,7 +73,6 @@ const SUB_TABS = [
   { id: 'income',    label: 'Income',   short: 'Income' },
   { id: 'expenses',  label: 'Expenses', short: 'Exp'   },
   { id: 'pl',        label: 'P&L',      short: 'P&L'   },
-  { id: 'cashflow',  label: 'Cashflow', short: 'Cash'  },
 ];
 
 function SubNav({ active, onChange }) {
@@ -1017,53 +1015,6 @@ function PLTab({ selectedPropertyId, tenants }) {
   );
 }
 
-// ─── Cashflow Tab ─────────────────────────────────────────────────────────────
-
-const EMPTY_CF = { type: 'building_rent', label: '', amount: '5000', dueDay: '1' };
-
-function CashflowTab({ selectedPropertyId, tenants }) {
-  const unpaidTenants = tenants.filter(t => t.paymentStatus === 'Unpaid');
-  const pendingRent = unpaidTenants.reduce((s, t) => s + Number(t.monthlyRent || 0), 0);
-
-  return (
-    <div className="flex flex-col gap-4">
-      {/* Summary strip */}
-      <StatStrip stats={[
-        { label: 'Rent Pending', value: fmt(pendingRent), sub: `${unpaidTenants.length} tenant${unpaidTenants.length !== 1 ? 's' : ''}`, color: pendingRent > 0 ? 'text-amber' : 'text-leaf' },
-      ]} />
-
-      {/* Pending rent collection */}
-      <Card className="overflow-hidden">
-        <SectionHeader title="Pending Rent Collection" />
-        {unpaidTenants.length === 0 ? (
-          <EmptyState icon={CheckCircle2} title="All rent collected" body="No unpaid tenants this month." />
-        ) : (
-          <div className="divide-y divide-border">
-            {unpaidTenants.slice(0, 10).map(t => (
-              <div key={t.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-ink truncate">{t.name}</p>
-                  <p className="text-xs text-slate2">Room {t.roomNumber} · Bed {t.bedNumber}</p>
-                </div>
-                <span className="text-sm font-bold tabular-nums text-amber shrink-0">{fmt(t.monthlyRent)}</span>
-              </div>
-            ))}
-            {unpaidTenants.length > 10 && (
-              <div className="px-4 py-2.5 text-xs text-slate2 text-center">
-                +{unpaidTenants.length - 10} more unpaid tenants
-              </div>
-            )}
-            <div className="flex items-center justify-between px-4 py-3 bg-mist">
-              <Label>Total Pending</Label>
-              <span className="text-base font-bold tabular-nums text-amber">{fmt(pendingRent)}</span>
-            </div>
-          </div>
-        )}
-      </Card>
-    </div>
-  );
-}
-
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
 export default function FinancePage({ selectedPropertyId, organizationId, tenants, onViewTenant, upiId }) {
@@ -1084,7 +1035,6 @@ export default function FinancePage({ selectedPropertyId, organizationId, tenant
       {tab === 'income'   && <IncomeTab   selectedPropertyId={selectedPropertyId} organizationId={organizationId} tenants={tenants} />}
       {tab === 'expenses' && <ExpensesTab selectedPropertyId={selectedPropertyId} />}
       {tab === 'pl'       && <PLTab       selectedPropertyId={selectedPropertyId} tenants={tenants} />}
-      {tab === 'cashflow' && <CashflowTab selectedPropertyId={selectedPropertyId} tenants={tenants} />}
     </div>
   );
 }
