@@ -5,7 +5,7 @@ import {
   BarChart2, BedDouble, Camera, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight,
   Home, Loader2, LogOut, Menu, MessageCircle, MoreVertical, Pencil, Plus, Save, ShieldCheck, Sparkles, Trash2, UserMinus, UserPlus, Users, X,
 } from 'lucide-react';
-import { createTenant, deleteTenant, vacateTenant, fetchTenants, fetchVacatedTenants, fetchPendingDeposits, fetchMovedOutThisMonth, forfeitDeposit, returnDeposit, updateTenant } from './services/tenantService';
+import { createTenant, deleteTenant, vacateTenant, fetchTenants, fetchVacatedTenants, fetchMovedOutThisMonth, forfeitDeposit, returnDeposit, updateTenant } from './services/tenantService';
 import { addIncomeRecord, uploadIdPhoto, saveTenantIdPhoto } from './services/incomeService';
 import { markTenantRecordPaid } from './services/paymentService';
 import { logActivity, fetchRecentActivity } from './services/activityService';
@@ -1570,32 +1570,6 @@ function RecentActivity({ propertyId }) {
   );
 }
 
-function DepositsToReview({ tenants, onReturnDeposit, onForfeitDeposit }) {
-  if (tenants.length === 0) return null;
-  return (
-    <Card className="overflow-hidden">
-      <SectionHeader title={`Deposits to Review (${tenants.length})`} />
-      <div className="divide-y divide-border">
-        {tenants.map(t => (
-          <div key={t.id} className="px-4 py-3 flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-ink">{t.name}</p>
-                <p className="text-xs text-slate2">Room {t.roomNumber} · Left {t.endDate ?? '—'}</p>
-              </div>
-              <span className="text-sm font-bold tabular-nums text-amber">{fmt(t.depositAmount)}</span>
-            </div>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => onReturnDeposit(t)} className="flex-1 text-xs font-semibold text-amber border border-amber/30 rounded-lg px-2.5 py-2 hover:bg-amber/5 transition-colors">Return Deposit</button>
-              <button type="button" onClick={() => onForfeitDeposit(t)} className="flex-1 text-xs font-semibold text-coral border border-coral/30 rounded-lg px-2.5 py-2 hover:bg-coral/5 transition-colors">Not Refundable</button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </Card>
-  );
-}
-
 function PendingBookings({ bookings, onConvertBooking, onGoToRooms }) {
   if (bookings.length === 0) return null;
   return (
@@ -1651,7 +1625,7 @@ function MovedOutThisMonth({ tenants }) {
   );
 }
 
-function DashboardPage({ tenants, totalBeds, hasRooms, selectedPropertyId, upiId, pendingDeposits, movedOutThisMonth, pendingBookings, onGoToFinance, onGoToRooms, onAddTenant, onAssignTenant, onMarkPaid, onViewTenant, onReturnDeposit, onForfeitDeposit, onConvertBooking }) {
+function DashboardPage({ tenants, totalBeds, hasRooms, selectedPropertyId, upiId, movedOutThisMonth, pendingBookings, onGoToFinance, onGoToRooms, onAddTenant, onAssignTenant, onMarkPaid, onViewTenant, onConvertBooking }) {
   return (
     <div className="flex flex-col gap-4">
       <SetupChecklist
@@ -1671,7 +1645,6 @@ function DashboardPage({ tenants, totalBeds, hasRooms, selectedPropertyId, upiId
       />
       <AttentionRequired tenants={tenants} upiId={upiId} onMarkPaid={onMarkPaid} onViewTenant={onViewTenant} />
       <PendingBookings bookings={pendingBookings ?? []} onConvertBooking={onConvertBooking} onGoToRooms={onGoToRooms} />
-      <DepositsToReview tenants={pendingDeposits} onReturnDeposit={onReturnDeposit} onForfeitDeposit={onForfeitDeposit} />
       <MovedOutThisMonth tenants={movedOutThisMonth} />
       <MoveInHealth tenants={tenants} />
       <FinancialHealth selectedPropertyId={selectedPropertyId} totalBeds={totalBeds} tenants={tenants} />
@@ -2366,7 +2339,6 @@ export default function App({ session, organizationName, organizationId: orgIdPr
   const toast = useToast();
   const [seeding, setSeeding] = useState(false);
   const [upiId, setUpiId] = useState('');
-  const [pendingDeposits, setPendingDeposits] = useState([]);
   const [movedOutThisMonth, setMovedOutThisMonth] = useState([]);
   const [pendingBookings, setPendingBookings] = useState([]);
   const [showAddProperty, setShowAddProperty] = useState(false);
@@ -2408,7 +2380,6 @@ export default function App({ session, organizationName, organizationId: orgIdPr
       .then(data => { setTenants(data); setLoading(false); })
       .catch(e => { setError(e.message); setLoading(false); });
     if (selectedPropertyId) {
-      fetchPendingDeposits(selectedPropertyId).then(setPendingDeposits).catch(() => {});
       fetchMovedOutThisMonth(selectedPropertyId).then(setMovedOutThisMonth).catch(() => {});
       fetchBookings(selectedPropertyId).then(setPendingBookings).catch(() => {});
     }
@@ -2606,7 +2577,6 @@ export default function App({ session, organizationName, organizationId: orgIdPr
       if (editingTenant?.id === tenant.id) setEditingTenant(null);
       setRoomsVersion(v => v + 1);
       // Refresh dashboard lists
-      fetchPendingDeposits(selectedPropertyId).then(setPendingDeposits).catch(() => {});
       fetchMovedOutThisMonth(selectedPropertyId).then(setMovedOutThisMonth).catch(() => {});
       const orgId = properties.find(p=>p.id===selectedPropertyId)?.organization_id;
       logActivity(selectedPropertyId, orgId, 'tenant_vacated', `${tenant.name} vacated Room ${tenant.roomNumber} Bed ${tenant.bedNumber} on ${endDate}`);
@@ -2658,7 +2628,6 @@ export default function App({ session, organizationName, organizationId: orgIdPr
     try {
       await returnDeposit(tenant.id);
       setTenants(cur => cur.map(t => t.id === tenant.id ? { ...t, depositStatus: 'returned' } : t));
-      setPendingDeposits(cur => cur.filter(t => t.id !== tenant.id));
       const orgId = properties.find(p=>p.id===selectedPropertyId)?.organization_id;
       logActivity(selectedPropertyId, orgId, 'deposit_returned', `${tenant.name} deposit returned`);
       toast.success(`${tenant.name}'s deposit returned`);
@@ -2669,7 +2638,6 @@ export default function App({ session, organizationName, organizationId: orgIdPr
     try {
       await forfeitDeposit(tenant.id);
       setTenants(cur => cur.map(t => t.id === tenant.id ? { ...t, depositStatus: 'forfeited' } : t));
-      setPendingDeposits(cur => cur.filter(t => t.id !== tenant.id));
       const orgId = properties.find(p=>p.id===selectedPropertyId)?.organization_id;
       logActivity(selectedPropertyId, orgId, 'deposit_forfeited', `${tenant.name} deposit marked not refundable`);
       toast.success(`${tenant.name}'s deposit forfeited`);
@@ -2731,7 +2699,6 @@ export default function App({ session, organizationName, organizationId: orgIdPr
       try {
         await Promise.all([
           fetchTenants(selectedPropertyId || null).then(setTenants),
-          selectedPropertyId ? fetchPendingDeposits(selectedPropertyId).then(setPendingDeposits) : Promise.resolve(),
           selectedPropertyId ? fetchBookings(selectedPropertyId).then(setPendingBookings) : Promise.resolve(),
         ]);
       } catch { /* silent */ }
@@ -2852,7 +2819,6 @@ export default function App({ session, organizationName, organizationId: orgIdPr
                   hasRooms={hasRooms}
                   selectedPropertyId={selectedPropertyId}
                   upiId={upiId}
-                  pendingDeposits={pendingDeposits}
                   movedOutThisMonth={movedOutThisMonth}
                   pendingBookings={pendingBookings}
                   onGoToFinance={() => navigateTo('finance')}
@@ -2860,8 +2826,6 @@ export default function App({ session, organizationName, organizationId: orgIdPr
                   onAssignTenant={() => navigateTo('rooms')}
                   onMarkPaid={setCollectingTenant}
                   onViewTenant={setViewingTenantId}
-                  onReturnDeposit={handleReturnDeposit}
-                  onForfeitDeposit={handleForfeitDeposit}
                   onConvertBooking={handleConvertBooking}
                   onAddTenant={() => {
                     setEditingTenant(null);

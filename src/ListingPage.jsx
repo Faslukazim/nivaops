@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import { MapPin, Wifi, Utensils, Shirt, ShieldCheck, Wind, Search, X, ArrowRight, BedDouble, ArrowLeft, MessageCircle } from 'lucide-react';
+import { MapPin, Search, X, ArrowRight, BedDouble, MessageCircle, ChevronDown } from 'lucide-react';
 import { fetchListedProperties } from './services/listingService';
 
-const AMENITY_ICON = {
-  wifi: Wifi,
-  food: Utensils,
-  laundry: Shirt,
-  security: ShieldCheck,
-  ac: Wind,
+const AMENITY_LABEL = {
+  wifi: 'WiFi',
+  food: 'Food',
+  laundry: 'Laundry',
+  security: 'Security',
+  ac: 'AC',
 };
+
+function amenityLine(amenities) {
+  if (!amenities?.length) return null;
+  return amenities.map(a => AMENITY_LABEL[a] || a).join(' · ');
+}
 
 function GenderTag({ value }) {
   if (value === 'any' || !value) return null;
@@ -62,17 +67,12 @@ function PropertyCard({ p, onOpen, index }) {
           <MapPin size={13} className="shrink-0" />
           {[p.locality, p.city].filter(Boolean).join(', ')}
         </p>
-        <div className="flex items-center gap-2 mt-3 flex-wrap">
+        <div className="flex items-center gap-2 mt-3">
           <GenderTag value={p.gender_preference} />
-          {(p.amenities || []).slice(0, 3).map(a => {
-            const Icon = AMENITY_ICON[a];
-            return (
-              <span key={a} className="flex items-center gap-1 text-[11px] font-medium text-slate2 bg-mist px-2 py-1 rounded-full border border-border">
-                {Icon && <Icon size={11} />} {a}
-              </span>
-            );
-          })}
         </div>
+        {amenityLine(p.amenities) && (
+          <p className="mt-2.5 text-[12.5px] text-slate2">{amenityLine(p.amenities)}</p>
+        )}
       </div>
     </button>
   );
@@ -99,17 +99,12 @@ function PropertyDetail({ property, onClose }) {
           <p className="flex items-center gap-1.5 text-slate2 mt-1.5">
             <MapPin size={14} /> {[property.locality, property.city].filter(Boolean).join(', ')}
           </p>
-          <div className="flex items-center gap-2 mt-4 flex-wrap">
+          <div className="flex items-center gap-2 mt-4">
             <GenderTag value={property.gender_preference} />
-            {(property.amenities || []).map(a => {
-              const Icon = AMENITY_ICON[a];
-              return (
-                <span key={a} className="flex items-center gap-1.5 text-xs font-medium text-slate2 bg-mist px-2.5 py-1.5 rounded-full border border-border capitalize">
-                  {Icon && <Icon size={12} />} {a}
-                </span>
-              );
-            })}
           </div>
+          {amenityLine(property.amenities) && (
+            <p className="mt-2.5 text-[13px] text-slate2">{amenityLine(property.amenities)}</p>
+          )}
           {property.listing_description && (
             <p className="mt-5 text-[14.5px] leading-relaxed text-slate2">{property.listing_description}</p>
           )}
@@ -138,9 +133,50 @@ function PropertyDetail({ property, onClose }) {
   );
 }
 
-export default function ListingPage({ city: initialCity, onExit }) {
+const GENDER_OPTIONS = [
+  { value: 'any', label: 'Any' },
+  { value: 'male', label: 'Men' },
+  { value: 'female', label: 'Women' },
+];
+
+function GenderSelect({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const current = GENDER_OPTIONS.find(g => g.value === value) ?? GENDER_OPTIONS[0];
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 h-full px-4 border-l border-border text-[15px] font-medium text-ink hover:bg-mist/60 transition-colors rounded-r-2xl"
+      >
+        {current.label} <ChevronDown size={15} className="text-slate2" />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-2 z-20 bg-white border border-border rounded-xl shadow-lg overflow-hidden min-w-[120px]">
+            {GENDER_OPTIONS.map(g => (
+              <button
+                key={g.value}
+                type="button"
+                onClick={() => { onChange(g.value); setOpen(false); }}
+                className={`w-full text-left px-4 py-2.5 text-sm hover:bg-mist transition-colors ${g.value === value ? 'font-semibold text-leaf' : 'text-ink'}`}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+export default function ListingPage({ city: initialCity }) {
   const [city, setCity] = useState(initialCity || '');
   const [query, setQuery] = useState('');
+  const [gender, setGender] = useState('any');
   const [properties, setProperties] = useState(null);
   const [error, setError] = useState('');
   const [selected, setSelected] = useState(null);
@@ -156,11 +192,21 @@ export default function ListingPage({ city: initialCity, onExit }) {
 
   const filtered = useMemo(() => {
     if (!properties) return [];
-    if (!query.trim()) return properties;
-    const q = query.toLowerCase();
-    return properties.filter(p =>
-      p.name.toLowerCase().includes(q) || (p.locality || '').toLowerCase().includes(q));
-  }, [properties, query]);
+    let list = properties;
+    if (gender !== 'any') list = list.filter(p => p.gender_preference === gender || p.gender_preference === 'any');
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      list = list.filter(p => p.name.toLowerCase().includes(q) || (p.locality || '').toLowerCase().includes(q));
+    }
+    return list;
+  }, [properties, query, gender]);
+
+  const recentlyListed = useMemo(() => {
+    if (!properties || properties.length < 4) return [];
+    return [...properties]
+      .sort((a, b) => new Date(b.listed_at) - new Date(a.listed_at))
+      .slice(0, 3);
+  }, [properties]);
 
   const cityLabel = city ? city.charAt(0).toUpperCase() + city.slice(1) : 'your city';
 
@@ -175,11 +221,6 @@ export default function ListingPage({ city: initialCity, onExit }) {
             <span className="font-bold text-ink tracking-tight">NivaOps</span>
             <span className="text-slate2 text-sm hidden sm:inline">/ pg / {city || 'browse'}</span>
           </div>
-          {onExit && (
-            <button onClick={onExit} className="flex items-center gap-1.5 text-sm font-medium text-slate2 hover:text-ink transition-colors">
-              <ArrowLeft size={15} /> Back
-            </button>
-          )}
         </div>
       </header>
 
@@ -193,17 +234,17 @@ export default function ListingPage({ city: initialCity, onExit }) {
           not a stale listing. No brokerage, no middlemen.
         </p>
 
-        <div className="mt-8 flex flex-col sm:flex-row gap-3 max-w-2xl">
+        <div className="mt-8 flex max-w-2xl rounded-2xl border border-border bg-white focus-within:ring-2 focus-within:ring-leaf/30 focus-within:border-leaf transition-shadow">
           <div className="relative flex-1">
             <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate2" />
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search by hostel name or locality"
-              className="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-border bg-white text-[15px]
-                         focus:outline-none focus:ring-2 focus:ring-leaf/30 focus:border-leaf transition-shadow"
+              className="w-full pl-11 pr-4 py-3.5 text-[15px] bg-transparent focus:outline-none"
             />
           </div>
+          <GenderSelect value={gender} onChange={setGender} />
         </div>
       </section>
 
@@ -232,6 +273,16 @@ export default function ListingPage({ city: initialCity, onExit }) {
           </div>
         ) : (
           <>
+            {recentlyListed.length > 0 && (
+              <div className="mb-10">
+                <p className="text-sm font-semibold text-ink mb-4">Recently listed</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {recentlyListed.map((p, i) => (
+                    <PropertyCard key={p.id} p={p} index={i} onOpen={setSelected} />
+                  ))}
+                </div>
+              </div>
+            )}
             <p className="text-sm text-slate2 mb-5">{filtered.length} propert{filtered.length === 1 ? 'y' : 'ies'} with beds available</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filtered.map((p, i) => (

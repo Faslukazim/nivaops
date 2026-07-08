@@ -154,7 +154,7 @@ export default function Root() {
   }, [session, memberships, loadMemberships]);
 
   if (pgCity !== null) {
-    return <ListingPage city={pgCity} onExit={() => { window.location.href = '/'; }} />;
+    return <ListingPage city={pgCity} />;
   }
 
   if (!hasSupabaseConfig) return <App />;
