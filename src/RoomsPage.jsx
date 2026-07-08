@@ -332,10 +332,12 @@ function BedRow({ bed, roomNumber, roomId, rooms, propertyId, upiId, onMarkPaid,
   }
 
   return (
-    <div className={`px-4 py-3 ${isPaid ? '' : 'bg-coral/[0.04]'}`}>
+    <div className="px-4 py-3">
       {/* Top row: bed number + name + payment toggle */}
       <div className="flex items-center gap-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-ink text-xs font-bold tabular-nums text-white shrink-0">
+        <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold tabular-nums shrink-0 ${
+          isPaid ? 'bg-success/10 text-success' : 'bg-coral/10 text-coral'
+        }`}>
           {bed.bed_number}
         </div>
 
@@ -347,9 +349,8 @@ function BedRow({ bed, roomNumber, roomId, rooms, propertyId, upiId, onMarkPaid,
           >
             {tenant.name}
           </button>
-          <p className="text-xs tabular-nums truncate">
-            <span className="text-success font-semibold">{fmt(occ.monthly_rent)}</span>
-            <span className="text-slate2">/mo · since {occ.start_date}</span>
+          <p className="text-xs text-slate2 tabular-nums truncate">
+            {fmt(occ.monthly_rent)}/mo · since {occ.start_date}
           </p>
         </div>
 

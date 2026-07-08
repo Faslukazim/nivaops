@@ -22,7 +22,7 @@ import { NivaLogo } from './components/NivaLogo';
 import {
   fmt, Label, Card, SectionHeader, Btn, IconBtn,
   StatusBadge, WhatsAppLink, PaymentLinkBtn,
-  PageLoader, StatStrip, HeroStatStrip, ConfirmInline, EmptyState, CollectModal,
+  PageLoader, StatStrip, ConfirmInline, EmptyState, CollectModal,
   MoneyInput, normalizePhone, isValidPhone, SignOutBtn,
 } from './components/ui';
 
@@ -407,10 +407,10 @@ function BottomNav({ active, onChange, bookingCount = 0, overdueCount = 0 }) {
 
 function Sidebar({ active, onChange, bookingCount = 0, overdueCount = 0 }) {
   return (
-    <aside className="hidden lg:flex fixed inset-y-0 left-0 z-40 w-60 flex-col bg-midnight" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-      <div className="flex items-center gap-2.5 px-5 h-16 shrink-0 border-b border-white/[0.06]">
+    <aside className="hidden lg:flex fixed inset-y-0 left-0 z-40 w-60 flex-col bg-white border-r border-border" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <div className="flex items-center gap-2.5 px-5 h-16 shrink-0 border-b border-border">
         <NivaLogo size={22} />
-        <span className="font-bold tracking-tight text-white">Niva<span className="text-green">Ops</span></span>
+        <span className="font-bold tracking-tight text-ink">Niva<span className="text-green">Ops</span></span>
       </div>
       <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
         {PAGES.map(p => {
@@ -426,7 +426,7 @@ function Sidebar({ active, onChange, bookingCount = 0, overdueCount = 0 }) {
               type="button"
               onClick={() => onChange(p.id)}
               className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive ? 'bg-green/10 text-green' : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+                isActive ? 'bg-green/10 text-green' : 'text-slate2 hover:text-ink hover:bg-mist'
               }`}
             >
               <Icon className={`h-4 w-4 ${isActive ? 'text-green' : ''}`} />
@@ -1295,30 +1295,30 @@ function BusinessHealth({ tenants, totalBeds }) {
   const revenue = tenants.reduce((s, t) => s + Number(t.monthlyRent || 0), 0);
 
   return (
-    <HeroStatStrip stats={[
+    <StatStrip stats={[
       {
         label: 'Occupancy',
         value: `${pct}%`,
         sub: `${occupied}/${totalBeds} beds`,
-        tint: pct >= 80 ? 'green' : pct >= 50 ? 'amber' : 'coral',
+        color: pct >= 80 ? 'text-success' : pct >= 50 ? 'text-amber' : 'text-coral',
       },
       {
         label: 'Vacant Beds',
         value: vacant,
         sub: `of ${totalBeds}`,
-        tint: vacant > 0 ? 'amber' : 'green',
+        color: vacant > 0 ? 'text-amber' : 'text-success',
       },
       {
         label: 'Pending Rent',
         value: fmt(pendingRent),
         sub: `${unpaid.length} unpaid`,
-        tint: pendingRent > 0 ? 'coral' : 'green',
+        color: pendingRent > 0 ? 'text-coral' : 'text-success',
       },
       {
         label: 'Potential Revenue',
         value: fmt(revenue),
         sub: `${tenants.length} occupied beds`,
-        tint: 'neutral',
+        color: 'text-ink',
       },
     ]} />
   );
