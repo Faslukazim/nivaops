@@ -247,16 +247,21 @@ function AddPropertyModal({ organizationId, onCreated, onClose }) {
 
 // ─── header ──────────────────────────────────────────────────────────────────
 
-function AppLogo() {
+function AppLogo({ onClick }) {
   return (
-    <div className="flex items-center gap-2.5">
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-2.5"
+      disabled={!onClick}
+    >
       <NivaLogo size={28} />
       <span className="text-[15px] font-semibold tracking-tight text-ink">NivaOps</span>
-    </div>
+    </button>
   );
 }
 
-function Header({ properties, selectedPropertyId, onPropertyChange, loadingProperties, onSignOut, isAdmin, onOpenAdmin, canAddProperty, onAddProperty, onDeleteProperty, onRenameProperty }) {
+function Header({ properties, selectedPropertyId, onPropertyChange, loadingProperties, onSignOut, isAdmin, onOpenAdmin, canAddProperty, onAddProperty, onDeleteProperty, onRenameProperty, onGoHome }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const actions = (
@@ -289,7 +294,7 @@ function Header({ properties, selectedPropertyId, onPropertyChange, loadingPrope
     <header className="sticky top-0 z-40 bg-white border-b border-border px-4 py-3 sm:px-6" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}>
       <div className="mx-auto max-w-5xl">
         <div className="flex items-center justify-between gap-4">
-          <div className="lg:hidden"><AppLogo /></div>
+          <div className="lg:hidden"><AppLogo onClick={onGoHome} /></div>
           <div className="hidden sm:flex items-center gap-2 lg:ml-auto">{actions}</div>
           <button
             type="button"
@@ -313,7 +318,7 @@ function Header({ properties, selectedPropertyId, onPropertyChange, loadingPrope
             style={{ top: 0, paddingTop: 'env(safe-area-inset-top, 0px)' }}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <AppLogo />
+              <AppLogo onClick={() => { setMobileMenuOpen(false); onGoHome?.(); }} />
               <IconBtn variant="ghost" onClick={() => setMobileMenuOpen(false)}>
                 <X className="h-5 w-5" />
               </IconBtn>
@@ -408,10 +413,14 @@ function BottomNav({ active, onChange, bookingCount = 0, overdueCount = 0 }) {
 function Sidebar({ active, onChange, bookingCount = 0, overdueCount = 0 }) {
   return (
     <aside className="hidden lg:flex fixed inset-y-0 left-0 z-40 w-60 flex-col bg-white border-r border-border" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-      <div className="flex items-center gap-2.5 px-5 h-16 shrink-0 border-b border-border">
+      <button
+        type="button"
+        onClick={() => onChange('dashboard')}
+        className="flex items-center gap-2.5 px-5 h-16 shrink-0 border-b border-border text-left"
+      >
         <NivaLogo size={22} />
         <span className="font-bold tracking-tight text-ink">Niva<span className="text-green">Ops</span></span>
-      </div>
+      </button>
       <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
         {PAGES.map(p => {
           const Icon = p.icon;
@@ -1375,7 +1384,6 @@ function FinancialHealth({ selectedPropertyId, totalBeds, tenants }) {
   const expenses = readExpensesSync(selectedPropertyId, currentYM);
   const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
   const netProfit = actualCollected - totalExpenses;
-  const hasExpenses = totalExpenses > 0;
 
   const ml = new Date(currentYM + '-02').toLocaleString('en-IN', { month: 'long', year: 'numeric' });
 
@@ -1396,20 +1404,18 @@ function FinancialHealth({ selectedPropertyId, totalBeds, tenants }) {
           </div>
         ))}
       </div>
-      {hasExpenses && (
-        <div className={`grid grid-cols-3 gap-px bg-border border-t border-border`}>
-          {[
-            { label: 'Expenses',   value: fmt(totalExpenses), color: 'text-coral' },
-            { label: netProfit >= 0 ? 'Net Profit' : 'Net Loss', value: fmt(Math.abs(netProfit)), color: netProfit >= 0 ? 'text-success' : 'text-coral' },
-            { label: 'Profit %',  value: actualCollected > 0 ? `${Math.round((netProfit / actualCollected) * 100)}%` : '—', color: netProfit >= 0 ? 'text-success' : 'text-coral' },
-          ].map(s => (
-            <div key={s.label} className="bg-white px-4 py-3">
-              <Label>{s.label}</Label>
-              <p className={`mt-1 text-lg font-bold tabular-nums ${s.color}`}>{s.value}</p>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="grid grid-cols-3 gap-px bg-border border-t border-border">
+        {[
+          { label: 'Expenses',   value: fmt(totalExpenses), color: totalExpenses > 0 ? 'text-coral' : 'text-slate2' },
+          { label: netProfit >= 0 ? 'Net Profit' : 'Net Loss', value: fmt(Math.abs(netProfit)), color: netProfit >= 0 ? 'text-success' : 'text-coral' },
+          { label: 'Profit %',  value: actualCollected > 0 ? `${Math.round((netProfit / actualCollected) * 100)}%` : '—', color: netProfit >= 0 ? 'text-success' : 'text-coral' },
+        ].map(s => (
+          <div key={s.label} className="bg-white px-4 py-3">
+            <Label>{s.label}</Label>
+            <p className={`mt-1 text-lg font-bold tabular-nums ${s.color}`}>{s.value}</p>
+          </div>
+        ))}
+      </div>
     </Card>
   );
 }
@@ -2809,6 +2815,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
         onAddProperty={() => setShowAddProperty(true)}
         onDeleteProperty={() => setShowDeleteProperty(true)}
         onRenameProperty={handleRenameProperty}
+        onGoHome={() => navigateTo('dashboard')}
       />
       <TopNav active={page} onChange={navigateTo} bookingCount={pendingBookings.length} overdueCount={tenants.filter(t => computeTenantStatus(t) === STATUS.OVERDUE).length} />
 
