@@ -1,6 +1,74 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NivaLogo, NivaWordmark } from './components/NivaLogo';
 import { Check, Menu, X, Wallet, MessageCircle, BedDouble, Receipt, ArrowUpRight } from 'lucide-react';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCROLL REVEAL
+// ─────────────────────────────────────────────────────────────────────────────
+
+function useInView() {
+  const ref = useRef(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setInView(true); obs.disconnect(); }
+    }, { threshold: 0.15 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return [ref, inView];
+}
+
+function Reveal({ children, delay = 0, className = '' }) {
+  const [ref, inView] = useInView();
+  return (
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        opacity: inView ? 1 : 0,
+        transform: inView ? 'translateY(0)' : 'translateY(28px)',
+        transition: `opacity 0.8s cubic-bezier(0.16,1,0.3,1) ${delay}s, transform 0.8s cubic-bezier(0.16,1,0.3,1) ${delay}s`,
+        willChange: 'opacity, transform',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MOUSE-TILT WRAPPER
+// ─────────────────────────────────────────────────────────────────────────────
+
+function TiltWrapper({ children }) {
+  const ref = useRef(null);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+
+  function handleMove(e) {
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) return;
+    const px = (e.clientX - rect.left) / rect.width - 0.5;
+    const py = (e.clientY - rect.top) / rect.height - 0.5;
+    setTilt({ x: py * -8, y: px * 10 });
+  }
+
+  return (
+    <div
+      ref={ref}
+      onMouseMove={handleMove}
+      onMouseLeave={() => setTilt({ x: 0, y: 0 })}
+      style={{
+        transform: `perspective(1200px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+        transition: 'transform 0.35s cubic-bezier(0.16,1,0.3,1)',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PHONE MOCKUP
@@ -238,12 +306,19 @@ const BOOK_DEMO_URL = 'https://wa.me/919633310117?text=Hi%2C%20I%27d%20like%20to
 
 export default function LandingPage({ onShowAuth }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   return (
     <div className="min-h-screen bg-white">
 
       {/* NAV */}
-      <nav className="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur-xl border-b border-border"
+      <nav className={`fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur-xl border-b transition-shadow duration-300 ${scrolled ? 'border-border shadow-[0_4px_24px_rgba(15,23,42,0.05)]' : 'border-transparent'}`}
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="max-w-5xl mx-auto px-6 h-14 grid grid-cols-[1fr_auto_1fr] items-center">
           <div className="flex items-center gap-2.5">
@@ -286,10 +361,10 @@ export default function LandingPage({ onShowAuth }) {
       </nav>
 
       {/* ── 1. HERO ─────────────────────────────────────────────────────────── */}
-      <section className="relative pt-32 pb-20 px-6 bg-white overflow-hidden">
+      <section className="relative pt-36 pb-24 px-6 bg-white overflow-hidden">
         {/* soft ambient backdrop */}
         <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-          <div className="absolute left-1/2 top-[-120px] -translate-x-1/2 w-[720px] h-[520px] rounded-full opacity-[0.10] blur-3xl"
+          <div className="absolute left-1/2 top-[-160px] -translate-x-1/2 w-[880px] h-[600px] rounded-full opacity-[0.12] blur-3xl animate-drift"
             style={{ background: 'radial-gradient(circle, #16A34A 0%, transparent 70%)' }} />
           <div className="absolute inset-0"
             style={{
@@ -301,27 +376,35 @@ export default function LandingPage({ onShowAuth }) {
             }} />
         </div>
 
-        <div className="relative max-w-2xl mx-auto text-center">
+        <div className="relative max-w-3xl mx-auto text-center">
 
-          <h1 className="text-[46px] sm:text-[62px] font-bold text-charcoal tracking-[-2px] leading-[1.08] mb-5">
-            Run your entire PG from one app.
-          </h1>
+          <Reveal>
+            <h1 className="text-[42px] sm:text-[58px] lg:text-[64px] font-bold text-charcoal tracking-[-2.5px] leading-[1.08] mb-5">
+              Run your entire PG<br /> from <span className="text-green">one app</span>.
+            </h1>
+          </Reveal>
 
-          <p className="text-[17px] text-slate leading-[1.7] max-w-sm mx-auto mb-8">
-            Manage beds, tenants, rent collection and expenses without juggling WhatsApp, Excel and notebooks.
-          </p>
+          <Reveal delay={0.08}>
+            <p className="text-[17px] sm:text-[18px] text-slate leading-[1.7] max-w-sm mx-auto mb-8">
+              Manage beds, tenants, rent collection and expenses without juggling WhatsApp, Excel and notebooks.
+            </p>
+          </Reveal>
 
-          <a href={BOOK_DEMO_URL} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 bg-green hover:bg-green-hover text-white font-semibold text-sm px-6 py-3 rounded-lg transition-colors duration-150 shadow-[0_8px_24px_rgba(22,163,74,0.28)]">
-            Book Demo <ArrowUpRight size={15} />
-          </a>
+          <Reveal delay={0.16}>
+            <a href={BOOK_DEMO_URL} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 bg-green hover:bg-green-hover text-white font-semibold text-sm px-6 py-3 rounded-lg transition-all duration-150 shadow-[0_8px_24px_rgba(22,163,74,0.28)] hover:shadow-[0_12px_32px_rgba(22,163,74,0.36)] hover:-translate-y-0.5">
+              Book Demo <ArrowUpRight size={15} />
+            </a>
 
-          <p className="mt-5 text-xs text-muted">
-            Not a demo — <span className="font-semibold text-slate">StayB in Kochi</span> runs its day-to-day on this, today.
-          </p>
+            <p className="mt-5 text-xs text-muted">
+              Not a demo — <span className="font-semibold text-slate">StayB in Kochi</span> runs its day-to-day on this, today.
+            </p>
+          </Reveal>
 
-          <div className="relative mt-16 flex justify-center">
-            <PhoneMockup />
+          <Reveal delay={0.24} className="relative mt-16 flex justify-center">
+            <TiltWrapper>
+              <PhoneMockup />
+            </TiltWrapper>
 
             {/* floating annotation cards — desktop only */}
             <div className="hidden lg:flex items-center gap-2.5 absolute left-[-40px] top-[120px] bg-white rounded-xl border border-border shadow-[0_12px_32px_rgba(15,23,42,0.10)] px-3.5 py-2.5 animate-float-slow">
@@ -342,15 +425,17 @@ export default function LandingPage({ onShowAuth }) {
                 <p className="text-[10px] text-muted mt-1">WhatsApp + UPI link, sent</p>
               </div>
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* ── 2. WHAT IT DOES ─────────────────────────────────────────────────── */}
-      <section id="features" className="py-16 px-6 border-t border-border">
+      <section id="features" className="py-24 px-6 border-t border-border">
         <div className="max-w-2xl mx-auto">
 
-          <p className="text-xs font-semibold text-muted uppercase tracking-[1.5px] mb-10">What NivaOps does</p>
+          <Reveal>
+            <p className="text-xs font-semibold text-muted uppercase tracking-[1.5px] mb-10">What NivaOps does</p>
+          </Reveal>
 
           <div className="grid sm:grid-cols-2 gap-5">
             {[
@@ -374,82 +459,127 @@ export default function LandingPage({ onShowAuth }) {
                 title: 'See where every rupee went',
                 body: 'Log maintenance, electricity, and staff costs against each property. Income and expenses side by side.',
               },
-            ].map(({ icon: Icon, title, body }) => (
-              <div key={title} className="group bg-white border border-border rounded-2xl p-6 transition-all duration-200 hover:border-green/30 hover:shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
-                <div className="w-10 h-10 rounded-xl bg-green-light flex items-center justify-center mb-4 transition-transform duration-200 group-hover:scale-105">
-                  <Icon size={18} className="text-green" />
+            ].map(({ icon: Icon, title, body }, i) => (
+              <Reveal key={title} delay={i * 0.08}>
+                <div className="group bg-white border border-border rounded-2xl p-6 h-full transition-all duration-300 hover:border-green/30 hover:shadow-[0_16px_40px_rgba(15,23,42,0.07)] hover:-translate-y-1">
+                  <div className="w-10 h-10 rounded-xl bg-green-light flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
+                    <Icon size={18} className="text-green" />
+                  </div>
+                  <h3 className="text-[15px] font-semibold text-charcoal mb-1.5 leading-snug">{title}</h3>
+                  <p className="text-[14px] text-slate leading-[1.65]">{body}</p>
                 </div>
-                <h3 className="text-[15px] font-semibold text-charcoal mb-1.5 leading-snug">{title}</h3>
-                <p className="text-[14px] text-slate leading-[1.65]">{body}</p>
-              </div>
+              </Reveal>
             ))}
           </div>
 
         </div>
       </section>
 
+      {/* ── PROOF ───────────────────────────────────────────────────────────── */}
+      <section className="hidden lg:block py-24 px-6 border-t border-border bg-light overflow-hidden">
+        <div className="max-w-4xl mx-auto text-center">
+          <Reveal>
+            <p className="text-xs font-semibold text-muted uppercase tracking-[1.5px] mb-4">On desktop too</p>
+            <h2 className="text-[28px] font-bold text-charcoal tracking-[-1px] leading-tight mb-12 max-w-md mx-auto">
+              Every room, every tenant, every rupee — one screen.
+            </h2>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <TiltWrapper>
+              <BrowserMockup />
+            </TiltWrapper>
+          </Reveal>
+        </div>
+      </section>
+
       {/* ── 3. PRICING ──────────────────────────────────────────────────────── */}
-      <section id="pricing" className="py-16 px-6 bg-light border-t border-border">
+      <section id="pricing" className="py-24 px-6 bg-light border-t border-border">
         <div className="max-w-3xl mx-auto">
 
-          <div className="text-center mb-12">
-            <h2 className="text-[32px] sm:text-[40px] font-bold text-charcoal tracking-[-1px] leading-[1.08] mb-2">
-              Pricing
-            </h2>
-            <p className="text-[15px] text-muted">Other hostel software charges ₹4,599–₹10,899/month for the same thing.</p>
-          </div>
+          <Reveal>
+            <div className="text-center mb-12">
+              <h2 className="text-[32px] sm:text-[40px] font-bold text-charcoal tracking-[-1px] leading-[1.08] mb-2">
+                Pricing
+              </h2>
+              <p className="text-[15px] text-muted">Other hostel software charges ₹4,599–₹10,899/month for the same thing.</p>
+            </div>
+          </Reveal>
 
           <div className="grid sm:grid-cols-2 gap-5">
 
             {/* Starter */}
-            <div className="bg-white border border-border rounded-2xl p-8 flex flex-col transition-shadow duration-200 hover:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-              <p className="text-xs font-semibold text-muted uppercase tracking-[1.5px] mb-6">Starter</p>
-              <div className="flex items-baseline gap-1.5 mb-1">
-                <span className="text-[58px] font-bold text-charcoal leading-none tracking-[-2.5px]">₹799</span>
-                <span className="text-base text-muted font-normal">/mo</span>
+            <Reveal>
+              <div className="bg-white border border-border rounded-2xl p-8 flex flex-col h-full transition-all duration-300 hover:shadow-[0_20px_48px_rgba(15,23,42,0.08)] hover:-translate-y-1">
+                <p className="text-xs font-semibold text-muted uppercase tracking-[1.5px] mb-6">Starter</p>
+                <div className="flex items-baseline gap-1.5 mb-1">
+                  <span className="text-[58px] font-bold text-charcoal leading-none tracking-[-2.5px]">₹799</span>
+                  <span className="text-base text-muted font-normal">/mo</span>
+                </div>
+                <p className="text-sm text-muted mb-8">Up to 25 beds · 1 property</p>
+                <ul className="space-y-3 flex-1">
+                  {['Bed & tenant management','Rent tracking','WhatsApp reminders + UPI','Expense tracking','Mobile PWA'].map(f => (
+                    <li key={f} className="flex items-start gap-2.5">
+                      <Check size={14} className="text-green shrink-0 mt-0.5" />
+                      <span className="text-sm text-slate">{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                <a href={BOOK_DEMO_URL} target="_blank" rel="noopener noreferrer"
+                  className="mt-8 w-full py-3 border border-border rounded-xl text-sm font-semibold text-charcoal hover:bg-surface transition-colors text-center block">
+                  Book Demo
+                </a>
               </div>
-              <p className="text-sm text-muted mb-8">Up to 25 beds · 1 property</p>
-              <ul className="space-y-3 flex-1">
-                {['Bed & tenant management','Rent tracking','WhatsApp reminders + UPI','Expense tracking','Mobile PWA'].map(f => (
-                  <li key={f} className="flex items-start gap-2.5">
-                    <Check size={14} className="text-green shrink-0 mt-0.5" />
-                    <span className="text-sm text-slate">{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <a href={BOOK_DEMO_URL} target="_blank" rel="noopener noreferrer"
-                className="mt-8 w-full py-3 border border-border rounded-xl text-sm font-semibold text-charcoal hover:bg-surface transition-colors text-center block">
-                Book Demo
-              </a>
-            </div>
+            </Reveal>
 
             {/* Pro */}
-            <div className="relative bg-midnight rounded-2xl p-8 flex flex-col shadow-[0_24px_56px_rgba(15,23,42,0.22)]">
-              <span className="absolute -top-3 right-8 bg-green text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">
-                Most popular
-              </span>
-              <p className="text-xs font-semibold text-white/40 uppercase tracking-[1.5px] mb-6">Pro</p>
-              <div className="flex items-baseline gap-1.5 mb-1">
-                <span className="text-[58px] font-bold text-white leading-none tracking-[-2.5px]">₹1,499</span>
-                <span className="text-base text-white/40 font-normal">/mo</span>
+            <Reveal delay={0.1}>
+              <div className="relative bg-midnight rounded-2xl p-8 flex flex-col h-full shadow-[0_24px_56px_rgba(15,23,42,0.22)] transition-transform duration-300 hover:-translate-y-1">
+                <span className="absolute -top-3 right-8 bg-green text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">
+                  Most popular
+                </span>
+                <p className="text-xs font-semibold text-white/40 uppercase tracking-[1.5px] mb-6">Pro</p>
+                <div className="flex items-baseline gap-1.5 mb-1">
+                  <span className="text-[58px] font-bold text-white leading-none tracking-[-2.5px]">₹1,499</span>
+                  <span className="text-base text-white/40 font-normal">/mo</span>
+                </div>
+                <p className="text-sm text-white/40 mb-8">Up to 100 beds · Multiple properties</p>
+                <ul className="space-y-3 flex-1">
+                  {['Everything in Starter','Multiple properties','Unlimited tenants','Finance & P&L overview','Priority support'].map((f, i) => (
+                    <li key={f} className="flex items-start gap-2.5">
+                      <Check size={14} className="text-green shrink-0 mt-0.5" />
+                      <span className={`text-sm ${i === 0 ? 'text-white/35' : 'text-white/70'}`}>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                <a href={BOOK_DEMO_URL} target="_blank" rel="noopener noreferrer"
+                  className="mt-8 w-full py-3 bg-green hover:bg-green-hover rounded-xl text-sm font-semibold text-white transition-colors text-center block">
+                  Book Demo
+                </a>
               </div>
-              <p className="text-sm text-white/40 mb-8">Up to 100 beds · Multiple properties</p>
-              <ul className="space-y-3 flex-1">
-                {['Everything in Starter','Multiple properties','Unlimited tenants','Finance & P&L overview','Priority support'].map((f, i) => (
-                  <li key={f} className="flex items-start gap-2.5">
-                    <Check size={14} className="text-green shrink-0 mt-0.5" />
-                    <span className={`text-sm ${i === 0 ? 'text-white/35' : 'text-white/70'}`}>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <a href={BOOK_DEMO_URL} target="_blank" rel="noopener noreferrer"
-                className="mt-8 w-full py-3 bg-green hover:bg-green-hover rounded-xl text-sm font-semibold text-white transition-colors text-center block">
-                Book Demo
-              </a>
-            </div>
+            </Reveal>
 
           </div>
         </div>
+      </section>
+
+      {/* ── FINAL CTA ───────────────────────────────────────────────────────── */}
+      <section className="py-24 px-6 bg-midnight text-center overflow-hidden relative">
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] rounded-full opacity-[0.10] blur-3xl"
+            style={{ background: 'radial-gradient(circle, #16A34A 0%, transparent 70%)' }} />
+        </div>
+        <Reveal className="relative max-w-lg mx-auto">
+          <h2 className="text-[32px] sm:text-[42px] font-bold text-white tracking-[-1.5px] leading-[1.1] mb-5">
+            Ready to stop chasing rent on WhatsApp?
+          </h2>
+          <p className="text-white/50 text-[15px] mb-8">
+            15 minutes on a call. See it running your own rooms and tenants before you decide anything.
+          </p>
+          <a href={BOOK_DEMO_URL} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 bg-green hover:bg-green-hover text-white font-semibold text-sm px-7 py-3.5 rounded-lg transition-all duration-150 shadow-[0_8px_24px_rgba(22,163,74,0.3)] hover:shadow-[0_12px_32px_rgba(22,163,74,0.4)] hover:-translate-y-0.5">
+            Book Demo <ArrowUpRight size={15} />
+          </a>
+        </Reveal>
       </section>
 
       {/* ── FOOTER ──────────────────────────────────────────────────────────── */}

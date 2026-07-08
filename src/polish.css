@@ -66,6 +66,13 @@
 
 .animate-float-slow { animation: float-slow 5s ease-in-out infinite; }
 
+@keyframes drift {
+  0%, 100% { transform: translate(-50%, 0) scale(1); }
+  50%      { transform: translate(-50%, 24px) scale(1.05); }
+}
+
+.animate-drift { animation: drift 9s ease-in-out infinite; }
+
 /* ── Green flash when rent is marked paid ───────────────────────────────── */
 
 @keyframes flash-paid {
