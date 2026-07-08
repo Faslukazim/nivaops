@@ -304,11 +304,11 @@ export default function LandingPage({ onShowAuth }) {
         <div className="relative max-w-2xl mx-auto text-center">
 
           <h1 className="text-[46px] sm:text-[62px] font-bold text-charcoal tracking-[-2px] leading-[1.08] mb-5">
-            Stop running your PG on WhatsApp.
+            Run your entire PG from one app.
           </h1>
 
           <p className="text-[17px] text-slate leading-[1.7] max-w-sm mx-auto mb-8">
-            Rent dues in your head. Payments scattered across chats. Tenants tracked in a notebook. There's a better way.
+            Manage beds, tenants, rent collection and expenses without juggling WhatsApp, Excel and notebooks.
           </p>
 
           <a href={BOOK_DEMO_URL} target="_blank" rel="noopener noreferrer"
