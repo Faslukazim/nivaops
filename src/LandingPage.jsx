@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NivaLogo, NivaWordmark } from './components/NivaLogo';
-import { Check, Menu, X } from 'lucide-react';
+import { Check, Menu, X, Wallet, MessageCircle, BedDouble, Receipt, ArrowUpRight } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PHONE MOCKUP
@@ -273,8 +273,22 @@ export default function LandingPage({ onShowAuth }) {
       </nav>
 
       {/* ── 1. HERO ─────────────────────────────────────────────────────────── */}
-      <section className="pt-32 pb-16 px-6 bg-white">
-        <div className="max-w-2xl mx-auto text-center">
+      <section className="relative pt-32 pb-20 px-6 bg-white overflow-hidden">
+        {/* soft ambient backdrop */}
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          <div className="absolute left-1/2 top-[-120px] -translate-x-1/2 w-[720px] h-[520px] rounded-full opacity-[0.10] blur-3xl"
+            style={{ background: 'radial-gradient(circle, #16A34A 0%, transparent 70%)' }} />
+          <div className="absolute inset-0"
+            style={{
+              backgroundImage: 'linear-gradient(#0F172A 1px, transparent 1px), linear-gradient(90deg, #0F172A 1px, transparent 1px)',
+              backgroundSize: '56px 56px',
+              opacity: 0.025,
+              maskImage: 'radial-gradient(ellipse 60% 50% at 50% 0%, black 40%, transparent 100%)',
+              WebkitMaskImage: 'radial-gradient(ellipse 60% 50% at 50% 0%, black 40%, transparent 100%)',
+            }} />
+        </div>
+
+        <div className="relative max-w-2xl mx-auto text-center">
 
           <h1 className="text-[46px] sm:text-[62px] font-bold text-charcoal tracking-[-2px] leading-[1.08] mb-5">
             Stop running your PG on WhatsApp.
@@ -285,12 +299,36 @@ export default function LandingPage({ onShowAuth }) {
           </p>
 
           <a href={REQUEST_ACCESS_URL} target="_blank" rel="noopener noreferrer"
-            className="inline-block bg-green hover:bg-green-hover text-white font-semibold text-sm px-6 py-3 rounded-lg transition-colors duration-150">
-            Request access
+            className="inline-flex items-center gap-1.5 bg-green hover:bg-green-hover text-white font-semibold text-sm px-6 py-3 rounded-lg transition-colors duration-150 shadow-[0_8px_24px_rgba(22,163,74,0.28)]">
+            Request access <ArrowUpRight size={15} />
           </a>
 
-          <div className="mt-14 flex justify-center">
+          <p className="mt-5 text-xs text-muted">
+            Not a demo — <span className="font-semibold text-slate">StayB in Kochi</span> runs its day-to-day on this, today.
+          </p>
+
+          <div className="relative mt-16 flex justify-center">
             <PhoneMockup />
+
+            {/* floating annotation cards — desktop only */}
+            <div className="hidden lg:flex items-center gap-2.5 absolute left-[-40px] top-[120px] bg-white rounded-xl border border-border shadow-[0_12px_32px_rgba(15,23,42,0.10)] px-3.5 py-2.5 animate-float-slow">
+              <div className="w-7 h-7 rounded-full bg-green-light flex items-center justify-center shrink-0">
+                <Wallet size={13} className="text-green" />
+              </div>
+              <div className="text-left">
+                <p className="text-[11.5px] font-semibold text-charcoal leading-none">7 days overdue</p>
+                <p className="text-[10px] text-muted mt-1">Flagged the moment rent's late — no calls</p>
+              </div>
+            </div>
+            <div className="hidden lg:flex items-center gap-2.5 absolute right-[-44px] bottom-[140px] bg-white rounded-xl border border-border shadow-[0_12px_32px_rgba(15,23,42,0.10)] px-3.5 py-2.5 animate-float-slow" style={{ animationDelay: '1.4s' }}>
+              <div className="w-7 h-7 rounded-full bg-green-light flex items-center justify-center shrink-0">
+                <MessageCircle size={13} className="text-green" />
+              </div>
+              <div className="text-left">
+                <p className="text-[11.5px] font-semibold text-charcoal leading-none">One tap</p>
+                <p className="text-[10px] text-muted mt-1">WhatsApp + UPI link, sent</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -301,26 +339,33 @@ export default function LandingPage({ onShowAuth }) {
 
           <p className="text-xs font-semibold text-muted uppercase tracking-[1.5px] mb-10">What NivaOps does</p>
 
-          <div className="grid sm:grid-cols-2 gap-x-12 gap-y-9">
+          <div className="grid sm:grid-cols-2 gap-5">
             {[
               {
+                icon: Wallet,
                 title: 'Know who paid — without calling anyone',
                 body: 'Every tenant\'s rent status is visible the moment you open the app. Overdue, pending, paid — no chasing needed.',
               },
               {
+                icon: MessageCircle,
                 title: 'Send a reminder with UPI link in one tap',
                 body: 'WhatsApp message with the amount, room number, and your UPI ID — ready to send. Tenants pay, you mark it done.',
               },
               {
+                icon: BedDouble,
                 title: 'Every bed and tenant in one view',
                 body: 'See which beds are occupied, vacant, or under maintenance. Joining dates, deposits, ID photos — all stored.',
               },
               {
+                icon: Receipt,
                 title: 'See where every rupee went',
                 body: 'Log maintenance, electricity, and staff costs against each property. Income and expenses side by side.',
               },
-            ].map(({ title, body }) => (
-              <div key={title}>
+            ].map(({ icon: Icon, title, body }) => (
+              <div key={title} className="group bg-white border border-border rounded-2xl p-6 transition-all duration-200 hover:border-green/30 hover:shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
+                <div className="w-10 h-10 rounded-xl bg-green-light flex items-center justify-center mb-4 transition-transform duration-200 group-hover:scale-105">
+                  <Icon size={18} className="text-green" />
+                </div>
                 <h3 className="text-[15px] font-semibold text-charcoal mb-1.5 leading-snug">{title}</h3>
                 <p className="text-[14px] text-slate leading-[1.65]">{body}</p>
               </div>
@@ -344,7 +389,7 @@ export default function LandingPage({ onShowAuth }) {
           <div className="grid sm:grid-cols-2 gap-5">
 
             {/* Starter */}
-            <div className="bg-white border border-border rounded-2xl p-8 flex flex-col">
+            <div className="bg-white border border-border rounded-2xl p-8 flex flex-col transition-shadow duration-200 hover:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
               <p className="text-xs font-semibold text-muted uppercase tracking-[1.5px] mb-6">Starter</p>
               <div className="flex items-baseline gap-1.5 mb-1">
                 <span className="text-[58px] font-bold text-charcoal leading-none tracking-[-2.5px]">₹799</span>
@@ -366,7 +411,10 @@ export default function LandingPage({ onShowAuth }) {
             </div>
 
             {/* Pro */}
-            <div className="bg-midnight rounded-2xl p-8 flex flex-col">
+            <div className="relative bg-midnight rounded-2xl p-8 flex flex-col shadow-[0_24px_56px_rgba(15,23,42,0.22)]">
+              <span className="absolute -top-3 right-8 bg-green text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">
+                Most popular
+              </span>
               <p className="text-xs font-semibold text-white/40 uppercase tracking-[1.5px] mb-6">Pro</p>
               <div className="flex items-baseline gap-1.5 mb-1">
                 <span className="text-[58px] font-bold text-white leading-none tracking-[-2.5px]">₹1,499</span>
