@@ -452,7 +452,7 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
         await updateTenant(bed.tenant.id, { paymentStatus: 'Paid', paymentDate: today });
         await markTenantRecordPaid(bed.tenant.id, currentYM, bed.occupancy.monthly_rent, null).catch(() => {});
       }));
-      logActivity(selectedPropertyId, 'payment_paid', `All unpaid beds in Room ${room.room_number} marked paid`);
+      logActivity(selectedPropertyId, organizationId, 'payment_paid', `All unpaid beds in Room ${room.room_number} marked paid`);
       toast.success(`${unpaidBeds.length} tenant${unpaidBeds.length > 1 ? 's' : ''} marked paid`);
       onRoomUpdate();
     } catch (e) { toast.error(e.message); }
@@ -485,7 +485,7 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
       const currentYM = new Date().toISOString().slice(0, 7);
       await updateTenant(tenantId, { paymentStatus: 'Paid', paymentDate: new Date().toISOString().slice(0, 10) });
       await markTenantRecordPaid(tenantId, currentYM, amountCollected, deductionReason).catch(console.error);
-      logActivity(selectedPropertyId, 'payment_paid', `${name} marked paid — Room ${room.room_number}`);
+      logActivity(selectedPropertyId, organizationId, 'payment_paid', `${name} marked paid — Room ${room.room_number}`);
       toast.success(`${name} marked paid`);
       onRoomUpdate();
     } catch (e) { toast.error(e.message); }
@@ -495,7 +495,7 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
     const bed = room.beds.find(b => b.tenant?.id === tenantId);
     try {
       await updateTenant(tenantId, { paymentStatus: 'Unpaid', paymentDate: '' });
-      logActivity(selectedPropertyId, 'payment_unpaid', `${bed?.tenant?.name ?? 'Tenant'} marked unpaid — Room ${room.room_number}`);
+      logActivity(selectedPropertyId, organizationId, 'payment_unpaid', `${bed?.tenant?.name ?? 'Tenant'} marked unpaid — Room ${room.room_number}`);
       toast.info(`${bed?.tenant?.name ?? 'Tenant'} marked unpaid`);
       onRoomUpdate();
     } catch (e) { toast.error(e.message); }
@@ -533,7 +533,7 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
     const bed = room.beds.find(b => b.tenant?.id === tenantId);
     try {
       await deleteTenant(tenantId);
-      logActivity(selectedPropertyId, 'tenant_vacated', `${bed?.tenant?.name ?? 'Tenant'} vacated Room ${room.room_number} Bed ${bed?.bed_number ?? ''}`);
+      logActivity(selectedPropertyId, organizationId, 'tenant_vacated', `${bed?.tenant?.name ?? 'Tenant'} vacated Room ${room.room_number} Bed ${bed?.bed_number ?? ''}`);
       toast.success(`${bed?.tenant?.name ?? 'Tenant'} vacated`);
       onRoomUpdate();
     } catch (e) { toast.error(e.message); }
@@ -544,7 +544,7 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
     const name = bed?.tenant?.name ?? 'Tenant';
     try {
       await moveTenant(tenantId, { roomId: destRoomId, bedId: destBedId });
-      logActivity(selectedPropertyId, 'tenant_moved', `${name} moved from Room ${room.room_number} Bed ${fromBedNumber} → Room ${destRoomNumber}`);
+      logActivity(selectedPropertyId, organizationId, 'tenant_moved', `${name} moved from Room ${room.room_number} Bed ${fromBedNumber} → Room ${destRoomNumber}`);
       toast.success(`${name} moved to Room ${destRoomNumber}`);
       onRoomUpdate();
     } catch (e) {
