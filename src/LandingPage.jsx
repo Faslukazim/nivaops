@@ -397,7 +397,7 @@ export default function LandingPage({ onShowAuth }) {
             </a>
 
             <p className="mt-5 text-xs text-muted">
-              Not a demo — <span className="font-semibold text-slate">StayB in Kochi</span> runs its day-to-day on this, today.
+              Not a demo — <span className="font-semibold text-slate">real hostels</span> run their day-to-day on this, today.
             </p>
           </Reveal>
 
