@@ -289,8 +289,8 @@ function Header({ properties, selectedPropertyId, onPropertyChange, loadingPrope
     <header className="sticky top-0 z-40 bg-white border-b border-border px-4 py-3 sm:px-6" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}>
       <div className="mx-auto max-w-5xl">
         <div className="flex items-center justify-between gap-4">
-          <AppLogo />
-          <div className="hidden sm:flex items-center gap-2">{actions}</div>
+          <div className="lg:hidden"><AppLogo /></div>
+          <div className="hidden sm:flex items-center gap-2 lg:ml-auto">{actions}</div>
           <button
             type="button"
             onClick={() => setMobileMenuOpen(true)}
@@ -405,9 +405,44 @@ function BottomNav({ active, onChange, bookingCount = 0, overdueCount = 0 }) {
   );
 }
 
+function Sidebar({ active, onChange, bookingCount = 0, overdueCount = 0 }) {
+  return (
+    <aside className="hidden lg:flex fixed inset-y-0 left-0 z-40 w-60 flex-col bg-midnight" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <div className="flex items-center gap-2.5 px-5 h-16 shrink-0 border-b border-white/[0.06]">
+        <NivaLogo size={22} />
+        <span className="font-bold tracking-tight text-white">Niva<span className="text-green">Ops</span></span>
+      </div>
+      <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
+        {PAGES.map(p => {
+          const Icon = p.icon;
+          const isActive = active === p.id;
+          const badge = (p.id === 'rooms' && bookingCount > 0) ? bookingCount
+            : (p.id === 'finance' && overdueCount > 0) ? overdueCount
+            : 0;
+          const badgeColor = p.id === 'finance' ? 'bg-coral' : 'bg-amber';
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => onChange(p.id)}
+              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                isActive ? 'bg-green/10 text-green' : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Icon className={`h-4 w-4 ${isActive ? 'text-green' : ''}`} />
+              {p.label}
+              {badge > 0 && <span className={`ml-auto h-4 w-4 rounded-full ${badgeColor} text-white text-[9px] font-bold flex items-center justify-center`}>{badge > 9 ? '9+' : badge}</span>}
+            </button>
+          );
+        })}
+      </nav>
+    </aside>
+  );
+}
+
 function TopNav({ active, onChange, bookingCount = 0, overdueCount = 0 }) {
   return (
-    <nav className="hidden sm:flex border-b border-border bg-white px-6">
+    <nav className="hidden sm:flex lg:hidden border-b border-border bg-white px-6">
       <div className="mx-auto max-w-5xl w-full flex gap-1">
         {PAGES.map(p => {
           const Icon = p.icon;
@@ -2711,11 +2746,13 @@ export default function App({ session, organizationName, organizationId: orgIdPr
 
   return (
     <div
-      className="min-h-screen bg-mist pb-14 sm:pb-0"
+      className="min-h-screen bg-mist pb-14 sm:pb-0 lg:pl-60"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
+      <Sidebar active={page} onChange={navigateTo} bookingCount={pendingBookings.length} overdueCount={tenants.filter(t => computeTenantStatus(t) === STATUS.OVERDUE).length} />
+
       {/* Swipe-back affordance */}
       {swipeBackX > 0 && (
         <div
