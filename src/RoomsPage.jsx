@@ -757,7 +757,7 @@ function AddRoomSheet({ onSave, onCancel, existingRoomNumbers = [] }) {
 
 // ─── Rooms page ───────────────────────────────────────────────────────────────
 
-export default function RoomsPage({ selectedPropertyId, organizationId, upiId, onAssignBed, onViewTenant, onConvertBooking }) {
+export default function RoomsPage({ selectedPropertyId, organizationId, upiId, onAssignBed, onViewTenant, onConvertBooking, roomsVersion }) {
   const toast = useToast();
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -787,7 +787,17 @@ export default function RoomsPage({ selectedPropertyId, organizationId, upiId, o
   useEffect(() => {
     setSelectedRoom(null);
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPropertyId]);
+
+  // Refresh room/bed/tenant data after an add/vacate/delete elsewhere in the
+  // app — without remounting this page, so the expanded room and scroll
+  // position survive (a full remount here previously reset the view to the
+  // top, which could land a subsequent "assign" click on the wrong room).
+  useEffect(() => {
+    if (roomsVersion) load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomsVersion]);
 
   const stats = useMemo(() => {
     const totalBeds = rooms.reduce((s, r) => s + r.beds.length, 0);

@@ -2837,10 +2837,11 @@ export default function App({ session, organizationName, organizationId: orgIdPr
               <div className={page !== 'rooms' ? 'hidden' : enteringPage === 'rooms' ? 'page-enter' : undefined}>
                 {mountedPages.has('rooms') && (
                   <RoomsPage
-                    key={`${selectedPropertyId}-${roomsVersion}`}
+                    key={selectedPropertyId}
                     selectedPropertyId={selectedPropertyId}
                     organizationId={organizationId}
                     upiId={upiId}
+                    roomsVersion={roomsVersion}
                     onAssignBed={prefill => { setRoomPrefill(prefill); navigateTo('tenants'); }}
                     onViewTenant={setViewingTenantId}
                     onConvertBooking={handleConvertBooking}
