@@ -1017,7 +1017,7 @@ function PLTab({ selectedPropertyId, tenants }) {
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
-export default function FinancePage({ selectedPropertyId, organizationId, tenants, onViewTenant, upiId }) {
+export default function FinancePage({ selectedPropertyId, organizationId, tenants, onViewTenant, upiId, openTabRequest }) {
   const [tab, setTab] = useState(() => {
     const saved = localStorage.getItem('stayops_finance_tab');
     return SUB_TABS.find(t => t.id === saved) ? saved : 'rent';
@@ -1027,6 +1027,14 @@ export default function FinancePage({ selectedPropertyId, organizationId, tenant
     setTab(t);
     localStorage.setItem('stayops_finance_tab', t);
   }
+
+  // Lets other pages (e.g. Overview's stat tiles) jump straight to a
+  // specific sub-tab — each request carries a fresh id so repeated
+  // clicks on the same tab still re-trigger even if already open.
+  useEffect(() => {
+    if (openTabRequest?.tab) changeTab(openTabRequest.tab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openTabRequest]);
 
   return (
     <div className="flex flex-col gap-4">

@@ -10,7 +10,7 @@ import { addIncomeRecord, uploadIdPhoto, saveTenantIdPhoto } from './services/in
 import { markTenantRecordPaid } from './services/paymentService';
 import { logActivity, fetchRecentActivity } from './services/activityService';
 import { fetchProperties, fetchRoomsWithBeds, updatePropertyUpiId, updatePropertyName, createProperty, deleteProperty } from './services/propertyService';
-import { readExpensesSync } from './services/financeService';
+import { fetchExpenses } from './services/financeService';
 import { seedSampleWorkspace, clearSampleWorkspace } from './services/seedService';
 import { fetchBookings, convertBooking } from './services/bookingService';
 import { hasSupabaseConfig } from './lib/supabase';
@@ -1291,7 +1291,7 @@ function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMa
 
 // ─── dashboard: business health ──────────────────────────────────────────────
 
-function BusinessHealth({ tenants, totalBeds }) {
+function BusinessHealth({ tenants, totalBeds, selectedPropertyId, onOpenRooms, onOpenFinanceTab }) {
   const occupied = tenants.length;
   const vacant = Math.max(totalBeds - occupied, 0);
   const pct = totalBeds ? Math.round((occupied / totalBeds) * 100) : 0;
@@ -1301,35 +1301,61 @@ function BusinessHealth({ tenants, totalBeds }) {
     return s === STATUS.OVERDUE || s === STATUS.DUE_TODAY || s === STATUS.DUE_SOON;
   });
   const pendingRent = unpaid.reduce((s, t) => s + Number(t.monthlyRent || 0), 0);
-  const revenue = tenants.reduce((s, t) => s + Number(t.monthlyRent || 0), 0);
+
+  const currentYM = useMemo(() => new Date().toISOString().slice(0, 7), []);
+  const [expenses, setExpenses] = useState([]);
+  useEffect(() => {
+    if (!selectedPropertyId) { setExpenses([]); return; }
+    fetchExpenses(selectedPropertyId, currentYM).then(setExpenses).catch(() => {});
+  }, [selectedPropertyId, currentYM]);
+  const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+  const monthLabel = new Date(currentYM + '-02').toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+
+  const tiles = [
+    {
+      label: 'Occupancy',
+      value: `${pct}%`,
+      sub: `${occupied}/${totalBeds} beds · ${vacant} vacant`,
+      color: pct >= 80 ? 'text-success' : pct >= 50 ? 'text-amber' : 'text-coral',
+      onClick: onOpenRooms,
+    },
+    {
+      label: 'Pending Rent',
+      value: fmt(pendingRent),
+      sub: `${unpaid.length} unpaid`,
+      color: pendingRent > 0 ? 'text-coral' : 'text-success',
+      onClick: () => onOpenFinanceTab?.('rent'),
+    },
+    {
+      label: 'Total Expense',
+      value: fmt(totalExpenses),
+      sub: `${expenses.length} this month`,
+      color: totalExpenses > 0 ? 'text-coral' : 'text-slate2',
+      onClick: () => onOpenFinanceTab?.('expenses'),
+    },
+  ];
 
   return (
-    <StatStrip stats={[
-      {
-        label: 'Occupancy',
-        value: `${pct}%`,
-        sub: `${occupied}/${totalBeds} beds`,
-        color: pct >= 80 ? 'text-success' : pct >= 50 ? 'text-amber' : 'text-coral',
-      },
-      {
-        label: 'Vacant Beds',
-        value: vacant,
-        sub: `of ${totalBeds}`,
-        color: vacant > 0 ? 'text-amber' : 'text-success',
-      },
-      {
-        label: 'Pending Rent',
-        value: fmt(pendingRent),
-        sub: `${unpaid.length} unpaid`,
-        color: pendingRent > 0 ? 'text-coral' : 'text-success',
-      },
-      {
-        label: 'Potential Revenue',
-        value: fmt(revenue),
-        sub: `${tenants.length} occupied beds`,
-        color: 'text-ink',
-      },
-    ]} />
+    <div>
+      <p className="text-xs font-semibold text-slate2 mb-1.5">{monthLabel}</p>
+      <Card className="overflow-hidden">
+        <div className="grid grid-cols-1 gap-px bg-border sm:grid-cols-3">
+          {tiles.map(t => (
+            <button
+              key={t.label}
+              type="button"
+              onClick={t.onClick}
+              disabled={!t.onClick}
+              className="bg-white px-4 py-4 text-left transition-colors hover:bg-mist disabled:cursor-default disabled:hover:bg-white"
+            >
+              <Label>{t.label}</Label>
+              <p className={`mt-1.5 text-xl font-bold tabular-nums ${t.color}`}>{t.value}</p>
+              {t.sub && <p className="mt-0.5 text-xs text-slate2">{t.sub}</p>}
+            </button>
+          ))}
+        </div>
+      </Card>
+    </div>
   );
 }
 
@@ -1360,6 +1386,7 @@ function MoveInHealth({ tenants }) {
 function FinancialHealth({ selectedPropertyId, totalBeds, tenants }) {
   const currentYM = useMemo(() => new Date().toISOString().slice(0, 7), []);
   const [records, setRecords] = useState([]);
+  const [expenses, setExpenses] = useState([]);
 
   useEffect(() => {
     if (!selectedPropertyId) return;
@@ -1367,6 +1394,7 @@ function FinancialHealth({ selectedPropertyId, totalBeds, tenants }) {
     import('./services/paymentService').then(m =>
       m.fetchPaymentRecords(selectedPropertyId, currentYM).then(setRecords).catch(() => {})
     );
+    fetchExpenses(selectedPropertyId, currentYM).then(setExpenses).catch(() => {});
   }, [selectedPropertyId, currentYM]);
 
   if (records.length === 0) return null;
@@ -1380,8 +1408,6 @@ function FinancialHealth({ selectedPropertyId, totalBeds, tenants }) {
   const avgRent = occupied > 0 ? potentialRevenue / occupied : 0;
   const vacancyLoss = Math.round(vacant * avgRent);
 
-  // Expenses from localStorage for quick profit estimate
-  const expenses = readExpensesSync(selectedPropertyId, currentYM);
   const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
   const netProfit = actualCollected - totalExpenses;
 
@@ -1666,7 +1692,7 @@ function MovedOutThisMonth({ tenants }) {
   );
 }
 
-function DashboardPage({ tenants, totalBeds, hasRooms, selectedPropertyId, upiId, movedOutThisMonth, pendingBookings, onGoToFinance, onGoToRooms, onAddTenant, onAssignTenant, onMarkPaid, onViewTenant, onConvertBooking }) {
+function DashboardPage({ tenants, totalBeds, hasRooms, selectedPropertyId, upiId, movedOutThisMonth, pendingBookings, onGoToFinance, onGoToRooms, onOpenFinanceTab, onAddTenant, onAssignTenant, onMarkPaid, onViewTenant, onConvertBooking }) {
   return (
     <div className="flex flex-col gap-4">
       <SetupChecklist
@@ -1677,7 +1703,7 @@ function DashboardPage({ tenants, totalBeds, hasRooms, selectedPropertyId, upiId
         onAddTenant={onAddTenant}
         onGoToFinance={onGoToFinance}
       />
-      <BusinessHealth tenants={tenants} totalBeds={totalBeds} />
+      <BusinessHealth tenants={tenants} totalBeds={totalBeds} selectedPropertyId={selectedPropertyId} onOpenRooms={onGoToRooms} onOpenFinanceTab={onOpenFinanceTab} />
       <QuickActions
         onAssignTenant={onAssignTenant}
         onAddTenant={onAddTenant}
@@ -2369,6 +2395,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
   const [mountedPages, setMountedPages] = useState(() => new Set([page]));
   const [enteringPage, setEnteringPage] = useState(page);
   const [roomsVersion, setRoomsVersion] = useState(0);
+  const [financeOpenRequest, setFinanceOpenRequest] = useState(null);
   const [hasRooms, setHasRooms] = useState(false);
   const [roomCount, setRoomCount] = useState(0);
   const [collectingTenant, setCollectingTenant] = useState(null);
@@ -2441,6 +2468,11 @@ export default function App({ session, organizationName, organizationId: orgIdPr
     setPage(newPage);
     setEnteringPage(newPage);
     setMountedPages(m => { const n = new Set(m); n.add(newPage); return n; });
+  }
+
+  function openFinanceTab(tabId) {
+    setFinanceOpenRequest({ tab: tabId, id: Date.now() });
+    navigateTo('finance');
   }
 
   function goBack() {
@@ -2867,6 +2899,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
                   pendingBookings={pendingBookings}
                   onGoToFinance={() => navigateTo('finance')}
                   onGoToRooms={() => navigateTo('rooms')}
+                  onOpenFinanceTab={openFinanceTab}
                   onAssignTenant={() => navigateTo('rooms')}
                   onMarkPaid={setCollectingTenant}
                   onViewTenant={setViewingTenantId}
@@ -2919,7 +2952,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
               <div className={page !== 'finance' ? 'hidden' : enteringPage === 'finance' ? 'page-enter' : undefined}>
                 {mountedPages.has('finance') && (
                   <>
-                    <FinancePage selectedPropertyId={selectedPropertyId} organizationId={properties.find(p => p.id === selectedPropertyId)?.organization_id} tenants={tenants} onViewTenant={setViewingTenantId} upiId={upiId} />
+                    <FinancePage selectedPropertyId={selectedPropertyId} organizationId={properties.find(p => p.id === selectedPropertyId)?.organization_id} tenants={tenants} onViewTenant={setViewingTenantId} upiId={upiId} openTabRequest={financeOpenRequest} />
                     <div className="mt-4 flex flex-col gap-4">
                       <UpiSettings propertyId={selectedPropertyId} upiId={upiId} onSave={handleSaveUpi} />
                       <RazorpaySettings organizationId={properties.find(p => p.id === selectedPropertyId)?.organization_id} />
