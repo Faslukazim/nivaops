@@ -6,7 +6,7 @@ import {
   Home, Loader2, LogOut, Menu, MessageCircle, MoreVertical, Pencil, Plus, Save, ShieldCheck, Sparkles, Trash2, UserMinus, UserPlus, Users, X,
 } from 'lucide-react';
 import { createTenant, deleteTenant, vacateTenant, fetchTenants, fetchVacatedTenants, fetchMovedOutThisMonth, forfeitDeposit, returnDeposit, updateTenant } from './services/tenantService';
-import { addIncomeRecord, uploadIdPhoto, saveTenantIdPhoto } from './services/incomeService';
+import { addIncomeRecord, uploadIdPhoto, saveTenantIdPhoto, fetchIncomeRecords } from './services/incomeService';
 import { markTenantRecordPaid } from './services/paymentService';
 import { logActivity, fetchRecentActivity } from './services/activityService';
 import { fetchProperties, fetchRoomsWithBeds, updatePropertyUpiId, updatePropertyName, createProperty, deleteProperty } from './services/propertyService';
@@ -1304,11 +1304,14 @@ function BusinessHealth({ tenants, totalBeds, selectedPropertyId, onOpenRooms, o
 
   const currentYM = useMemo(() => new Date().toISOString().slice(0, 7), []);
   const [expenses, setExpenses] = useState([]);
+  const [income, setIncome] = useState([]);
   useEffect(() => {
-    if (!selectedPropertyId) { setExpenses([]); return; }
+    if (!selectedPropertyId) { setExpenses([]); setIncome([]); return; }
     fetchExpenses(selectedPropertyId, currentYM).then(setExpenses).catch(() => {});
+    fetchIncomeRecords(selectedPropertyId, currentYM).then(setIncome).catch(() => {});
   }, [selectedPropertyId, currentYM]);
   const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+  const totalIncome = income.reduce((s, r) => s + Number(r.amount || 0), 0);
   const monthLabel = new Date(currentYM + '-02').toLocaleString('en-IN', { month: 'long', year: 'numeric' });
 
   const tiles = [
@@ -1327,6 +1330,13 @@ function BusinessHealth({ tenants, totalBeds, selectedPropertyId, onOpenRooms, o
       onClick: () => onOpenFinanceTab?.('rent'),
     },
     {
+      label: 'Total Income',
+      value: fmt(totalIncome),
+      sub: `${income.length} this month`,
+      color: totalIncome > 0 ? 'text-success' : 'text-slate2',
+      onClick: () => onOpenFinanceTab?.('income'),
+    },
+    {
       label: 'Total Expense',
       value: fmt(totalExpenses),
       sub: `${expenses.length} this month`,
@@ -1339,7 +1349,7 @@ function BusinessHealth({ tenants, totalBeds, selectedPropertyId, onOpenRooms, o
     <div>
       <p className="text-xs font-semibold text-slate2 mb-1.5">{monthLabel}</p>
       <Card className="overflow-hidden">
-        <div className="grid grid-cols-1 gap-px bg-border sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-px bg-border sm:grid-cols-4">
           {tiles.map(t => (
             <button
               key={t.label}
