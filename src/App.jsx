@@ -1313,10 +1313,10 @@ function BusinessHealth({ tenants, totalBeds, selectedPropertyId, onOpenRooms, o
 
   const tiles = [
     {
-      label: 'Occupancy',
-      value: `${pct}%`,
-      sub: `${occupied}/${totalBeds} beds · ${vacant} vacant`,
-      color: pct >= 80 ? 'text-success' : pct >= 50 ? 'text-amber' : 'text-coral',
+      label: 'Vacant Beds',
+      value: vacant,
+      sub: `${occupied}/${totalBeds} beds · ${pct}% occupancy`,
+      color: vacant > 0 ? 'text-amber' : 'text-success',
       onClick: onOpenRooms,
     },
     {
