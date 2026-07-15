@@ -133,19 +133,19 @@ function RentStatusRow({ r, ym, propertyId, onMarkPaid, onMarkUnpaid, onViewTena
   }
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3">
-      <div className="min-w-0 flex-1">
+    <div className="px-4 py-3">
+      <div className="min-w-0">
         <button
           type="button"
           onClick={() => onViewTenant?.(r.tenantId)}
-          className="text-sm font-semibold text-ink truncate hover:underline text-left w-full"
+          className="text-sm font-semibold text-ink hover:underline text-left w-full"
         >
           {r.name}
         </button>
         <p className="text-xs text-slate2 tabular-nums">Room {r.roomNumber} · Bed {r.bedNumber} · {fmt(r.amount)}</p>
         {statusLine}
       </div>
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="mt-2 flex flex-wrap items-center gap-2">
         {st !== STATUS.PAID ? (
           <>
             <WhatsAppLink name={r.name} phone={r.phone} roomNumber={r.roomNumber} bedNumber={r.bedNumber} rent={r.amount} label="Remind" upiId={upiId} />
