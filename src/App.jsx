@@ -1349,7 +1349,7 @@ function BusinessHealth({ tenants, totalBeds, selectedPropertyId, onOpenRooms, o
     <div>
       <p className="text-xs font-semibold text-slate2 mb-1.5">{monthLabel}</p>
       <Card className="overflow-hidden">
-        <div className="grid grid-cols-1 gap-px bg-border sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4">
           {tiles.map(t => (
             <button
               key={t.label}
