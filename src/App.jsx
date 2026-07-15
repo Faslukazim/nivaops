@@ -5,9 +5,9 @@ import {
   BarChart2, BedDouble, Camera, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight,
   Home, Loader2, LogOut, Menu, MessageCircle, MoreVertical, Pencil, Plus, Save, ShieldCheck, Sparkles, Trash2, UserMinus, UserPlus, Users, X,
 } from 'lucide-react';
-import { createTenant, deleteTenant, vacateTenant, fetchTenants, fetchVacatedTenants, fetchMovedOutThisMonth, forfeitDeposit, returnDeposit, updateTenant } from './services/tenantService';
+import { createTenant, deleteTenant, vacateTenant, fetchTenants, fetchVacatedTenants, fetchMovedOutThisMonth, forfeitDeposit, returnDeposit, updateTenant, fetchDepositSettlementsForMonth } from './services/tenantService';
 import { addIncomeRecord, uploadIdPhoto, saveTenantIdPhoto, fetchIncomeRecords } from './services/incomeService';
-import { markTenantRecordPaid } from './services/paymentService';
+import { markTenantRecordPaid, fetchPaymentRecords } from './services/paymentService';
 import { logActivity, fetchRecentActivity } from './services/activityService';
 import { fetchProperties, fetchRoomsWithBeds, updatePropertyUpiId, updatePropertyName, createProperty, deleteProperty } from './services/propertyService';
 import { fetchExpenses } from './services/financeService';
@@ -1305,13 +1305,29 @@ function BusinessHealth({ tenants, totalBeds, selectedPropertyId, onOpenRooms, o
   const currentYM = useMemo(() => new Date().toISOString().slice(0, 7), []);
   const [expenses, setExpenses] = useState([]);
   const [income, setIncome] = useState([]);
+  const [rentRecords, setRentRecords] = useState([]);
+  const [depositSettlements, setDepositSettlements] = useState([]);
   useEffect(() => {
-    if (!selectedPropertyId) { setExpenses([]); setIncome([]); return; }
+    if (!selectedPropertyId) { setExpenses([]); setIncome([]); setRentRecords([]); setDepositSettlements([]); return; }
     fetchExpenses(selectedPropertyId, currentYM).then(setExpenses).catch(() => {});
     fetchIncomeRecords(selectedPropertyId, currentYM).then(setIncome).catch(() => {});
+    fetchPaymentRecords(selectedPropertyId, currentYM).then(setRentRecords).catch(() => {});
+    fetchDepositSettlementsForMonth(selectedPropertyId, currentYM).then(setDepositSettlements).catch(() => {});
   }, [selectedPropertyId, currentYM]);
   const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
-  const totalIncome = income.reduce((s, r) => s + Number(r.amount || 0), 0);
+
+  // Total Income mirrors P&L's definition — rent actually collected (not
+  // pending), plus admission fees, extra income, and deposit cash flow this
+  // month. Previously this only counted extra income (income_records),
+  // silently excluding rent — the biggest source of revenue.
+  const extraIncome = income.reduce((s, r) => s + Number(r.amount || 0), 0);
+  const rentCollected = rentRecords.filter(r => r.status === 'paid').reduce((s, r) => s + (r.amountCollected ?? r.amount), 0);
+  const newThisMonth = tenants.filter(t => t.joinDate?.startsWith(currentYM));
+  const admissionIncome = newThisMonth.reduce((s, t) => s + Number(t.admissionFee || 0), 0);
+  const depositCollected = newThisMonth.filter(t => !t.depositPreAccounted).reduce((s, t) => s + Number(t.depositAmount || 0), 0);
+  const depositForfeited = depositSettlements.filter(d => d.deposit_status === 'forfeited').reduce((s, d) => s + Number(d.deposit_amount || 0), 0);
+  const totalIncome = rentCollected + admissionIncome + extraIncome + depositCollected + depositForfeited;
+
   const monthLabel = new Date(currentYM + '-02').toLocaleString('en-IN', { month: 'long', year: 'numeric' });
 
   const tiles = [
@@ -1332,9 +1348,9 @@ function BusinessHealth({ tenants, totalBeds, selectedPropertyId, onOpenRooms, o
     {
       label: 'Total Income',
       value: fmt(totalIncome),
-      sub: `${income.length} this month`,
+      sub: `${fmt(rentCollected)} rent + ${fmt(totalIncome - rentCollected)} other`,
       color: totalIncome > 0 ? 'text-success' : 'text-slate2',
-      onClick: () => onOpenFinanceTab?.('income'),
+      onClick: () => onOpenFinanceTab?.('pl'),
     },
     {
       label: 'Total Expense',
