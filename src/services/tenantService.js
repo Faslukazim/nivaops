@@ -93,6 +93,22 @@ async function setBedStatus(bedId, status) {
   if (error) throw error;
 }
 
+// A returned deposit is real cash leaving the business — StayB is an
+// already-running firm, not a fresh books setup, so it needs to land as an
+// actual Expenses-tab row in the month it's actually paid out, not just be
+// folded into a P&L subtotal that never shows up as a line item anywhere.
+async function postDepositRefundExpense(propertyId, amount, tenantName) {
+  if (!amount || amount <= 0) return;
+  const { error } = await supabase.from('expenses').insert({
+    property_id: propertyId,
+    category: 'deposit_refund',
+    amount,
+    description: `Security deposit returned${tenantName ? ` — ${tenantName}` : ''}`,
+    expense_date: new Date().toISOString().slice(0, 10),
+  });
+  if (error) throw error;
+}
+
 // Occupancies on notice whose move-out date has arrived get finalized
 // (ended, deposit settled per the stored intent, bed freed) before the
 // active-tenant list is read — this is what actually makes the advance
@@ -101,7 +117,7 @@ async function finalizeDueVacateNotices(propertyId) {
   const today = new Date().toISOString().slice(0, 10);
   const query = supabase
     .from('occupancies')
-    .select('id, tenant_id, bed_id, notice_deposit_action')
+    .select('id, tenant_id, bed_id, property_id, deposit_amount, notice_deposit_action, tenant:tenants(name)')
     .eq('status', 'active')
     .not('notice_end_date', 'is', null)
     .lte('notice_end_date', today);
@@ -116,6 +132,9 @@ async function finalizeDueVacateNotices(propertyId) {
     await supabase.from('occupancies').update(patch).eq('id', occ.id);
     await supabase.from('tenants').update({ status: 'archived' }).eq('id', occ.tenant_id);
     await setBedStatus(occ.bed_id, 'available');
+    if (occ.notice_deposit_action === 'returned') {
+      await postDepositRefundExpense(occ.property_id, occ.deposit_amount, occ.tenant?.name);
+    }
   }
 }
 
@@ -285,11 +304,24 @@ export async function updateTenant(id, patch) {
 
 export async function returnDeposit(id) {
   if (!hasSupabaseConfig) return updateTenant(id, { depositStatus: 'returned' });
+  const { data: occ, error: fetchErr } = await supabase
+    .from('occupancies')
+    .select('id, property_id, deposit_amount, tenant:tenants(name)')
+    .eq('tenant_id', id)
+    .eq('deposit_status', 'held')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (fetchErr) throw fetchErr;
+  if (!occ) throw new Error('No held deposit found for this tenant.');
+
   const { error } = await supabase
     .from('occupancies')
     .update({ deposit_status: 'returned', deposit_settled_at: new Date().toISOString() })
-    .eq('tenant_id', id);
+    .eq('id', occ.id);
   if (error) throw error;
+
+  await postDepositRefundExpense(occ.property_id, occ.deposit_amount, occ.tenant?.name);
 }
 
 export async function forfeitDeposit(id) {
@@ -407,6 +439,9 @@ export async function vacateTenant(id, { endDate, depositAction = 'later' } = {}
   const { error: tenErr } = await supabase.from('tenants').update({ status: 'archived' }).eq('id', id);
   if (tenErr) throw tenErr;
   await setBedStatus(occupancy.bed_id, 'available');
+  if (depositAction === 'returned') {
+    await postDepositRefundExpense(occupancy.property_id, occupancy.deposit_amount, occupancy.tenant?.name);
+  }
   return id;
 }
 

@@ -877,17 +877,18 @@ function PLTab({ selectedPropertyId, tenants }) {
   const otherIncome = incomeRecs.reduce((s, r) => s + Number(r.amount), 0);
 
   // Deposits — treated as cash-basis income/expense (per operator's request):
-  // collected this month = income, returned this month = expense, forfeited
-  // this month = income (you kept it). Pre-accounted legacy deposits are
-  // excluded server-side already.
+  // collected this month = income, forfeited this month = income (you kept
+  // it). A returned deposit is posted as a real 'deposit_refund' expense row
+  // (see tenantService.postDepositRefundExpense) so it's just another
+  // expense category here rather than a separate bolt-on subtotal. Pre-
+  // accounted legacy deposits are excluded server-side already.
   const depositCollected = newThisMonth.filter(t => !t.depositPreAccounted).reduce((s, t) => s + Number(t.depositAmount || 0), 0);
   const depositForfeited = depositSettlements.filter(d => d.deposit_status === 'forfeited').reduce((s, d) => s + Number(d.deposit_amount || 0), 0);
-  const depositReturned = depositSettlements.filter(d => d.deposit_status === 'returned').reduce((s, d) => s + Number(d.deposit_amount || 0), 0);
 
   const totalIncome = rentCollected + admissionIncome + otherIncome + depositCollected + depositForfeited;
 
   // Expenses
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0) + depositReturned;
+  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
   const byCategory = EXPENSE_CATEGORIES.map(cat => ({
     ...cat,
     total: expenses.filter(e => e.category === cat.id).reduce((s, e) => s + e.amount, 0),
@@ -997,15 +998,6 @@ function PLTab({ selectedPropertyId, tenants }) {
                     <span className="text-sm font-semibold tabular-nums text-coral">{fmt(cat.total)}</span>
                   </div>
                 ))}
-                {depositReturned > 0 && (
-                  <div className="flex items-center justify-between px-4 py-3">
-                    <div>
-                      <p className="text-sm text-ink">Deposits Returned</p>
-                      <p className="text-xs text-slate2">refunded to tenants who moved out</p>
-                    </div>
-                    <span className="text-sm font-semibold tabular-nums text-coral">{fmt(depositReturned)}</span>
-                  </div>
-                )}
               </div>
             )}
           </Card>

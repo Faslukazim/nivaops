@@ -9,6 +9,7 @@ export const EXPENSE_CATEGORIES = [
   { id: 'electricity',   label: 'Electricity'   },
   { id: 'internet',      label: 'Internet'      },
   { id: 'maintenance',   label: 'Maintenance'   },
+  { id: 'deposit_refund', label: 'Deposit Refund' },
   { id: 'misc',          label: 'Misc'          },
 ];
 
