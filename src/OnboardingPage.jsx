@@ -47,7 +47,10 @@ export default function OnboardingPage({ email, onCreated, onSignOut }) {
     <div className="min-h-screen bg-mist flex flex-col">
 
       {/* Top bar */}
-      <div className="flex items-center justify-between px-5 pt-5 pb-2">
+      <div
+        className="flex items-center justify-between px-5 pb-2"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.25rem)' }}
+      >
         <div className="flex items-center gap-2">
           <NivaLogo size={28} />
           <span className="text-sm font-bold text-ink tracking-tight">NivaOps</span>
