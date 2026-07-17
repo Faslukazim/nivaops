@@ -2,14 +2,14 @@ import { useEffect, useState, useMemo } from 'react';
 import { useToast } from './lib/toast.jsx';
 import { ArrowLeft, ArrowRightLeft, BedDouble, Bookmark, Check, ChevronDown, Loader2, Pencil, Plus, Trash2, UserPlus, X } from 'lucide-react';
 import { fetchRoomsWithOccupants, createRoom, deleteRoom, deleteBed, updateRoomNumber } from './services/propertyService';
-import { deleteTenant, moveTenant, updateTenant } from './services/tenantService';
+import { vacateTenant, giveVacateNotice, moveTenant, updateTenant } from './services/tenantService';
 import { createBooking, cancelBooking, convertBooking } from './services/bookingService';
 import { markTenantRecordPaid } from './services/paymentService';
 import { logActivity } from './services/activityService';
 import {
   fmt, Label, Card, SectionHeader, Btn, IconBtn,
   StatusBadge, PaymentToggleBtn, WhatsAppLink, PaymentLinkBtn,
-  PageLoader, StatStrip, ConfirmInline, EmptyState, CollectModal,
+  PageLoader, StatStrip, ConfirmInline, EmptyState, CollectModal, VacateModal,
 } from './components/ui';
 
 // ─── Occupancy bar ────────────────────────────────────────────────────────────
@@ -211,7 +211,8 @@ function BedRow({ bed, roomNumber, roomId, rooms, propertyId, upiId, onMarkPaid,
   const tenant = bed.tenant;
   const booking = bed.booking;
   const isPaid = occ?.payment_status === 'Paid';
-  const [confirming, setConfirming] = useState(false);
+  const [vacating, setVacating] = useState(false);
+  const [vacateSaving, setVacateSaving] = useState(false);
   const [moving, setMoving] = useState(false);
   const [moveSaving, setMoveSaving] = useState(false);
   const [confirmDeleteBed, setConfirmDeleteBed] = useState(false);
@@ -320,17 +321,6 @@ function BedRow({ bed, roomNumber, roomId, rooms, propertyId, upiId, onMarkPaid,
     );
   }
 
-  if (confirming) {
-    return (
-      <ConfirmInline
-        message={<>Vacate <span className="font-semibold">{tenant.name}</span> from Bed {bed.bed_number}?</>}
-        confirmLabel="Yes, vacate"
-        onCancel={() => setConfirming(false)}
-        onConfirm={() => { onVacate(tenant.id); setConfirming(false); }}
-      />
-    );
-  }
-
   return (
     <div className="px-4 py-3">
       {/* Top row: bed number + name + payment toggle */}
@@ -390,7 +380,7 @@ function BedRow({ bed, roomNumber, roomId, rooms, propertyId, upiId, onMarkPaid,
         <button
           type="button"
           title="Vacate tenant"
-          onClick={() => setConfirming(true)}
+          onClick={() => setVacating(true)}
           className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold text-coral hover:bg-coral/10 transition-colors"
         >
           <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -416,6 +406,31 @@ function BedRow({ bed, roomNumber, roomId, rooms, propertyId, upiId, onMarkPaid,
               setMoving(false);
             } finally {
               setMoveSaving(false);
+            }
+          }}
+        />
+      )}
+
+      {vacating && (
+        <VacateModal
+          tenant={{
+            id: tenant.id,
+            name: tenant.name,
+            phone: tenant.phone,
+            roomNumber,
+            bedNumber: bed.bed_number,
+            depositAmount: Number(occ.deposit_amount ?? 0),
+            depositStatus: occ.deposit_status ?? 'none',
+          }}
+          saving={vacateSaving}
+          onCancel={() => setVacating(false)}
+          onConfirm={async opts => {
+            setVacateSaving(true);
+            try {
+              await onVacate(tenant.id, opts);
+              setVacating(false);
+            } finally {
+              setVacateSaving(false);
             }
           }}
         />
@@ -533,12 +548,21 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
     } catch (e) { toast.error(e.message); }
   }
 
-  async function handleVacate(tenantId) {
+  async function handleVacate(tenantId, { endDate, depositAction } = {}) {
     const bed = room.beds.find(b => b.tenant?.id === tenantId);
+    const name = bed?.tenant?.name ?? 'Tenant';
+    const today = new Date().toISOString().slice(0, 10);
+    const isAdvanceNotice = endDate > today;
     try {
-      await deleteTenant(tenantId);
-      logActivity(selectedPropertyId, organizationId, 'tenant_vacated', `${bed?.tenant?.name ?? 'Tenant'} vacated Room ${room.room_number} Bed ${bed?.bed_number ?? ''}`);
-      toast.success(`${bed?.tenant?.name ?? 'Tenant'} vacated`);
+      if (isAdvanceNotice) {
+        await giveVacateNotice(tenantId, { endDate, depositAction });
+        logActivity(selectedPropertyId, organizationId, 'tenant_vacate_notice', `${name} gave notice to vacate Room ${room.room_number} Bed ${bed?.bed_number ?? ''} on ${endDate}`);
+        toast.success(`Notice recorded — ${name} vacates on ${endDate}`);
+      } else {
+        await vacateTenant(tenantId, { endDate, depositAction });
+        logActivity(selectedPropertyId, organizationId, 'tenant_vacated', `${name} vacated Room ${room.room_number} Bed ${bed?.bed_number ?? ''}`);
+        toast.success(`${name} vacated`);
+      }
       onRoomUpdate();
     } catch (e) { toast.error(e.message); }
   }
