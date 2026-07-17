@@ -213,7 +213,10 @@ export default function ListingPage({ city: initialCity }) {
 
   return (
     <div className="min-h-screen bg-mist">
-      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-border">
+      <header
+        className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-border"
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      >
         <div className="max-w-6xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <NivaLogo size={26} />
