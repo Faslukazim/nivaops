@@ -263,6 +263,9 @@ function AppLogo({ onClick }) {
 
 function Header({ properties, selectedPropertyId, onPropertyChange, loadingProperties, onSignOut, isAdmin, onOpenAdmin, canAddProperty, onAddProperty, onDeleteProperty, onRenameProperty, onGoHome, isOwner = true }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // For the super-admin viewing their own workspace, the logo's "home" is
+  // the admin panel they came from, not this workspace's Dashboard.
+  const handleLogoClick = isAdmin ? onOpenAdmin : onGoHome;
 
   const actions = (
     <>
@@ -295,7 +298,7 @@ function Header({ properties, selectedPropertyId, onPropertyChange, loadingPrope
     <header className="sticky top-0 z-40 bg-white border-b border-border px-4 py-3 sm:px-6" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}>
       <div className="mx-auto max-w-5xl">
         <div className="flex items-center justify-between gap-4">
-          <div className="lg:hidden"><AppLogo onClick={onGoHome} /></div>
+          <div className="lg:hidden"><AppLogo onClick={handleLogoClick} /></div>
           <div className="hidden sm:flex items-center gap-2 lg:ml-auto">{actions}</div>
           <div className="sm:hidden flex items-center gap-1">
             {isAdmin && (
@@ -332,7 +335,7 @@ function Header({ properties, selectedPropertyId, onPropertyChange, loadingPrope
             style={{ top: 0, paddingTop: 'env(safe-area-inset-top, 0px)' }}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <AppLogo onClick={() => { setMobileMenuOpen(false); onGoHome?.(); }} />
+              <AppLogo onClick={() => { setMobileMenuOpen(false); handleLogoClick?.(); }} />
               <IconBtn variant="ghost" onClick={() => setMobileMenuOpen(false)}>
                 <X className="h-5 w-5" />
               </IconBtn>
