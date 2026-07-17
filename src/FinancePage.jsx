@@ -328,7 +328,7 @@ function saveBudgets(propertyId, budgets) {
   localStorage.setItem(budgetKey(propertyId), JSON.stringify(budgets));
 }
 
-function ExpensesTab({ selectedPropertyId }) {
+function ExpensesTab({ selectedPropertyId, canDelete = true }) {
   const toast = useToast();
   const [ym, setYm] = useState(ymNow);
   const [expenses, setExpenses] = useState([]);
@@ -560,16 +560,18 @@ function ExpensesTab({ selectedPropertyId }) {
                   <p className="text-xs text-slate2">{exp.expenseDate}{exp.description ? ` · ${exp.description}` : ''}</p>
                 </div>
                 <span className="text-sm font-bold tabular-nums text-coral shrink-0">{fmt(exp.amount)}</span>
-                <IconBtn
-                  variant="ghost"
-                  onClick={() => handleDelete(exp.id)}
-                  disabled={deletingId === exp.id}
-                  className="text-slate2 hover:text-coral"
-                >
-                  {deletingId === exp.id
-                    ? <Loader2 className="h-4 w-4 animate-spin" />
-                    : <Trash2 className="h-4 w-4" />}
-                </IconBtn>
+                {canDelete && (
+                  <IconBtn
+                    variant="ghost"
+                    onClick={() => handleDelete(exp.id)}
+                    disabled={deletingId === exp.id}
+                    className="text-slate2 hover:text-coral"
+                  >
+                    {deletingId === exp.id
+                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      : <Trash2 className="h-4 w-4" />}
+                  </IconBtn>
+                )}
               </div>
             ))}
           </div>
@@ -1009,7 +1011,7 @@ function PLTab({ selectedPropertyId, tenants }) {
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
-export default function FinancePage({ selectedPropertyId, organizationId, tenants, onViewTenant, upiId, openTabRequest }) {
+export default function FinancePage({ selectedPropertyId, organizationId, tenants, onViewTenant, upiId, openTabRequest, canDelete = true }) {
   const [tab, setTab] = useState(() => {
     const saved = localStorage.getItem('stayops_finance_tab');
     return SUB_TABS.find(t => t.id === saved) ? saved : 'rent';
@@ -1033,7 +1035,7 @@ export default function FinancePage({ selectedPropertyId, organizationId, tenant
       <SubNav active={tab} onChange={changeTab} />
       {tab === 'rent'     && <RentTab     selectedPropertyId={selectedPropertyId} onViewTenant={onViewTenant} upiId={upiId} />}
       {tab === 'income'   && <IncomeTab   selectedPropertyId={selectedPropertyId} organizationId={organizationId} tenants={tenants} />}
-      {tab === 'expenses' && <ExpensesTab selectedPropertyId={selectedPropertyId} />}
+      {tab === 'expenses' && <ExpensesTab selectedPropertyId={selectedPropertyId} canDelete={canDelete} />}
       {tab === 'pl'       && <PLTab       selectedPropertyId={selectedPropertyId} tenants={tenants} />}
     </div>
   );

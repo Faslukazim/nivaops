@@ -902,7 +902,7 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
 
 // ─── vacated tenant card ─────────────────────────────────────────────────────
 
-function VacatedTenantCard({ tenant: t, onReturnDeposit, onForfeitDeposit, onDelete, onUndo }) {
+function VacatedTenantCard({ tenant: t, onReturnDeposit, onForfeitDeposit, onDelete, onUndo, canDelete = true }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [undoing, setUndoing] = useState(false);
   const depositPending = t.depositAmount > 0 && t.depositStatus !== 'returned' && t.depositStatus !== 'forfeited';
@@ -926,7 +926,9 @@ function VacatedTenantCard({ tenant: t, onReturnDeposit, onForfeitDeposit, onDel
             <IconBtn variant="ghost" title="Undo vacate" onClick={handleUndo} disabled={undoing}>
               {undoing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
             </IconBtn>
-            <IconBtn variant="danger" onClick={() => setConfirmDelete(true)}><Trash2 className="h-4 w-4" /></IconBtn>
+            {canDelete && (
+              <IconBtn variant="danger" onClick={() => setConfirmDelete(true)}><Trash2 className="h-4 w-4" /></IconBtn>
+            )}
           </div>
         </div>
 
@@ -2128,7 +2130,7 @@ function ListingSettings({ property }) {
   );
 }
 
-function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, saving, roomPrefill, upiId, flashPaidId, onAddTenant, onUpdateTenant, onCancelEdit, onEdit, onDelete, onVacate, onMarkPaid, onMarkUnpaid, onReturnDeposit, onForfeitDeposit, onAddDayGuest, onUndoVacate, selectedPropertyId }) {
+function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, saving, roomPrefill, upiId, flashPaidId, onAddTenant, onUpdateTenant, onCancelEdit, onEdit, onDelete, onVacate, onMarkPaid, onMarkUnpaid, onReturnDeposit, onForfeitDeposit, onAddDayGuest, onUndoVacate, selectedPropertyId, canDelete = true }) {
   const [query, setQuery] = useState('');
   const [showPast, setShowPast] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -2294,6 +2296,7 @@ function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, sa
                 onForfeitDeposit={handleVacatedForfeit}
                 onDelete={handleVacatedDelete}
                 onUndo={handleVacatedUndo}
+                canDelete={canDelete}
               />
             ))}
           </>
@@ -2456,6 +2459,7 @@ function SetupChecklist({ hasRooms, tenantCount, upiId, onGoToRooms, onAddTenant
 
 export default function App({ session, organizationName, organizationId: orgIdProp, role = 'owner', plan = 'starter', onSignOut, isAdmin, onOpenAdmin } = {}) {
   const isOwner = role === 'owner';
+  const canDelete = role !== 'staff';
   const [page, setPage] = useState(() => {
     const saved = localStorage.getItem('stayops_page');
     // 'payments' is now 'finance' — migrate old saved value
@@ -3061,12 +3065,13 @@ export default function App({ session, organizationName, organizationId: orgIdPr
                   onForfeitDeposit={handleForfeitDeposit}
                   onAddDayGuest={handleAddDayGuestRecord}
                   onUndoVacate={handleUndoVacate}
+                  canDelete={canDelete}
                 />
               </div>
               <div className={page !== 'finance' ? 'hidden' : enteringPage === 'finance' ? 'page-enter' : undefined}>
                 {mountedPages.has('finance') && (
                   <>
-                    <FinancePage selectedPropertyId={selectedPropertyId} organizationId={properties.find(p => p.id === selectedPropertyId)?.organization_id} tenants={tenants} onViewTenant={setViewingTenantId} upiId={upiId} openTabRequest={financeOpenRequest} />
+                    <FinancePage selectedPropertyId={selectedPropertyId} organizationId={properties.find(p => p.id === selectedPropertyId)?.organization_id} tenants={tenants} onViewTenant={setViewingTenantId} upiId={upiId} openTabRequest={financeOpenRequest} canDelete={canDelete} />
                     <div className="mt-4 flex flex-col gap-4">
                       <UpiSettings propertyId={selectedPropertyId} upiId={upiId} onSave={handleSaveUpi} />
                       {isOwner && (
