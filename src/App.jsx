@@ -3,9 +3,9 @@ import { createPortal } from 'react-dom';
 import { useToast } from './lib/toast.jsx';
 import {
   BarChart2, BedDouble, Camera, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight,
-  Home, Loader2, LogOut, Menu, MessageCircle, MoreVertical, Pencil, Plus, Save, ShieldCheck, Sparkles, Trash2, UserMinus, UserPlus, Users, X,
+  Home, Loader2, LogOut, Menu, MessageCircle, MoreVertical, Pencil, Plus, RotateCcw, Save, ShieldCheck, Sparkles, Trash2, UserMinus, UserPlus, Users, X,
 } from 'lucide-react';
-import { createTenant, deleteTenant, vacateTenant, giveVacateNotice, cancelVacateNotice, fetchTenants, fetchVacatedTenants, fetchMovedOutThisMonth, forfeitDeposit, returnDeposit, updateTenant, fetchDepositSettlementsForMonth } from './services/tenantService';
+import { createTenant, deleteTenant, vacateTenant, giveVacateNotice, cancelVacateNotice, undoVacate, fetchTenants, fetchVacatedTenants, fetchMovedOutThisMonth, forfeitDeposit, returnDeposit, updateTenant, fetchDepositSettlementsForMonth } from './services/tenantService';
 import { addIncomeRecord, uploadIdPhoto, saveTenantIdPhoto, fetchIncomeRecords } from './services/incomeService';
 import { markTenantRecordPaid, fetchPaymentRecords } from './services/paymentService';
 import { logActivity, fetchRecentActivity } from './services/activityService';
@@ -900,9 +900,16 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
 
 // ─── vacated tenant card ─────────────────────────────────────────────────────
 
-function VacatedTenantCard({ tenant: t, onReturnDeposit, onForfeitDeposit, onDelete }) {
+function VacatedTenantCard({ tenant: t, onReturnDeposit, onForfeitDeposit, onDelete, onUndo }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [undoing, setUndoing] = useState(false);
   const depositPending = t.depositAmount > 0 && t.depositStatus !== 'returned' && t.depositStatus !== 'forfeited';
+
+  async function handleUndo() {
+    setUndoing(true);
+    await onUndo(t);
+    setUndoing(false);
+  }
 
   return (
     <Card className="overflow-hidden opacity-85">
@@ -914,6 +921,9 @@ function VacatedTenantCard({ tenant: t, onReturnDeposit, onForfeitDeposit, onDel
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-xs font-semibold px-2 py-0.5 rounded bg-mist text-slate2">Vacated</span>
+            <IconBtn variant="ghost" title="Undo vacate" onClick={handleUndo} disabled={undoing}>
+              {undoing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+            </IconBtn>
             <IconBtn variant="danger" onClick={() => setConfirmDelete(true)}><Trash2 className="h-4 w-4" /></IconBtn>
           </div>
         </div>
@@ -1975,7 +1985,7 @@ function ListingSettings({ property }) {
   );
 }
 
-function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, saving, roomPrefill, upiId, flashPaidId, onAddTenant, onUpdateTenant, onCancelEdit, onEdit, onDelete, onVacate, onMarkPaid, onMarkUnpaid, onReturnDeposit, onForfeitDeposit, onAddDayGuest, selectedPropertyId }) {
+function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, saving, roomPrefill, upiId, flashPaidId, onAddTenant, onUpdateTenant, onCancelEdit, onEdit, onDelete, onVacate, onMarkPaid, onMarkUnpaid, onReturnDeposit, onForfeitDeposit, onAddDayGuest, onUndoVacate, selectedPropertyId }) {
   const [query, setQuery] = useState('');
   const [showPast, setShowPast] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -2006,6 +2016,10 @@ function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, sa
   function handleVacatedDelete(tenant) {
     onDelete(tenant);
     setVacated(cur => cur.filter(t => t.id !== tenant.id));
+  }
+  async function handleVacatedUndo(tenant) {
+    const ok = await onUndoVacate(tenant);
+    if (ok) setVacated(cur => cur.filter(t => t.id !== tenant.id));
   }
 
   const filtered = useMemo(() => {
@@ -2136,6 +2150,7 @@ function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, sa
                 onReturnDeposit={handleVacatedReturn}
                 onForfeitDeposit={handleVacatedForfeit}
                 onDelete={handleVacatedDelete}
+                onUndo={handleVacatedUndo}
               />
             ))}
           </>
@@ -2597,6 +2612,19 @@ export default function App({ session, organizationName, organizationId: orgIdPr
     } catch (e) { toast.error(e.message); }
   }
 
+  async function handleUndoVacate(tenant) {
+    try {
+      await undoVacate(tenant.id);
+      const refreshed = await fetchTenants(selectedPropertyId || null);
+      setTenants(refreshed);
+      setRoomsVersion(v => v + 1);
+      const orgId = properties.find(p=>p.id===selectedPropertyId)?.organization_id;
+      logActivity(selectedPropertyId, orgId, 'tenant_vacate_undone', `${tenant.name}'s vacate was undone`);
+      toast.success(`${tenant.name} restored`);
+      return true;
+    } catch (e) { toast.error(e.message); return false; }
+  }
+
   async function handleDelete(tenant) {
     setError('');
     try {
@@ -2887,6 +2915,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
                   onReturnDeposit={handleReturnDeposit}
                   onForfeitDeposit={handleForfeitDeposit}
                   onAddDayGuest={handleAddDayGuestRecord}
+                  onUndoVacate={handleUndoVacate}
                 />
               </div>
               <div className={page !== 'finance' ? 'hidden' : enteringPage === 'finance' ? 'page-enter' : undefined}>

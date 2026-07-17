@@ -410,6 +410,38 @@ export async function vacateTenant(id, { endDate, depositAction = 'later' } = {}
   return id;
 }
 
+// Reverses a vacate: reactivates the tenant's most recently ended occupancy
+// and reclaims the bed, as long as nobody else has since moved into it.
+// Deposit status from the vacate (returned/forfeited) is left as-is — the
+// operator settles that manually if it needs correcting.
+export async function undoVacate(id) {
+  if (!hasSupabaseConfig) return id;
+  const { data: occupancy, error: occFetchErr } = await supabase
+    .from('occupancies')
+    .select('id, bed_id')
+    .eq('tenant_id', id)
+    .eq('status', 'ended')
+    .order('end_date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (occFetchErr) throw occFetchErr;
+  if (!occupancy) throw new Error('No vacated occupancy found for this tenant.');
+
+  const { data: bed, error: bedFetchErr } = await supabase.from('beds').select('status').eq('id', occupancy.bed_id).single();
+  if (bedFetchErr) throw bedFetchErr;
+  if (bed.status === 'occupied') throw new Error('That bed is occupied by another tenant now — move them first.');
+
+  const { error: occErr } = await supabase
+    .from('occupancies')
+    .update({ status: 'active', end_date: null, notice_end_date: null, notice_deposit_action: null })
+    .eq('id', occupancy.id);
+  if (occErr) throw occErr;
+  const { error: tenErr } = await supabase.from('tenants').update({ status: 'active' }).eq('id', id);
+  if (tenErr) throw tenErr;
+  await setBedStatus(occupancy.bed_id, 'occupied');
+  return id;
+}
+
 export async function deleteTenant(id) {
   if (!hasSupabaseConfig) {
     writeLocalTenants(readLocalTenants().filter((t) => t.id !== id));
