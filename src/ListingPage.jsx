@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { MapPin, Search, X, ArrowRight, BedDouble, MessageCircle, ChevronDown } from 'lucide-react';
 import { fetchListedProperties } from './services/listingService';
+import { NivaLogo, NivaWordmark } from './components/NivaLogo';
 
 const AMENITY_LABEL = {
   wifi: 'WiFi',
@@ -215,10 +216,8 @@ export default function ListingPage({ city: initialCity }) {
       <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-border">
         <div className="max-w-6xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-ink flex items-center justify-center">
-              <span className="text-leaf font-black text-sm">N</span>
-            </div>
-            <span className="font-bold text-ink tracking-tight">NivaOps</span>
+            <NivaLogo size={26} />
+            <NivaWordmark size="base" />
             <span className="text-slate2 text-sm hidden sm:inline">/ pg / {city || 'browse'}</span>
           </div>
         </div>
