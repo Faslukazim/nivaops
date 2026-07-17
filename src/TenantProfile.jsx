@@ -20,7 +20,7 @@ const STATUS_PILL = {
   [STATUS.UPCOMING]: { label: 'Upcoming',  cls: 'bg-mist text-slate2' },
 };
 
-export default function TenantProfile({ tenant, properties, onClose, onCollect, onEdit, onDelete, onVacate, onTenantUpdated }) {
+export default function TenantProfile({ tenant, properties, onClose, onCollect, onEdit, onDelete, onVacate, onCancelNotice, onTenantUpdated }) {
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -117,6 +117,22 @@ export default function TenantProfile({ tenant, properties, onClose, onCollect, 
         </div>
 
         <div className="p-5 flex flex-col gap-5">
+          {/* Vacate notice banner */}
+          {tenant.noticeEndDate && (
+            <div className="flex items-center justify-between gap-3 rounded-xl bg-amber/10 px-4 py-3">
+              <p className="text-sm text-amber">
+                <span className="font-semibold">Vacating on {tenant.noticeEndDate}</span> — bed stays occupied until then
+              </p>
+              <button
+                type="button"
+                onClick={() => onCancelNotice?.(tenant)}
+                className="shrink-0 text-xs font-semibold text-slate2 hover:text-ink hover:underline"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+
           {/* Contact */}
           <div className="flex flex-col gap-2">
             <div>

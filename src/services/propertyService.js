@@ -123,6 +123,7 @@ export async function fetchRoomsWithOccupants(propertyId) {
           payment_date,
           start_date,
           status,
+          notice_end_date,
           tenant:tenants (
             id,
             name,

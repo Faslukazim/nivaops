@@ -5,7 +5,7 @@ import {
   BarChart2, BedDouble, Camera, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight,
   Home, Loader2, LogOut, Menu, MessageCircle, MoreVertical, Pencil, Plus, Save, ShieldCheck, Sparkles, Trash2, UserMinus, UserPlus, Users, X,
 } from 'lucide-react';
-import { createTenant, deleteTenant, vacateTenant, fetchTenants, fetchVacatedTenants, fetchMovedOutThisMonth, forfeitDeposit, returnDeposit, updateTenant, fetchDepositSettlementsForMonth } from './services/tenantService';
+import { createTenant, deleteTenant, vacateTenant, giveVacateNotice, cancelVacateNotice, fetchTenants, fetchVacatedTenants, fetchMovedOutThisMonth, forfeitDeposit, returnDeposit, updateTenant, fetchDepositSettlementsForMonth } from './services/tenantService';
 import { addIncomeRecord, uploadIdPhoto, saveTenantIdPhoto, fetchIncomeRecords } from './services/incomeService';
 import { markTenantRecordPaid, fetchPaymentRecords } from './services/paymentService';
 import { logActivity, fetchRecentActivity } from './services/activityService';
@@ -901,7 +901,6 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
 
 function VacateModal({ tenant, onConfirm, onCancel, saving }) {
   const today = new Date().toISOString().slice(0, 10);
-  const maxDate = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
   const [endDate, setEndDate] = useState(today);
   const [depositAction, setDepositAction] = useState('later');
   const hasDeposit = tenant.depositAmount > 0;
@@ -935,11 +934,10 @@ function VacateModal({ tenant, onConfirm, onCancel, saving }) {
             <input
               type="date"
               value={endDate}
-              max={maxDate}
               onChange={e => setEndDate(e.target.value)}
               className={`mt-1.5 ${inputCls}`}
             />
-            {endDate > today && <p className="mt-1 text-xs text-amber">Future date — bed stays occupied until then</p>}
+            {endDate > today && <p className="mt-1 text-xs text-amber">Notice recorded — bed stays occupied and rent still tracked until this date, then it auto-vacates</p>}
           </label>
 
           {/* Deposit settlement */}
@@ -980,7 +978,11 @@ function VacateModal({ tenant, onConfirm, onCancel, saving }) {
 
           {/* Summary */}
           <div className="rounded-lg bg-mist px-3 py-2.5 text-xs text-slate2 space-y-0.5">
-            <p>· Bed {tenant.bedNumber} will be marked <span className="font-semibold text-ink">available</span></p>
+            {endDate > today ? (
+              <p>· Bed {tenant.bedNumber} stays <span className="font-semibold text-ink">occupied</span> until {endDate}, then auto-frees</p>
+            ) : (
+              <p>· Bed {tenant.bedNumber} will be marked <span className="font-semibold text-ink">available</span></p>
+            )}
             {depositHeld && depositAction === 'returned'  && <p>· Deposit <span className="font-semibold text-success">returned</span></p>}
             {depositHeld && depositAction === 'forfeited' && <p>· Deposit marked <span className="font-semibold text-coral">not refundable</span></p>}
             {depositHeld && depositAction === 'later'     && <p>· Deposit appears in <span className="font-semibold text-amber">Deposits to Review</span></p>}
@@ -995,7 +997,7 @@ function VacateModal({ tenant, onConfirm, onCancel, saving }) {
               onClick={() => onConfirm({ endDate, depositAction })}
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserMinus className="h-4 w-4" />}
-              Confirm Vacate
+              {endDate > today ? 'Save Notice' : 'Confirm Vacate'}
             </Btn>
           </div>
         </div>
@@ -1163,6 +1165,9 @@ function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMa
             <p className="text-sm text-slate2">{tenant.phone}</p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
+            {tenant.noticeEndDate && (
+              <span className="text-[10px] font-semibold text-amber bg-amber/10 rounded px-1.5 py-0.5">Vacating {tenant.noticeEndDate}</span>
+            )}
             {daysOverdue > 0 && (
               <span className="text-[10px] font-semibold text-coral bg-coral/10 rounded px-1.5 py-0.5">{daysOverdue}d overdue</span>
             )}
@@ -2670,7 +2675,17 @@ export default function App({ session, organizationName, organizationId: orgIdPr
 
   async function handleVacate(tenant, { endDate, depositAction } = {}) {
     setError('');
+    const today = new Date().toISOString().slice(0, 10);
+    const isAdvanceNotice = endDate > today;
     try {
+      if (isAdvanceNotice) {
+        await giveVacateNotice(tenant.id, { endDate, depositAction });
+        setTenants(cur => cur.map(t => t.id === tenant.id ? { ...t, noticeEndDate: endDate, noticeDepositAction: depositAction } : t));
+        const orgId = properties.find(p=>p.id===selectedPropertyId)?.organization_id;
+        logActivity(selectedPropertyId, orgId, 'tenant_vacate_notice', `${tenant.name} gave notice to vacate Room ${tenant.roomNumber} Bed ${tenant.bedNumber} on ${endDate}`);
+        toast.success(`Notice recorded — ${tenant.name} vacates on ${endDate}`);
+        return;
+      }
       await vacateTenant(tenant.id, { endDate, depositAction });
       setTenants(cur => cur.filter(t => t.id !== tenant.id));
       if (editingTenant?.id === tenant.id) setEditingTenant(null);
@@ -2680,6 +2695,14 @@ export default function App({ session, organizationName, organizationId: orgIdPr
       const orgId = properties.find(p=>p.id===selectedPropertyId)?.organization_id;
       logActivity(selectedPropertyId, orgId, 'tenant_vacated', `${tenant.name} vacated Room ${tenant.roomNumber} Bed ${tenant.bedNumber} on ${endDate}`);
       toast.success(`${tenant.name} vacated`);
+    } catch (e) { toast.error(e.message); }
+  }
+
+  async function handleCancelVacateNotice(tenant) {
+    try {
+      await cancelVacateNotice(tenant.id);
+      setTenants(cur => cur.map(t => t.id === tenant.id ? { ...t, noticeEndDate: null, noticeDepositAction: null } : t));
+      toast.success(`Vacate notice cancelled for ${tenant.name}`);
     } catch (e) { toast.error(e.message); }
   }
 
@@ -3012,6 +3035,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
           }}
           onEdit={t => { setViewingTenantId(null); setEditingTenant(t); navigateTo('tenants'); }}
           onVacate={t => { setViewingTenantId(null); setVacatingTenant(t); }}
+          onCancelNotice={handleCancelVacateNotice}
           onDelete={t => { setViewingTenantId(null); handleDelete(t); }}
           onTenantUpdated={() => fetchTenants(selectedPropertyId || null).then(setTenants).catch(console.error)}
         />

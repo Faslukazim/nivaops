@@ -352,6 +352,9 @@ function BedRow({ bed, roomNumber, roomId, rooms, propertyId, upiId, onMarkPaid,
           <p className="text-xs text-slate2 tabular-nums truncate">
             {fmt(occ.monthly_rent)}/mo · since {occ.start_date}
           </p>
+          {occ.notice_end_date && (
+            <span className="mt-0.5 inline-block text-[10px] font-semibold text-amber bg-amber/10 rounded px-1.5 py-0.5">Vacating {occ.notice_end_date}</span>
+          )}
         </div>
 
         <PaymentToggleBtn

@@ -67,6 +67,8 @@ function toUiTenant(occupancy) {
     admissionFee: Number(occupancy.admission_fee ?? 0),
     moveInCollection: Number(occupancy.move_in_collection ?? 0),
     id_photo_url: occupancy.tenant.id_photo_url ?? null,
+    noticeEndDate: occupancy.notice_end_date ?? null,
+    noticeDepositAction: occupancy.notice_deposit_action ?? null,
   };
 }
 
@@ -91,8 +93,60 @@ async function setBedStatus(bedId, status) {
   if (error) throw error;
 }
 
+// Occupancies on notice whose move-out date has arrived get finalized
+// (ended, deposit settled per the stored intent, bed freed) before the
+// active-tenant list is read — this is what actually makes the advance
+// notice date "happen" without a server-side cron.
+async function finalizeDueVacateNotices(propertyId) {
+  const today = new Date().toISOString().slice(0, 10);
+  const query = supabase
+    .from('occupancies')
+    .select('id, tenant_id, bed_id, notice_deposit_action')
+    .eq('status', 'active')
+    .not('notice_end_date', 'is', null)
+    .lte('notice_end_date', today);
+  if (propertyId) query.eq('property_id', propertyId);
+  const { data, error } = await query;
+  if (error || !data?.length) return;
+
+  for (const occ of data) {
+    const patch = { status: 'ended', end_date: today, notice_end_date: null, notice_deposit_action: null };
+    if (occ.notice_deposit_action === 'returned') { patch.deposit_status = 'returned'; patch.deposit_settled_at = new Date().toISOString(); }
+    if (occ.notice_deposit_action === 'forfeited') { patch.deposit_status = 'forfeited'; patch.deposit_settled_at = new Date().toISOString(); }
+    await supabase.from('occupancies').update(patch).eq('id', occ.id);
+    await supabase.from('tenants').update({ status: 'archived' }).eq('id', occ.tenant_id);
+    await setBedStatus(occ.bed_id, 'available');
+  }
+}
+
+// Record advance notice: tenant stays active and the bed stays occupied
+// until endDate, when finalizeDueVacateNotices ends the occupancy for real.
+export async function giveVacateNotice(id, { endDate, depositAction = 'later' } = {}) {
+  if (!hasSupabaseConfig) return id;
+  const occupancy = await fetchOccupancyByTenantId(id);
+  const { error } = await supabase
+    .from('occupancies')
+    .update({ notice_end_date: endDate, notice_deposit_action: depositAction })
+    .eq('id', occupancy.id);
+  if (error) throw error;
+  return id;
+}
+
+export async function cancelVacateNotice(id) {
+  if (!hasSupabaseConfig) return id;
+  const occupancy = await fetchOccupancyByTenantId(id);
+  const { error } = await supabase
+    .from('occupancies')
+    .update({ notice_end_date: null, notice_deposit_action: null })
+    .eq('id', occupancy.id);
+  if (error) throw error;
+  return id;
+}
+
 export async function fetchTenants(propertyId) {
   if (!hasSupabaseConfig) return readLocalTenants();
+
+  await finalizeDueVacateNotices(propertyId);
 
   const query = supabase
     .from('occupancies')
