@@ -297,14 +297,27 @@ function Header({ properties, selectedPropertyId, onPropertyChange, loadingPrope
         <div className="flex items-center justify-between gap-4">
           <div className="lg:hidden"><AppLogo onClick={onGoHome} /></div>
           <div className="hidden sm:flex items-center gap-2 lg:ml-auto">{actions}</div>
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(true)}
-            className="sm:hidden inline-flex items-center justify-center rounded-lg p-2 text-slate2 hover:bg-mist transition-colors"
-            aria-label="Menu"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
+          <div className="sm:hidden flex items-center gap-1">
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={onOpenAdmin}
+                title="Back to admin panel"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-mist border border-border px-2.5 py-1.5 text-xs font-semibold text-slate2 hover:bg-border hover:text-ink transition-colors"
+              >
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Admin
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className="inline-flex items-center justify-center rounded-lg p-2 text-slate2 hover:bg-mist transition-colors"
+              aria-label="Menu"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          </div>
         </div>
       </div>
 
