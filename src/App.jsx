@@ -103,7 +103,7 @@ function RenamePropertyModal({ currentName, onSave, onClose }) {
   );
 }
 
-function PropertyPill({ properties, selectedId, onChange, loading, canAddProperty, onAddProperty, onDeleteProperty, onRenameProperty, fullWidth }) {
+function PropertyPill({ properties, selectedId, onChange, loading, canAddProperty, onAddProperty, onDeleteProperty, onRenameProperty, fullWidth, isOwner = true }) {
   const [showRename, setShowRename] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
@@ -141,7 +141,7 @@ function PropertyPill({ properties, selectedId, onChange, loading, canAddPropert
           <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate2" />
         </div>
       )}
-      {canAddProperty && (
+      {canAddProperty && isOwner && (
         <button
           type="button"
           onClick={onAddProperty}
@@ -151,7 +151,7 @@ function PropertyPill({ properties, selectedId, onChange, loading, canAddPropert
           <Plus className="h-3.5 w-3.5" />
         </button>
       )}
-      {selectedId && properties.length > 0 && (
+      {isOwner && selectedId && properties.length > 0 && (
         <div className="relative" ref={menuRef}>
           <button
             type="button"
@@ -261,7 +261,7 @@ function AppLogo({ onClick }) {
   );
 }
 
-function Header({ properties, selectedPropertyId, onPropertyChange, loadingProperties, onSignOut, isAdmin, onOpenAdmin, canAddProperty, onAddProperty, onDeleteProperty, onRenameProperty, onGoHome }) {
+function Header({ properties, selectedPropertyId, onPropertyChange, loadingProperties, onSignOut, isAdmin, onOpenAdmin, canAddProperty, onAddProperty, onDeleteProperty, onRenameProperty, onGoHome, isOwner = true }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const actions = (
@@ -275,6 +275,7 @@ function Header({ properties, selectedPropertyId, onPropertyChange, loadingPrope
         onAddProperty={onAddProperty}
         onDeleteProperty={onDeleteProperty}
         onRenameProperty={onRenameProperty}
+        isOwner={isOwner}
       />
       {isAdmin && (
         <button
@@ -335,6 +336,7 @@ function Header({ properties, selectedPropertyId, onPropertyChange, loadingPrope
                   onAddProperty={onAddProperty}
                   onDeleteProperty={onDeleteProperty}
                   onRenameProperty={onRenameProperty}
+                  isOwner={isOwner}
                   fullWidth
                 />
               </div>
@@ -1803,6 +1805,147 @@ function RazorpaySettings({ organizationId }) {
   );
 }
 
+const ROLE_LABEL = { owner: 'Owner', manager: 'Manager', staff: 'Staff' };
+
+function TeamSettings({ organizationId }) {
+  const toast = useToast();
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [inviting, setInviting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ email: '', password: '', role: 'staff' });
+  const [error, setError] = useState('');
+  const [removingId, setRemovingId] = useState(null);
+
+  function load() {
+    if (!organizationId) return;
+    setLoading(true);
+    import('./services/authService').then(({ fetchOrgMembers }) =>
+      fetchOrgMembers(organizationId).then(setMembers).catch(() => setMembers([])).finally(() => setLoading(false))
+    );
+  }
+
+  useEffect(load, [organizationId]);
+
+  async function handleInvite(e) {
+    e.preventDefault();
+    setError('');
+    if (!form.email.trim() || !form.password) { setError('Email and password are required.'); return; }
+    if (form.password.length < 6) { setError('Password must be at least 6 characters.'); return; }
+    setSaving(true);
+    try {
+      const { inviteTeamMember } = await import('./services/authService');
+      await inviteTeamMember({ organizationId, email: form.email.trim(), password: form.password, role: form.role });
+      setForm({ email: '', password: '', role: 'staff' });
+      setInviting(false);
+      load();
+      toast.success(`${form.email.trim()} added as ${ROLE_LABEL[form.role].toLowerCase()}`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleRemove(member) {
+    setRemovingId(member.id);
+    try {
+      const { removeTeamMember } = await import('./services/authService');
+      await removeTeamMember(member.id);
+      setMembers(cur => cur.filter(m => m.id !== member.id));
+      toast.success(`${member.email ?? 'Member'} removed`);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setRemovingId(null);
+    }
+  }
+
+  return (
+    <Card className="overflow-hidden">
+      <SectionHeader title="Team" />
+      <div className="p-4 flex flex-col gap-3">
+        {loading ? (
+          <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-slate2" /></div>
+        ) : (
+          <div className="flex flex-col divide-y divide-border rounded-xl border border-border overflow-hidden">
+            {members.map(m => (
+              <div key={m.id} className="flex items-center justify-between gap-3 px-3 py-2.5 bg-white">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-ink truncate">{m.email ?? 'Unknown'}</p>
+                  <p className="text-xs text-slate2">{ROLE_LABEL[m.role] ?? m.role}</p>
+                </div>
+                {m.role !== 'owner' && (
+                  <button
+                    type="button"
+                    disabled={removingId === m.id}
+                    onClick={() => handleRemove(m)}
+                    className="shrink-0 text-xs font-semibold text-coral hover:underline disabled:opacity-50"
+                  >
+                    {removingId === m.id ? 'Removing…' : 'Remove'}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!inviting ? (
+          <Btn variant="secondary" className="justify-center" onClick={() => setInviting(true)}>
+            <UserPlus className="h-4 w-4" />
+            Add staff / manager
+          </Btn>
+        ) : (
+          <form onSubmit={handleInvite} className="flex flex-col gap-3">
+            {error && <p className="text-xs text-coral">{error}</p>}
+            <label className="block">
+              <Label>Email</Label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                placeholder="staff@example.com"
+                className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+              />
+            </label>
+            <label className="block">
+              <Label>Temporary Password</Label>
+              <input
+                type="text"
+                value={form.password}
+                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                placeholder="At least 6 characters"
+                className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
+              />
+            </label>
+            <label className="block">
+              <Label>Role</Label>
+              <div className="mt-1.5 flex rounded-lg border border-border overflow-hidden text-sm font-semibold">
+                {['staff', 'manager'].map(r => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, role: r }))}
+                    className={`flex-1 py-2 transition-colors ${form.role === r ? 'bg-ink text-white' : 'text-slate2 hover:bg-mist'}`}
+                  >
+                    {ROLE_LABEL[r]}
+                  </button>
+                ))}
+              </div>
+            </label>
+            <div className="flex gap-2">
+              <Btn variant="secondary" className="flex-1 justify-center" onClick={() => { setInviting(false); setError(''); }}>Cancel</Btn>
+              <Btn variant="primary" className="flex-1 justify-center" disabled={saving} {...{ type: 'submit' }}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add Member'}
+              </Btn>
+            </div>
+          </form>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 const LISTING_AMENITIES = ['wifi', 'food', 'laundry', 'security', 'ac'];
 
 function ListingSettings({ property }) {
@@ -2311,7 +2454,8 @@ function SetupChecklist({ hasRooms, tenantCount, upiId, onGoToRooms, onAddTenant
 
 // ─── root ────────────────────────────────────────────────────────────────────
 
-export default function App({ session, organizationName, organizationId: orgIdProp, plan = 'starter', onSignOut, isAdmin, onOpenAdmin } = {}) {
+export default function App({ session, organizationName, organizationId: orgIdProp, role = 'owner', plan = 'starter', onSignOut, isAdmin, onOpenAdmin } = {}) {
+  const isOwner = role === 'owner';
   const [page, setPage] = useState(() => {
     const saved = localStorage.getItem('stayops_page');
     // 'payments' is now 'finance' — migrate old saved value
@@ -2816,6 +2960,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
         onDeleteProperty={() => setShowDeleteProperty(true)}
         onRenameProperty={handleRenameProperty}
         onGoHome={() => navigateTo('dashboard')}
+        isOwner={isOwner}
       />
       <TopNav active={page} onChange={navigateTo} bookingCount={pendingBookings.length} overdueCount={tenants.filter(t => computeTenantStatus(t) === STATUS.OVERDUE).length} />
 
@@ -2924,8 +3069,13 @@ export default function App({ session, organizationName, organizationId: orgIdPr
                     <FinancePage selectedPropertyId={selectedPropertyId} organizationId={properties.find(p => p.id === selectedPropertyId)?.organization_id} tenants={tenants} onViewTenant={setViewingTenantId} upiId={upiId} openTabRequest={financeOpenRequest} />
                     <div className="mt-4 flex flex-col gap-4">
                       <UpiSettings propertyId={selectedPropertyId} upiId={upiId} onSave={handleSaveUpi} />
-                      <RazorpaySettings organizationId={properties.find(p => p.id === selectedPropertyId)?.organization_id} />
-                      <ListingSettings property={properties.find(p => p.id === selectedPropertyId)} />
+                      {isOwner && (
+                        <>
+                          <RazorpaySettings organizationId={properties.find(p => p.id === selectedPropertyId)?.organization_id} />
+                          <ListingSettings property={properties.find(p => p.id === selectedPropertyId)} />
+                          <TeamSettings organizationId={properties.find(p => p.id === selectedPropertyId)?.organization_id} />
+                        </>
+                      )}
                     </div>
                   </>
                 )}

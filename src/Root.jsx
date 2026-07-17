@@ -214,6 +214,7 @@ export default function Root() {
         session={session}
         organizationName={activeOrg?.name}
         organizationId={activeOrg?.organizationId}
+        role={activeOrg?.role ?? 'owner'}
         plan={activeOrg?.plan ?? 'starter'}
         membershipError={membershipError}
         onSignOut={signOut}

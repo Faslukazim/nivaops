@@ -1,4 +1,4 @@
-import { hasSupabaseConfig, supabase } from '../lib/supabase';
+import { hasSupabaseConfig, supabase, supabaseFunctionsUrl } from '../lib/supabase';
 
 // ─── Session ──────────────────────────────────────────────────────────────────
 
@@ -95,4 +95,48 @@ export async function createOrganization({ orgName, propertyName, totalBeds }) {
   });
   if (error) throw error;
   return data; // new organization id (uuid)
+}
+
+// ─── Team members (staff / manager logins) ─────────────────────────────────────
+
+/** All members of an org (owner + any invited manager/staff). */
+export async function fetchOrgMembers(organizationId) {
+  if (!hasSupabaseConfig) return [];
+  const { data, error } = await supabase
+    .from('memberships')
+    .select('id, user_id, role, email, created_at')
+    .eq('organization_id', organizationId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Owner-only: creates a real login for a staff/manager member and adds them
+ * to the org. Runs server-side (invite-team-member edge function) since
+ * creating an auth user requires the service role key.
+ */
+export async function inviteTeamMember({ organizationId, email, password, role }) {
+  if (!hasSupabaseConfig || !supabaseFunctionsUrl) throw new Error('Supabase not configured');
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not signed in');
+
+  const res = await fetch(`${supabaseFunctionsUrl}/invite-team-member`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ organizationId, email, password, role }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? 'Failed to invite team member');
+  return json;
+}
+
+/** Owner-only (enforced by RLS): removes a team member's access to the org. */
+export async function removeTeamMember(membershipId) {
+  if (!hasSupabaseConfig) return;
+  const { error } = await supabase.from('memberships').delete().eq('id', membershipId);
+  if (error) throw error;
 }
