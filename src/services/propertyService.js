@@ -45,24 +45,16 @@ export async function createProperty(organizationId, name) {
 }
 
 export async function createRoom(propertyId, { roomNumber, beds }) {
-  const { data: room, error: roomErr } = await supabase
-    .from('rooms')
-    .insert({ property_id: propertyId, room_number: roomNumber, capacity: beds, status: 'active' })
-    .select()
-    .single();
-  if (roomErr) {
-    if (roomErr.code === '23505') throw new Error(`Room "${roomNumber}" already exists in this property.`);
-    throw roomErr;
+  const { data, error } = await supabase.rpc('create_room_with_beds', {
+    p_property_id: propertyId,
+    p_room_number: roomNumber,
+    p_bed_count: Number(beds),
+  });
+  if (error) {
+    if (error.code === '23505') throw new Error(`Room "${roomNumber}" already exists in this property.`);
+    throw error;
   }
-
-  const bedRows = Array.from({ length: beds }, (_, i) => ({
-    room_id: room.id,
-    bed_number: String(i + 1),
-    status: 'available',
-  }));
-  const { data: createdBeds, error: bedErr } = await supabase.from('beds').insert(bedRows).select();
-  if (bedErr) throw bedErr;
-  return { ...room, beds: createdBeds };
+  return { ...data.room, beds: data.beds };
 }
 
 export async function deleteRoom(roomId) {
