@@ -393,7 +393,7 @@ function BottomNav({ active, onChange, bookingCount = 0, overdueCount = 0 }) {
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 bg-midnight border-t border-white/10 sm:hidden"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 8px) + 0.25rem)' }}
     >
       <div className="grid grid-cols-4">
         {PAGES.map(p => {
@@ -408,7 +408,7 @@ function BottomNav({ active, onChange, bookingCount = 0, overdueCount = 0 }) {
               key={p.id}
               type="button"
               onClick={() => onChange(p.id)}
-              className={`relative flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium tracking-normal transition-colors ${
+              className={`relative flex flex-col items-center gap-0.5 pt-2.5 pb-1 text-[10px] font-medium tracking-normal transition-colors ${
                 isActive ? 'text-green' : 'text-white/40'
               }`}
             >
@@ -2916,7 +2916,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
 
   return (
     <div
-      className="min-h-screen bg-mist pb-14 sm:pb-0 lg:pl-60"
+      className="min-h-screen bg-mist pb-24 sm:pb-0 lg:pl-60"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}

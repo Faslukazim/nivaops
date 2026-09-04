@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useToast } from './lib/toast.jsx';
 import { ArrowLeft, ArrowRightLeft, BedDouble, Bookmark, Check, ChevronDown, Loader2, Pencil, Plus, Trash2, UserPlus, X } from 'lucide-react';
 import { fetchRoomsWithOccupants, createRoom, deleteRoom, deleteBed, updateRoomNumber } from './services/propertyService';
@@ -752,9 +753,12 @@ function AddRoomSheet({ onSave, onCancel, existingRoomNumbers = [] }) {
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-[60] flex flex-col justify-end sm:items-center sm:justify-center bg-ink/40 backdrop-blur-sm" onClick={e => e.target === e.currentTarget && onCancel()}>
-      <div className="w-full sm:max-w-sm bg-white rounded-t-2xl sm:rounded-2xl p-5 shadow-xl">
+  return createPortal(
+    <div className="fixed inset-0 z-[70] flex flex-col justify-end sm:items-center sm:justify-center bg-ink/40 backdrop-blur-sm" onClick={e => e.target === e.currentTarget && onCancel()}>
+      <div
+        className="w-full sm:max-w-sm bg-white rounded-t-2xl sm:rounded-2xl p-5 shadow-xl max-h-[90vh] overflow-y-auto"
+        style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 16px) + 1rem)' }}
+      >
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-ink">Add Room</h3>
           <button type="button" onClick={onCancel} className="text-slate2 hover:text-ink"><X className="h-5 w-5" /></button>
@@ -778,7 +782,8 @@ function AddRoomSheet({ onSave, onCancel, existingRoomNumbers = [] }) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

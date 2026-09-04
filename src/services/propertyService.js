@@ -45,16 +45,62 @@ export async function createProperty(organizationId, name) {
 }
 
 export async function createRoom(propertyId, { roomNumber, beds }) {
-  const { data, error } = await supabase.rpc('create_room_with_beds', {
-    p_property_id: propertyId,
-    p_room_number: roomNumber,
-    p_bed_count: Number(beds),
-  });
-  if (error) {
-    if (error.code === '23505') throw new Error(`Room "${roomNumber}" already exists in this property.`);
-    throw error;
+  const bedCount = Number(beds) || 1;
+  const cleanRoomNumber = String(roomNumber).trim();
+
+  try {
+    const { data, error } = await supabase.rpc('create_room_with_beds', {
+      p_property_id: propertyId,
+      p_room_number: cleanRoomNumber,
+      p_bed_count: bedCount,
+    });
+    if (!error && data) {
+      return { ...data.room, beds: data.beds || [] };
+    }
+    if (error && error.code === '23505') {
+      throw new Error(`Room "${cleanRoomNumber}" already exists in this property.`);
+    }
+    console.warn('RPC create_room_with_beds error, falling back to direct insert:', error?.message);
+  } catch (rpcErr) {
+    if (rpcErr.message && rpcErr.message.includes('already exists')) throw rpcErr;
+    console.warn('create_room_with_beds RPC threw, using fallback:', rpcErr.message);
   }
-  return { ...data.room, beds: data.beds };
+
+  // Fallback: direct table insert into rooms & beds
+  const { data: newRoom, error: roomErr } = await supabase
+    .from('rooms')
+    .insert({
+      property_id: propertyId,
+      room_number: cleanRoomNumber,
+      capacity: bedCount,
+      status: 'active',
+    })
+    .select()
+    .single();
+
+  if (roomErr) {
+    if (roomErr.code === '23505') {
+      throw new Error(`Room "${cleanRoomNumber}" already exists in this property.`);
+    }
+    throw roomErr;
+  }
+
+  const bedsToInsert = Array.from({ length: bedCount }, (_, i) => ({
+    room_id: newRoom.id,
+    bed_number: String(i + 1),
+    status: 'available',
+  }));
+
+  const { data: createdBeds, error: bedsErr } = await supabase
+    .from('beds')
+    .insert(bedsToInsert)
+    .select();
+
+  if (bedsErr) {
+    console.error('Error creating beds for room:', bedsErr);
+  }
+
+  return { ...newRoom, beds: createdBeds || [] };
 }
 
 export async function deleteRoom(roomId) {

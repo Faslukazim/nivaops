@@ -255,7 +255,10 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
     <div className="min-h-screen bg-white text-ink font-sans antialiased selection:bg-leaf/20">
 
       {/* ─── STICKY HEADER ───────────────────────────────────────────────────── */}
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-border bg-white/95 backdrop-blur-md">
+      <header
+        className="fixed inset-x-0 top-0 z-50 border-b border-border bg-white/95 backdrop-blur-md"
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      >
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-8">
           
           {/* Logo */}
@@ -390,7 +393,10 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
       </header>
 
       {/* ─── HERO SECTION ────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden pt-28 pb-16 sm:pt-36 sm:pb-24">
+      <section
+        className="relative overflow-hidden pb-16 sm:pb-24 sm:pt-36"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 6.75rem)' }}
+      >
         {/* Subtle Ambient Radial Glow */}
         <div
           className="pointer-events-none absolute left-1/2 top-0 h-[500px] w-[800px] -translate-x-1/2 rounded-full opacity-10 blur-3xl"
@@ -888,7 +894,10 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
       </section>
 
       {/* ─── FOOTER ──────────────────────────────────────────────────────────── */}
-      <footer className="border-t border-border bg-[#0B0F19] py-8 text-white/60 text-xs">
+      <footer
+        className="border-t border-border bg-[#0B0F19] pt-8 text-white/60 text-xs"
+        style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 16px) + 5rem)' }}
+      >
         <div className="mx-auto flex max-w-6xl flex-col sm:flex-row items-center justify-between gap-4 px-4 sm:px-8">
           <div className="flex items-center gap-2">
             <NivaLogo size={20} />
@@ -903,7 +912,10 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
       </footer>
 
       {/* ─── FLOATING MOBILE QUICK ACTION BAR ─────────────────────────────────── */}
-      <div className="fixed bottom-0 inset-x-0 z-40 sm:hidden border-t border-border bg-white/95 backdrop-blur-md p-2.5 px-4 flex items-center gap-2 shadow-2xl">
+      <div
+        className="fixed bottom-0 inset-x-0 z-40 sm:hidden border-t border-border bg-white/95 backdrop-blur-md px-4 pt-2.5 flex items-center gap-2 shadow-2xl"
+        style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 10px) + 0.5rem)' }}
+      >
         <button
           type="button"
           onClick={() => handleWhatsAppClick('mobile_sticky_bar')}
