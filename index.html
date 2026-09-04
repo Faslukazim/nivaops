@@ -4,13 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
     <title>NivaOps</title>
-    <meta name="description" content="The operating system for modern rental properties." />
-    <meta name="theme-color" content="#16A34A" />
+    <meta name="description" content="NivaOps is the mobile-first PG management app built for Indian operators. Track beds, send 1-tap WhatsApp rent reminders with UPI, and manage deposits effortlessly." />
+    <meta name="theme-color" content="#111827" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="NivaOps" />
-    <meta property="og:title" content="NivaOps" />
-    <meta property="og:description" content="Run properties smarter. Delight residents. Grow with confidence." />
+    <meta property="og:title" content="NivaOps — Your PG, in your pocket" />
+    <meta property="og:description" content="Who's paid, who's due, which beds are free — in one glance. 1-tap WhatsApp rent reminders with GPay/UPI." />
+    <meta property="og:type" content="website" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" href="/favicon.png" sizes="64x64" />
     <link rel="manifest" href="/manifest.json" />
@@ -18,6 +19,29 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Meta Pixel Code -->
+    <script>
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      window.trackMetaEvent = function(name, params) {
+        try {
+          if (window.fbq) { window.fbq('track', name, params); }
+        } catch (e) {
+          console.warn('Meta event error', e);
+        }
+      };
+      var pixelId = window.META_PIXEL_ID || localStorage.getItem('meta_pixel_id') || 'META_PIXEL_ID_PLACEHOLDER';
+      if (pixelId && pixelId !== 'META_PIXEL_ID_PLACEHOLDER') {
+        fbq('init', pixelId);
+        fbq('track', 'PageView');
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Loader2, X, Download, Share } from 'lucide-react';
 import { hasSupabaseConfig } from './lib/supabase';
-import { getSession, onAuthChange, fetchMemberships } from './services/authService';
+import { getSession, onAuthChange, fetchMemberships, signIn } from './services/authService';
 import App from './App.jsx';
 import AuthPage from './AuthPage.jsx';
 import OnboardingPage from './OnboardingPage.jsx';
@@ -124,6 +124,20 @@ export default function Root() {
   const [showAuth, setShowAuth] = useState(false);
   const [adminMode, setAdminMode] = useState(true);
 
+  const [demoLoading, setDemoLoading] = useState(false);
+
+  const handleTryDemo = async () => {
+    setDemoLoading(true);
+    try {
+      const s = await signIn('demo@stayops.com', 'demo2026');
+      setSession(s);
+    } catch (e) {
+      console.error('Failed to launch demo:', e);
+    } finally {
+      setDemoLoading(false);
+    }
+  };
+
   const loadMemberships = useCallback(async () => {
     setMembershipError('');
     try {
@@ -171,7 +185,13 @@ export default function Root() {
         />
       );
     }
-    return <LandingPage onShowAuth={() => setShowAuth(true)} />;
+    return (
+      <LandingPage
+        onShowAuth={() => setShowAuth(true)}
+        onTryDemo={handleTryDemo}
+        demoLoading={demoLoading}
+      />
+    );
   }
 
   // ── Signed in — loading memberships ────────────────────────────────────────
