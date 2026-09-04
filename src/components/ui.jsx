@@ -25,14 +25,13 @@ export function SignOutBtn({ onSignOut, className = '' }) {
         Sign out
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
-          className="fixed inset-0 z-[80] flex items-center justify-center px-4"
-          style={{ background: 'rgba(15,23,42,0.4)', backdropFilter: 'blur(4px)' }}
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/30 backdrop-blur-md"
           onClick={() => setOpen(false)}
         >
           <div
-            className="w-full max-w-xs rounded-2xl bg-white border border-border shadow-xl p-6"
+            className="w-full max-w-xs rounded-2xl bg-white border border-black/[0.08] shadow-2xl p-6"
             onClick={e => e.stopPropagation()}
           >
             <h2 className="text-base font-bold text-ink text-center">Sign out?</h2>
@@ -40,19 +39,20 @@ export function SignOutBtn({ onSignOut, className = '' }) {
             <div className="mt-6 flex gap-3">
               <button
                 onClick={() => setOpen(false)}
-                className="flex-1 rounded-lg border border-border py-2.5 text-sm font-semibold text-slate2 hover:bg-mist transition-colors"
+                className="flex-1 rounded-xl border border-black/[0.08] py-2.5 text-sm font-semibold text-slate2 hover:bg-[#F5F5F7] transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={() => { setOpen(false); onSignOut(); }}
-                className="flex-1 rounded-lg bg-coral py-2.5 text-sm font-bold text-white hover:bg-coral/90 transition-colors"
+                className="flex-1 rounded-xl bg-coral py-2.5 text-sm font-bold text-white hover:bg-coral/90 shadow-sm transition-colors"
               >
                 Sign out
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
@@ -591,7 +591,7 @@ export function CollectModal({ record, onConfirm, onCancel }) {
   const numAmount = Math.max(0, Number(amount) || 0);
   const deduction = record.amount - numAmount;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-md px-4" style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}>
       <div className="w-full max-w-sm rounded-t-[28px] sm:rounded-[24px] bg-white border border-black/[0.06] shadow-2xl overflow-hidden">
         <div className="px-6 pt-6 pb-5">
@@ -641,6 +641,7 @@ export function CollectModal({ record, onConfirm, onCancel }) {
           </Btn>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

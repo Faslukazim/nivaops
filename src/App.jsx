@@ -30,11 +30,10 @@ import {
 
 function DeletePropertyModal({ propertyName, tenantCount, roomCount, onConfirm, onClose, busy }) {
   const hasContent = tenantCount > 0 || roomCount > 0;
-  return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center px-4"
-      style={{ background: 'rgba(15,23,42,0.4)', backdropFilter: 'blur(4px)' }}
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/30 backdrop-blur-md"
       onClick={onClose}>
-      <div className="w-full max-w-xs rounded-2xl bg-white border border-border shadow-xl p-6"
+      <div className="w-full max-w-xs rounded-2xl bg-white border border-black/[0.08] shadow-2xl p-6"
         onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 mb-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-coral/10">
@@ -43,23 +42,24 @@ function DeletePropertyModal({ propertyName, tenantCount, roomCount, onConfirm, 
           <h2 className="text-sm font-bold text-ink">Delete "{propertyName}"?</h2>
         </div>
         {hasContent && (
-          <div className="rounded-lg bg-coral/5 border border-coral/20 px-3 py-2.5 mb-4 text-sm text-coral">
+          <div className="rounded-xl bg-coral/5 border border-coral/20 px-3 py-2.5 mb-4 text-sm text-coral">
             ⚠️ This property has <strong>{tenantCount} active tenant{tenantCount !== 1 ? 's' : ''}</strong> and <strong>{roomCount} room{roomCount !== 1 ? 's' : ''}</strong>. All data will be archived.
           </div>
         )}
         <p className="text-sm text-slate2 mb-5">All rooms, beds, tenants, and payments will be hidden. This is difficult to undo — contact support if needed.</p>
         <div className="flex gap-2">
-          <button onClick={onClose} className="flex-1 rounded-xl border border-border py-2.5 text-sm font-semibold text-slate2 hover:bg-mist transition-colors">
+          <button onClick={onClose} className="flex-1 rounded-xl border border-black/[0.08] py-2.5 text-sm font-semibold text-slate2 hover:bg-[#F5F5F7] transition-colors">
             Cancel
           </button>
           <button onClick={onConfirm} disabled={busy}
-            className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-coral text-white py-2.5 text-sm font-bold hover:bg-coral/90 transition-colors disabled:opacity-50">
+            className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-coral text-white py-2.5 text-sm font-bold hover:bg-coral/90 shadow-sm transition-colors disabled:opacity-50">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {hasContent ? 'Delete Anyway' : 'Delete'}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -76,11 +76,10 @@ function RenamePropertyModal({ currentName, onSave, onClose }) {
     finally { setBusy(false); }
   }
 
-  return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center px-4"
-      style={{ background: 'rgba(15,23,42,0.4)', backdropFilter: 'blur(4px)' }}
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/30 backdrop-blur-md"
       onClick={onClose}>
-      <div className="w-full max-w-xs rounded-2xl bg-white border border-border shadow-xl p-6"
+      <div className="w-full max-w-xs rounded-2xl bg-white border border-black/[0.08] shadow-2xl p-6"
         onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-bold text-ink">Rename property</h2>
@@ -91,15 +90,16 @@ function RenamePropertyModal({ currentName, onSave, onClose }) {
             autoFocus
             value={name}
             onChange={e => setName(e.target.value)}
-            className="w-full rounded-xl border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-green"
+            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-green"
           />
           <button type="submit" disabled={busy || !name.trim()}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-green text-white py-2.5 text-sm font-bold hover:bg-green-hover transition-colors disabled:opacity-50">
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-green text-white py-2.5 text-sm font-bold hover:bg-green-hover shadow-sm transition-colors disabled:opacity-50">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
           </button>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -214,11 +214,10 @@ function AddPropertyModal({ organizationId, onCreated, onClose }) {
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center px-4"
-      style={{ background: 'rgba(15,23,42,0.4)', backdropFilter: 'blur(4px)' }}
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/30 backdrop-blur-md"
       onClick={onClose}>
-      <div className="w-full max-w-xs rounded-2xl bg-white border border-border shadow-xl p-6"
+      <div className="w-full max-w-xs rounded-2xl bg-white border border-black/[0.08] shadow-2xl p-6"
         onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-bold text-ink">Add property</h2>
@@ -232,16 +231,17 @@ function AddPropertyModal({ organizationId, onCreated, onClose }) {
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="Property name"
-            className="w-full rounded-xl border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-green"
+            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-green"
           />
           <button type="submit" disabled={busy || !name.trim()}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-green text-white py-2.5 text-sm font-bold hover:bg-green-hover transition-colors disabled:opacity-50">
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-green text-white py-2.5 text-sm font-bold hover:bg-green-hover shadow-sm transition-colors disabled:opacity-50">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             Create property
           </button>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
