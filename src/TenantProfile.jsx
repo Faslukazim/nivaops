@@ -83,7 +83,8 @@ export default function TenantProfile({ tenant, properties, onClose, onCollect, 
   const property = properties?.find(p => p.id === tenant.propertyId);
 
   const phone = String(tenant.phone).replace(/\D/g, '');
-  const waMsg = `Hi ${tenant.name}, rent reminder for Room ${tenant.roomNumber} Bed ${tenant.bedNumber}. Monthly rent ${fmt(tenant.monthlyRent)} is unpaid. Please pay at your earliest.`;
+  const upiLine = property?.upi_id ? ` Pay via GPay/UPI: ${property.upi_id}` : '';
+  const waMsg = `Hi ${tenant.name}, rent reminder for Room ${tenant.roomNumber} Bed ${tenant.bedNumber}. Monthly rent ${fmt(tenant.monthlyRent)} is unpaid. Please pay at your earliest.${upiLine}`;
   const waHref = `https://wa.me/${phone}?text=${encodeURIComponent(waMsg)}`;
   const callHref = `tel:${tenant.phone}`;
 
@@ -146,8 +147,8 @@ export default function TenantProfile({ tenant, properties, onClose, onCollect, 
                 Call
               </a>
               <a href={waHref} target="_blank" rel="noreferrer"
-                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-border text-sm font-semibold text-ink hover:bg-mist transition-colors">
-                <MessageCircle className="h-4 w-4" />
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-[#25D366]/30 bg-[#25D366]/10 text-sm font-bold text-[#15803D] hover:bg-[#25D366]/20 transition-all active:scale-95 shadow-sm">
+                <MessageCircle className="h-4 w-4 text-[#25D366]" />
                 WhatsApp
               </a>
               <PaymentLinkBtn

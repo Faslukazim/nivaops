@@ -1431,29 +1431,38 @@ function AttentionRequired({ tenants, upiId, onMarkPaid, onViewTenant }) {
       <SectionHeader
         title="Attention Required"
         action={actionable.length > 0 && (
-          <Btn variant="secondary" size="sm" onClick={() => setRemindExpanded(v => !v)}>
-            <MessageCircle className="h-3.5 w-3.5" />
+          <button
+            type="button"
+            onClick={() => setRemindExpanded(v => !v)}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all active:scale-95 ${
+              remindExpanded
+                ? 'bg-ink text-white'
+                : 'bg-[#25D366]/15 text-[#15803D] border border-[#25D366]/30 hover:bg-[#25D366]/25'
+            }`}
+          >
+            <MessageCircle className={`h-3.5 w-3.5 ${remindExpanded ? 'text-white' : 'text-[#25D366]'}`} />
             {remindExpanded ? 'Close' : `Remind All (${actionable.length})`}
-          </Btn>
+          </button>
         )}
       />
 
       {remindExpanded && actionable.length > 0 && (
         <div className="border-b border-border bg-mist px-4 py-3 flex flex-col gap-1.5">
-          <p className="text-xs text-slate2 mb-1">Tap each to open WhatsApp — send one at a time.</p>
+          <p className="text-xs text-slate2 mb-1">Tap each to open WhatsApp — send one at a time with UPI link.</p>
           {actionable.map(t => {
             const phone = String(t.phone).replace(/\D/g, '');
-            const msg = `Hi ${t.name}, rent reminder for Room ${t.roomNumber} Bed ${t.bedNumber}. Monthly rent ${fmt(t.monthlyRent)} is unpaid. Please pay at your earliest.`;
+            const upiLine = upiId ? ` Pay via GPay/UPI: ${upiId}` : '';
+            const msg = `Hi ${t.name}, rent reminder for Room ${t.roomNumber} Bed ${t.bedNumber}. Monthly rent ${fmt(t.monthlyRent)} is unpaid. Please pay at your earliest.${upiLine}`;
             const href = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
             return (
               <a key={t.id} href={href} target="_blank" rel="noreferrer"
-                className="flex items-center gap-2 border border-border bg-white rounded-lg px-3 py-2.5 text-sm font-medium text-ink hover:bg-mist transition-colors"
+                className="flex items-center gap-2 border border-border bg-white rounded-lg px-3 py-2.5 text-sm font-medium text-ink hover:bg-[#25D366]/5 hover:border-[#25D366]/40 transition-colors"
               >
-                <MessageCircle className="h-4 w-4 text-slate2 shrink-0" />
-                <span>{t.name.split(' ')[0]}</span>
+                <MessageCircle className="h-4 w-4 text-[#25D366] shrink-0" />
+                <span className="font-semibold">{t.name.split(' ')[0]}</span>
                 <span className="text-slate2">·</span>
                 <span className="text-slate2 text-xs">Room {t.roomNumber}</span>
-                <span className="ml-auto text-xs font-semibold text-coral tabular-nums">{fmt(t.monthlyRent)}</span>
+                <span className="ml-auto text-xs font-bold text-coral tabular-nums">{fmt(t.monthlyRent)}</span>
               </a>
             );
           })}
@@ -2148,6 +2157,7 @@ function ListingSettings({ property }) {
 
 function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, saving, roomPrefill, upiId, flashPaidId, onAddTenant, onUpdateTenant, onCancelEdit, onEdit, onDelete, onVacate, onMarkPaid, onMarkUnpaid, onReturnDeposit, onForfeitDeposit, onAddDayGuest, onUndoVacate, selectedPropertyId, canDelete = true }) {
   const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [showPast, setShowPast] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [vacated, setVacated] = useState([]);
@@ -2183,15 +2193,31 @@ function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, sa
     if (ok) setVacated(cur => cur.filter(t => t.id !== tenant.id));
   }
 
+  const counts = useMemo(() => {
+    const unpaid = tenants.filter(t => t.paymentStatus !== 'Paid').length;
+    const paid = tenants.filter(t => t.paymentStatus === 'Paid').length;
+    const notice = tenants.filter(t => !!t.noticeEndDate).length;
+    const collected = tenants.filter(t => t.paymentStatus === 'Paid').reduce((s, t) => s + (Number(t.monthlyRent) || 0), 0);
+    return { all: tenants.length, unpaid, paid, notice, collected };
+  }, [tenants]);
+
   const filtered = useMemo(() => {
+    let list = tenants;
+    if (statusFilter === 'unpaid') {
+      list = list.filter(t => t.paymentStatus !== 'Paid');
+    } else if (statusFilter === 'paid') {
+      list = list.filter(t => t.paymentStatus === 'Paid');
+    } else if (statusFilter === 'notice') {
+      list = list.filter(t => !!t.noticeEndDate);
+    }
     const q = query.trim().toLowerCase();
-    if (!q) return tenants;
-    return tenants.filter(t =>
+    if (!q) return list;
+    return list.filter(t =>
       t.name.toLowerCase().includes(q) ||
       t.phone.includes(q) ||
       String(t.roomNumber).toLowerCase().includes(q)
     );
-  }, [tenants, query]);
+  }, [tenants, query, statusFilter]);
 
   const filteredVacated = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -2258,26 +2284,59 @@ function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, sa
           </button>
         </div>
 
-        {!showPast && tenants.length > 0 && (() => {
-          const paid = tenants.filter(t => t.paymentStatus === 'Paid').length;
-          const unpaid = tenants.length - paid;
-          const collected = tenants.filter(t => t.paymentStatus === 'Paid').reduce((s, t) => s + t.monthlyRent, 0);
-          return (
-            <div className="flex items-center gap-3 rounded-xl border border-border bg-white px-4 py-2.5 text-sm">
-              <span className="text-success font-semibold">{paid} paid</span>
-              <span className="text-slate2">·</span>
-              <span className="text-coral font-semibold">{unpaid} unpaid</span>
-              <span className="text-slate2">·</span>
-              <span className="text-ink font-semibold">{fmt(collected)} collected</span>
+        {!showPast && tenants.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-2">
+              {/* Filter Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+                {[
+                  { id: 'all',    label: 'All',       count: counts.all },
+                  { id: 'unpaid', label: 'Unpaid',    count: counts.unpaid, color: 'text-coral', bg: 'bg-coral/10' },
+                  { id: 'paid',   label: 'Paid',      count: counts.paid,   color: 'text-leaf',  bg: 'bg-leaf/10' },
+                  { id: 'notice', label: 'On Notice', count: counts.notice, color: 'text-amber', bg: 'bg-amber/10' },
+                ].map(f => {
+                  const active = statusFilter === f.id;
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setStatusFilter(f.id)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
+                        active
+                          ? 'bg-ink text-white shadow-sm'
+                          : 'bg-white border border-border text-slate2 hover:text-ink hover:bg-mist'
+                      }`}
+                    >
+                      <span>{f.label}</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold tabular-nums ${
+                        active ? 'bg-white/20 text-white' : f.bg ? `${f.bg} ${f.color}` : 'bg-mist text-slate2'
+                      }`}>
+                        {f.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Total collected summary */}
+              <span className="hidden sm:inline-block text-xs font-semibold text-slate2 shrink-0">
+                {fmt(counts.collected)} collected
+              </span>
             </div>
-          );
-        })()}
+          </div>
+        )}
 
         {!showPast ? (
           tenants.length === 0 ? (
             <Card><EmptyState icon={Users} title="No tenants yet" body="Add your first tenant using the form on the left." /></Card>
           ) : filtered.length === 0 ? (
-            <Card><EmptyState icon={Users} title={`No results for "${query}"`} body="Try a different name, phone number, or room." /></Card>
+            <Card>
+              <EmptyState
+                icon={Users}
+                title={query ? `No results for "${query}"` : `No ${statusFilter} tenants`}
+                body={query ? "Try a different name, phone number, or room." : `No tenants currently match the "${statusFilter}" filter.`}
+              />
+            </Card>
           ) : (
             <>
               {query && <p className="text-xs text-slate2 px-1">{filtered.length} of {tenants.length} tenants</p>}

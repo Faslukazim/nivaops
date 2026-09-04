@@ -894,6 +894,14 @@ export default function RoomsPage({ selectedPropertyId, organizationId, upiId, o
   if (selectedRoom && isMobile) {
     return (
       <div className="flex flex-col" style={{ minHeight: 'calc(100vh - 160px)' }}>
+        <button
+          type="button"
+          onClick={() => setSelectedRoom(null)}
+          className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold text-slate2 hover:text-ink active:scale-95 transition-all self-start px-3 py-1.5 rounded-lg bg-white border border-border shadow-xs"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          <span>All Rooms</span>
+        </button>
         <Card className="flex-1 rounded-xl overflow-hidden">
           <RoomDetail
             room={selectedRoom}

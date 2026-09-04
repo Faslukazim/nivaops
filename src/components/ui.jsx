@@ -327,9 +327,9 @@ export function WhatsAppLink({ name, phone, roomNumber, bedNumber, rent, label, 
       target="_blank"
       rel="noreferrer"
       title="WhatsApp reminder"
-      className={`inline-flex items-center justify-center gap-1.5 rounded-lg text-slate2 hover:bg-mist hover:text-ink transition-colors ${label ? 'px-2.5 py-2 text-xs font-semibold' : 'p-2.5'} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#25D366]/10 text-[#15803D] border border-[#25D366]/25 hover:bg-[#25D366]/20 transition-all active:scale-95 ${label ? 'px-2.5 py-1.5 text-xs font-bold' : 'p-2'} ${className}`}
     >
-      <MessageCircle className="h-4 w-4 shrink-0" />
+      <MessageCircle className="h-4 w-4 shrink-0 text-[#25D366]" />
       {label && <span>{label}</span>}
     </a>
   );
