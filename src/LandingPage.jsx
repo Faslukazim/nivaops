@@ -2,12 +2,10 @@ import { useState } from 'react';
 import { NivaLogo, NivaWordmark } from './components/NivaLogo';
 import {
   ArrowRight,
-  ArrowUpRight,
   BedDouble,
   Check,
   CheckCircle2,
   ChevronDown,
-  Clock,
   Loader2,
   Menu,
   MessageCircle,
@@ -42,98 +40,103 @@ function scrollTo(id) {
   });
 }
 
-// ─── Hero Mobile Phone Mockup Component ──────────────────────────────────────
+// ─── Slender Apple-Style Flagship iPhone Mockup ──────────────────────────────
+// Authentic 19.5:9 smartphone silhouette (eliminates wide/squat "tablet/tab" look)
 function PhoneMockup({ onTryDemo, demoLoading }) {
   const [samplePaid, setSamplePaid] = useState(false);
 
   return (
-    <div className="relative mx-auto w-full max-w-[340px] sm:max-w-[370px]">
-      {/* Outer Phone Hardware Frame */}
-      <div className="relative overflow-hidden rounded-[38px] border-[7px] border-[#0F172A] bg-[#F8FAFC] shadow-[0_25px_60px_-15px_rgba(15,23,42,0.25)] ring-1 ring-black/5">
-        
-        {/* Dynamic Island / Speaker Notch */}
-        <div className="absolute left-1/2 top-2.5 z-30 h-4 w-24 -translate-x-1/2 rounded-full bg-[#0F172A]" />
+    <div className="relative mx-auto flex justify-center py-2">
+      {/* Soft Apple ambient background glow */}
+      <div className="absolute inset-0 max-w-[320px] mx-auto bg-gradient-to-b from-leaf/10 to-transparent blur-3xl opacity-60 pointer-events-none" />
 
-        {/* Status Bar */}
-        <div className="relative flex items-center justify-between px-6 pt-3 pb-1 text-[11px] font-semibold text-slate-700 select-none">
+      {/* Flagship iPhone Silhouette (Slender 1:2.05 aspect ratio) */}
+      <div className="relative w-[285px] sm:w-[310px] h-[590px] sm:h-[625px] rounded-[52px] border-[3.5px] border-[#2A2A2E] bg-[#FBFBFC] shadow-[0_25px_70px_-15px_rgba(0,0,0,0.18)] ring-1 ring-black/10 flex flex-col overflow-hidden select-none">
+        
+        {/* Apple Dynamic Island */}
+        <div className="absolute top-2.5 left-1/2 -translate-x-1/2 z-30 h-[22px] w-[88px] rounded-full bg-black flex items-center justify-between px-2.5">
+          <div className="h-2.5 w-2.5 rounded-full bg-[#111113]" />
+          <div className="h-2 w-2 rounded-full bg-[#16A34A] animate-pulse" />
+        </div>
+
+        {/* iOS Status Bar */}
+        <div className="relative z-20 flex items-center justify-between px-7 pt-3.5 pb-1 text-[11px] font-semibold text-[#1D1D1F]">
           <span>9:41</span>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px]">5G</span>
-            <div className="h-2.5 w-4 rounded-sm border border-slate-700/80 p-0.5">
-              <div className="h-full w-full bg-slate-700 rounded-2xs" />
+          <div className="flex items-center gap-1.5 text-[10px]">
+            <span>5G</span>
+            <div className="w-4 h-2 rounded-[2px] border border-[#1D1D1F] p-0.5">
+              <div className="h-full w-full bg-[#1D1D1F] rounded-2xs" />
             </div>
           </div>
         </div>
 
-        {/* In-App Header */}
-        <div className="border-b border-border bg-white px-4 py-3">
-          <div className="flex items-center justify-between">
+        {/* In-App Screen Content */}
+        <div className="flex-1 flex flex-col px-3.5 pt-2 pb-2 overflow-hidden">
+          
+          {/* Hostel Header */}
+          <div className="rounded-xl bg-white border border-black/[0.06] p-3 shadow-xs flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <NivaLogo size={22} />
+              <NivaLogo size={20} />
               <div>
-                <p className="text-xs font-bold text-ink leading-none">StayB Hostel</p>
-                <p className="text-[10px] text-slate2 mt-0.5 leading-none">Main Building · 32 Beds</p>
+                <p className="text-xs font-bold text-[#1D1D1F] leading-tight">StayB Hostel</p>
+                <p className="text-[10px] text-[#86868B] leading-none mt-0.5">32 Beds · Main Branch</p>
               </div>
             </div>
-            <span className="inline-flex items-center gap-1 rounded-full bg-leaf/10 px-2 py-0.5 text-[10px] font-bold text-leaf">
+            <span className="inline-flex items-center gap-1 rounded-full bg-leaf/10 px-2 py-0.5 text-[9px] font-bold text-leaf">
               <span className="h-1.5 w-1.5 rounded-full bg-leaf animate-pulse" />
               Live
             </span>
           </div>
-        </div>
 
-        {/* In-App Body */}
-        <div className="p-3.5 space-y-3 bg-[#F8FAFC]">
-          
           {/* Quick Stats Pill */}
-          <div className="grid grid-cols-3 gap-1.5 rounded-xl border border-border bg-white p-2.5 text-center shadow-sm">
+          <div className="grid grid-cols-3 gap-1 mt-2.5 rounded-xl border border-black/[0.06] bg-white p-2 text-center shadow-xs">
             <div>
-              <p className="text-[10px] font-semibold uppercase text-slate2">Occupied</p>
-              <p className="text-base font-bold text-ink tabular-nums">28</p>
+              <p className="text-[9px] font-semibold uppercase text-[#86868B]">Occupied</p>
+              <p className="text-sm font-bold text-[#1D1D1F] tabular-nums">28</p>
             </div>
-            <div className="border-x border-border">
-              <p className="text-[10px] font-semibold uppercase text-slate2">Vacant</p>
-              <p className="text-base font-bold text-amber tabular-nums">4 beds</p>
+            <div className="border-x border-black/[0.06]">
+              <p className="text-[9px] font-semibold uppercase text-[#86868B]">Vacant</p>
+              <p className="text-sm font-bold text-[#D97706] tabular-nums">4 beds</p>
             </div>
             <div>
-              <p className="text-[10px] font-semibold uppercase text-slate2">Unpaid</p>
-              <p className="text-base font-bold text-coral tabular-nums">₹15.5k</p>
+              <p className="text-[9px] font-semibold uppercase text-[#86868B]">Unpaid</p>
+              <p className="text-sm font-bold text-[#E5484D] tabular-nums">₹15.5k</p>
             </div>
           </div>
 
-          {/* Attention Required Card (The Hook) */}
-          <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between border-b border-border bg-slate-50 px-3 py-2">
+          {/* Attention Required Card */}
+          <div className="mt-2.5 rounded-xl border border-black/[0.06] bg-white shadow-xs overflow-hidden">
+            <div className="flex items-center justify-between bg-red-50/60 border-b border-red-100/80 px-3 py-1.5">
               <div className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-coral animate-ping" />
-                <p className="text-[11px] font-bold uppercase tracking-wider text-ink">Attention Required</p>
+                <span className="h-1.5 w-1.5 rounded-full bg-[#E5484D] animate-ping" />
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#1D1D1F]">Attention Required</p>
               </div>
-              <span className="text-[10px] font-bold text-coral bg-coral/10 rounded px-1.5 py-0.5">2 Overdue</span>
+              <span className="text-[9px] font-bold text-[#E5484D] bg-white rounded px-1.5 py-0.5 border border-red-200">
+                2 Overdue
+              </span>
             </div>
 
-            {/* Tenant Row 1: Overdue */}
-            <div className="p-3 border-b border-border">
-              <div className="flex items-start justify-between gap-2">
+            <div className="p-3">
+              <div className="flex items-start justify-between">
                 <div>
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-xs font-bold text-ink">Rahul Sharma</p>
-                    <span className="rounded bg-coral/10 px-1 py-0.2 text-[9px] font-bold text-coral">3d overdue</span>
-                  </div>
-                  <p className="text-[11px] text-slate2 mt-0.5">Room 102 · Bed 2 · <span className="font-semibold text-ink">₹7,500</span></p>
+                  <p className="text-xs font-bold text-[#1D1D1F]">Rahul Sharma</p>
+                  <p className="text-[10px] text-[#86868B] mt-0.5">Room 102 · Bed 2 · <span className="font-semibold text-[#1D1D1F]">₹7,500</span></p>
                 </div>
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors ${samplePaid ? 'bg-leaf/10 text-leaf' : 'bg-coral/10 text-coral'}`}>
-                  {samplePaid ? 'Paid' : 'Unpaid'}
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded transition-colors ${
+                  samplePaid ? 'bg-leaf/10 text-leaf' : 'bg-red-50 text-[#E5484D]'
+                }`}>
+                  {samplePaid ? 'Paid' : '3d overdue'}
                 </span>
               </div>
 
-              {/* Action Buttons */}
+              {/* 1-Tap WhatsApp Button */}
               <div className="mt-2.5 flex items-center gap-1.5">
                 <a
                   href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Hi Rahul, rent reminder for Room 102. Monthly rent ₹7,500 is unpaid. Please pay via UPI: stayb@okicici")}`}
                   target="_blank"
                   rel="noreferrer"
                   onClick={() => trackEvent('Contact', { type: 'mockup_wa_sample' })}
-                  className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-[#25D366]/10 hover:bg-[#25D366]/20 py-1.5 text-[11px] font-bold text-[#15803D] transition-colors"
+                  className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-[#25D366]/15 hover:bg-[#25D366]/25 border border-[#25D366]/30 py-1.5 text-[10px] font-bold text-[#15803D] transition-all"
                 >
                   <MessageCircle className="h-3.5 w-3.5 text-[#25D366]" />
                   <span>WhatsApp Reminder</span>
@@ -142,85 +145,70 @@ function PhoneMockup({ onTryDemo, demoLoading }) {
                 <button
                   type="button"
                   onClick={() => setSamplePaid(v => !v)}
-                  className={`rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-all active:scale-95 ${
+                  className={`rounded-lg px-2 py-1.5 text-[10px] font-bold transition-all ${
                     samplePaid
-                      ? 'bg-leaf text-white shadow-sm'
-                      : 'border border-border bg-white text-slate2 hover:text-ink hover:bg-slate-50'
+                      ? 'bg-leaf text-white'
+                      : 'bg-[#F5F5F7] text-[#1D1D1F] border border-black/[0.08]'
                   }`}
-                  title="Click to test marking paid"
                 >
-                  {samplePaid ? '✓ Marked Paid' : 'Mark Paid'}
+                  {samplePaid ? '✓' : 'Mark'}
                 </button>
               </div>
             </div>
+          </div>
 
-            {/* Tenant Row 2: Due Today */}
-            <div className="p-3 bg-white">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-xs font-bold text-ink">Ananya Iyer</p>
-                    <span className="rounded bg-amber/10 px-1 py-0.2 text-[9px] font-bold text-amber">Due today</span>
-                  </div>
-                  <p className="text-[11px] text-slate2 mt-0.5">Room 204 · Bed 1 · <span className="font-semibold text-ink">₹8,000</span></p>
-                </div>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber/10 text-amber">
-                  Due today
-                </span>
+          {/* Vacant Bed Quick Grid */}
+          <div className="mt-2.5 rounded-xl border border-black/[0.06] bg-white p-2.5 shadow-xs">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[10px] font-bold text-[#86868B] uppercase tracking-wider">Vacant Beds (4)</p>
+              <span className="text-[9px] font-semibold text-leaf">Ready to fill</span>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <div className="rounded-lg bg-[#F5F5F7] p-1.5 border border-black/[0.04]">
+                <p className="text-[9px] text-[#86868B]">Room 101</p>
+                <p className="text-[11px] font-bold text-[#1D1D1F]">Bed 2 · ₹7.5k</p>
+              </div>
+              <div className="rounded-lg bg-[#F5F5F7] p-1.5 border border-black/[0.04]">
+                <p className="text-[9px] text-[#86868B]">Room 104</p>
+                <p className="text-[11px] font-bold text-[#1D1D1F]">Bed 1 · ₹8.0k</p>
               </div>
             </div>
           </div>
 
-          {/* Quick demo teaser pill inside mockup */}
-          <div className="rounded-xl border border-dashed border-leaf/40 bg-leaf/5 p-2.5 text-center">
-            <p className="text-[11px] font-semibold text-leaf leading-snug">
-              ⚡ Test with pre-loaded demo hostel data
-            </p>
-            <button
-              type="button"
-              onClick={onTryDemo}
-              disabled={demoLoading}
-              className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-bold text-ink underline hover:text-leaf"
-            >
-              {demoLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3 text-leaf" />}
-              Launch interactive app demo →
-            </button>
-          </div>
+          {/* Test Live Demo Bar */}
+          {onTryDemo && (
+            <div className="mt-auto pt-2">
+              <button
+                type="button"
+                onClick={onTryDemo}
+                disabled={demoLoading}
+                className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#1D1D1F] text-white py-2 text-[11px] font-semibold hover:bg-black transition-all active:scale-95 shadow-sm"
+              >
+                {demoLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3 text-leaf" />}
+                <span>Try interactive demo live</span>
+              </button>
+            </div>
+          )}
+
         </div>
 
-        {/* Bottom Home Indicator */}
-        <div className="flex justify-center pb-2 pt-1 bg-[#F8FAFC]">
-          <div className="h-1 w-28 rounded-full bg-slate-400" />
+        {/* iOS Home Indicator Bar */}
+        <div className="h-4 flex items-center justify-center shrink-0">
+          <div className="h-1 w-28 rounded-full bg-black/20" />
         </div>
-      </div>
 
-      {/* Floating Badge Behind Mockup */}
-      <div className="absolute -bottom-4 -left-4 sm:-left-6 rounded-2xl border border-border bg-white/95 p-3 shadow-xl backdrop-blur-md hidden sm:flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-leaf/10 text-leaf">
-          <CheckCircle2 className="h-5 w-5" />
-        </div>
-        <div className="text-left">
-          <p className="text-xs font-bold text-ink">UPI ID Auto-Attached</p>
-          <p className="text-[11px] text-slate2">GPay / PhonePe / Paytm</p>
-        </div>
-      </div>
-
-      <div className="absolute -top-3 -right-4 rounded-2xl border border-border bg-white/95 px-3 py-2 shadow-lg backdrop-blur-md hidden sm:flex items-center gap-2">
-        <span className="flex h-2 w-2 rounded-full bg-leaf animate-pulse" />
-        <p className="text-[11px] font-bold text-ink">Zero Excel Spreadsheets</p>
       </div>
     </div>
   );
 }
 
-// ─── Main Landing Page ───────────────────────────────────────────────────────
 export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState(null);
 
-  function handleWhatsAppClick(location = 'hero') {
-    trackEvent('Lead', { source: location });
-    window.open(BOOK_DEMO_URL, '_blank', 'noopener,noreferrer');
+  function handleWhatsAppClick(source) {
+    trackEvent('Lead', { source, destination: 'WhatsApp' });
+    window.open(BOOK_DEMO_URL, '_blank');
   }
 
   function handleDemoClick() {
@@ -230,36 +218,36 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
 
   const faqs = [
     {
-      q: 'Do my tenants need to download an app?',
-      a: 'No, not at all. Tenants receive normal WhatsApp messages or SMS reminders with payment details and your UPI ID. Only you and your staff use the NivaOps app.',
+      q: 'Do my tenants need to download any app?',
+      a: 'No. Tenants receive clear WhatsApp reminders with your name, room number, amount due, and direct UPI link. They do not need to install anything or create an account.',
     },
     {
-      q: 'How does rent collection work with UPI?',
-      a: 'You add your GPay, PhonePe, or BHIM UPI ID once in settings. When you tap "WhatsApp Reminder", NivaOps instantly composes a message with the tenant\'s exact name, room number, rent amount, and your UPI ID ready to send.',
+      q: 'How does the UPI payment work? Do you take a commission?',
+      a: 'Zero commission. The reminder contains your own GPay, PhonePe, or BHIM UPI ID. When tenants pay, the money transfers directly from their bank to yours instantly.',
     },
     {
       q: 'Will this work on my phone without downloading from the App Store?',
-      a: 'Yes! NivaOps is a Progressive Web App (PWA). You open it in Chrome or Safari, tap "Add to Home Screen", and it functions just like an app—fast, lightweight, and saves offline without hogging storage.',
+      a: 'Yes. NivaOps is a Progressive Web App (PWA). You can install it straight from Safari or Chrome to your home screen with one tap. It opens full screen with zero lag.',
     },
     {
       q: 'Can my hostel manager or caretaker use it too?',
-      a: 'Yes. On the Pro plan, you can add staff or manager logins. They can mark rent paid, assign rooms, and log complaints without seeing your personal profit margins or sensitive settings.',
+      a: 'Yes. On the Pro plan, you can invite caretakers or managers with restricted access so they can mark rent paid and assign rooms without seeing your overall financials.',
     },
     {
       q: 'How do I get my rooms and tenants added?',
-      a: 'You can add them yourself in 5 minutes, or simply send your tenant list/register to us on WhatsApp. Our team will set up your entire property for free during your trial!',
+      a: 'You can add them yourself in 5 minutes, or simply send a photo of your register or Excel file on WhatsApp. Our concierge team will set up your entire property for free.',
     },
   ];
 
   return (
-    <div className="min-h-screen bg-white text-ink font-sans antialiased selection:bg-leaf/20">
+    <div className="min-h-screen bg-white text-[#1D1D1F] font-sans antialiased selection:bg-leaf/20">
 
-      {/* ─── STICKY HEADER ───────────────────────────────────────────────────── */}
+      {/* ─── STICKY HEADER (Apple Frosted Glass) ─────────────────────────────── */}
       <header
-        className="fixed inset-x-0 top-0 z-50 border-b border-border bg-white/95 backdrop-blur-md"
+        className="fixed inset-x-0 top-0 z-50 border-b border-black/[0.06] bg-white/80 backdrop-blur-xl transition-all"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-8">
+        <div className="mx-auto flex h-14 sm:h-16 max-w-6xl items-center justify-between px-4 sm:px-8">
           
           {/* Logo */}
           <button
@@ -268,32 +256,32 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
             className="flex items-center gap-2.5 text-left"
             aria-label="NivaOps home"
           >
-            <NivaLogo size={26} />
+            <NivaLogo size={24} />
             <NivaWordmark size="base" />
           </button>
 
           {/* Desktop Nav Links */}
           <nav className="hidden items-center gap-8 md:flex">
-            <button type="button" onClick={() => scrollTo('features')} className="text-sm font-medium text-slate2 hover:text-ink transition-colors">
+            <button type="button" onClick={() => scrollTo('features')} className="text-[13px] font-medium text-[#1D1D1F]/70 hover:text-[#1D1D1F] transition-colors">
               Features
             </button>
-            <button type="button" onClick={() => scrollTo('comparison')} className="text-sm font-medium text-slate2 hover:text-ink transition-colors">
+            <button type="button" onClick={() => scrollTo('comparison')} className="text-[13px] font-medium text-[#1D1D1F]/70 hover:text-[#1D1D1F] transition-colors">
               Why NivaOps
             </button>
-            <button type="button" onClick={() => scrollTo('pricing')} className="text-sm font-medium text-slate2 hover:text-ink transition-colors">
+            <button type="button" onClick={() => scrollTo('pricing')} className="text-[13px] font-medium text-[#1D1D1F]/70 hover:text-[#1D1D1F] transition-colors">
               Pricing
             </button>
-            <button type="button" onClick={() => scrollTo('faq')} className="text-sm font-medium text-slate2 hover:text-ink transition-colors">
+            <button type="button" onClick={() => scrollTo('faq')} className="text-[13px] font-medium text-[#1D1D1F]/70 hover:text-[#1D1D1F] transition-colors">
               FAQ
             </button>
           </nav>
 
-          {/* Header Action Buttons */}
+          {/* Header Action Buttons (Apple Pill Style) */}
           <div className="hidden items-center gap-3 sm:flex">
             <button
               type="button"
               onClick={onShowAuth}
-              className="rounded-lg px-3 py-2 text-sm font-semibold text-slate2 hover:text-ink transition-colors"
+              className="px-3 py-1.5 text-xs font-semibold text-[#86868B] hover:text-[#1D1D1F] transition-colors"
             >
               Sign in
             </button>
@@ -303,9 +291,9 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
                 type="button"
                 onClick={handleDemoClick}
                 disabled={demoLoading}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-white px-3.5 py-2 text-xs font-bold text-ink hover:bg-mist transition-all active:scale-95"
+                className="inline-flex items-center gap-1.5 rounded-full border border-black/[0.1] bg-white px-4 py-1.5 text-xs font-semibold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-all active:scale-95"
               >
-                {demoLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 text-leaf" />}
+                {demoLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3 text-leaf" />}
                 Live Demo
               </button>
             )}
@@ -313,9 +301,9 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
             <button
               type="button"
               onClick={() => handleWhatsAppClick('header')}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-leaf px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-leaf/90 transition-all active:scale-95"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#1D1D1F] hover:bg-black px-4 py-1.5 text-xs font-semibold text-white shadow-xs transition-all active:scale-95"
             >
-              <MessageCircle className="h-3.5 w-3.5" />
+              <MessageCircle className="h-3.5 w-3.5 text-leaf" />
               Chat on WhatsApp
             </button>
           </div>
@@ -324,122 +312,110 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
           <button
             type="button"
             aria-label="Toggle menu"
-            className="rounded-lg p-2 text-slate2 md:hidden"
+            className="rounded-full p-2 text-[#1D1D1F]/70 hover:bg-[#F5F5F7] md:hidden transition-colors"
             onClick={() => setMobileMenuOpen(open => !open)}
           >
-            {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
 
         {/* Mobile Dropdown Nav */}
         {mobileMenuOpen && (
-          <div className="border-t border-border bg-white px-5 py-4 md:hidden animate-fade-in shadow-xl">
-            <div className="flex flex-col gap-3">
+          <div className="border-t border-black/[0.06] bg-white px-5 py-4 md:hidden animate-fade-in shadow-xl">
+            <div className="flex flex-col gap-2.5">
               <button
                 type="button"
                 onClick={() => { setMobileMenuOpen(false); scrollTo('features'); }}
-                className="py-2 text-left text-sm font-semibold text-slate2 hover:text-ink"
+                className="py-2 text-left text-sm font-semibold text-[#1D1D1F]/70 hover:text-[#1D1D1F]"
               >
                 Features
               </button>
               <button
                 type="button"
                 onClick={() => { setMobileMenuOpen(false); scrollTo('comparison'); }}
-                className="py-2 text-left text-sm font-semibold text-slate2 hover:text-ink"
+                className="py-2 text-left text-sm font-semibold text-[#1D1D1F]/70 hover:text-[#1D1D1F]"
               >
                 Why NivaOps
               </button>
               <button
                 type="button"
                 onClick={() => { setMobileMenuOpen(false); scrollTo('pricing'); }}
-                className="py-2 text-left text-sm font-semibold text-slate2 hover:text-ink"
+                className="py-2 text-left text-sm font-semibold text-[#1D1D1F]/70 hover:text-[#1D1D1F]"
               >
-                Pricing (₹799/mo)
+                Pricing (from ₹799/mo)
               </button>
               <button
                 type="button"
                 onClick={() => { setMobileMenuOpen(false); scrollTo('faq'); }}
-                className="py-2 text-left text-sm font-semibold text-slate2 hover:text-ink"
+                className="py-2 text-left text-sm font-semibold text-[#1D1D1F]/70 hover:text-[#1D1D1F]"
               >
                 FAQ
               </button>
-              <hr className="border-border my-1" />
+              <hr className="border-black/[0.06] my-1" />
               <button
                 type="button"
                 onClick={() => { setMobileMenuOpen(false); handleDemoClick(); }}
-                className="w-full flex items-center justify-center gap-2 rounded-xl border border-border bg-mist py-3 text-sm font-bold text-ink"
+                className="w-full flex items-center justify-center gap-2 rounded-full border border-black/[0.1] bg-[#F5F5F7] py-2.5 text-xs font-semibold text-[#1D1D1F]"
               >
-                <Sparkles className="h-4 w-4 text-leaf" />
+                <Sparkles className="h-3.5 w-3.5 text-leaf" />
                 Explore Live Demo
               </button>
               <button
                 type="button"
                 onClick={() => { setMobileMenuOpen(false); handleWhatsAppClick('mobile_menu'); }}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-leaf py-3 text-sm font-bold text-white shadow-md"
+                className="w-full flex items-center justify-center gap-2 rounded-full bg-[#1D1D1F] py-2.5 text-xs font-semibold text-white shadow-sm"
               >
-                <MessageCircle className="h-4 w-4" />
-                Get Started on WhatsApp
+                <MessageCircle className="h-3.5 w-3.5 text-leaf" />
+                Chat on WhatsApp
               </button>
               <button
                 type="button"
                 onClick={() => { setMobileMenuOpen(false); onShowAuth(); }}
-                className="py-2 text-center text-xs font-semibold text-slate2"
+                className="py-2 text-center text-xs font-semibold text-[#86868B]"
               >
-                Already have an account? <span className="text-ink underline">Sign in</span>
+                Already have an account? <span className="text-[#1D1D1F] underline">Sign in</span>
               </button>
             </div>
           </div>
         )}
       </header>
 
-      {/* ─── HERO SECTION ────────────────────────────────────────────────────── */}
+      {/* ─── HERO SECTION (Apple Minimalist Layout) ──────────────────────────── */}
       <section
-        className="relative overflow-hidden pb-16 sm:pb-24 sm:pt-36"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 6.75rem)' }}
+        className="relative overflow-hidden pb-16 sm:pb-24"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 6.5rem)' }}
       >
-        {/* Subtle Ambient Radial Glow */}
-        <div
-          className="pointer-events-none absolute left-1/2 top-0 h-[500px] w-[800px] -translate-x-1/2 rounded-full opacity-10 blur-3xl"
-          style={{ background: 'radial-gradient(circle, #16A34A 0%, #111827 80%, transparent 100%)' }}
-          aria-hidden="true"
-        />
-
         <div className="mx-auto max-w-6xl px-4 sm:px-8">
-          <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-8">
+          <div className="grid items-center gap-10 lg:grid-cols-12 lg:gap-8">
             
             {/* Left Column: Value Prop & CTAs */}
             <div className="text-center lg:text-left lg:col-span-7">
               
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 rounded-full border border-leaf/30 bg-leaf/10 px-3.5 py-1.5 text-xs font-bold text-leaf shadow-sm">
-                <Zap className="h-3.5 w-3.5 fill-current" />
-                Built for Indian PG & Hostel Owners
+              {/* Eyebrow Pill */}
+              <div className="inline-flex items-center gap-2 rounded-full border border-black/[0.06] bg-[#F5F5F7] px-3.5 py-1 text-xs font-medium text-[#1D1D1F] shadow-2xs">
+                <span className="h-1.5 w-1.5 rounded-full bg-leaf animate-pulse" />
+                <span>Built for Indian PG &amp; Hostel Owners</span>
               </div>
 
               {/* Main Headline */}
-              <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-ink sm:text-5xl lg:text-[54px] leading-[1.1]">
+              <h1 className="mt-5 text-4xl font-semibold tracking-[-0.03em] text-[#1D1D1F] sm:text-5xl lg:text-[56px] leading-[1.08]">
                 Run your PG without the{' '}
-                <span className="relative inline-block text-leaf">
-                  rent-day headache.
-                  <svg className="absolute -bottom-1 left-0 w-full text-leaf/30 h-2" viewBox="0 0 100 20" preserveAspectRatio="none">
-                    <path d="M0 15 Q50 0 100 15" stroke="currentColor" strokeWidth="4" fill="none" />
-                  </svg>
-                </span>
+                <span className="text-leaf">rent-day headache.</span>
               </h1>
 
               {/* Subheadline */}
-              <p className="mt-5 text-base sm:text-lg text-slate2 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                Who’s paid, who’s overdue, and which beds are free—in one glance. Send 1-tap WhatsApp rent reminders with your GPay/UPI ID.
+              <p className="mt-5 text-base sm:text-lg text-[#86868B] max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal">
+                Who’s paid, who’s overdue, and which beds are free — in one glance. Send 1-tap WhatsApp rent reminders with your GPay/UPI ID.
               </p>
 
-              {/* Primary Call to Actions */}
-              <div className="mt-8 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 sm:gap-4">
+              {/* Primary Call to Actions (Apple Pill Buttons) */}
+              <div className="mt-8 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
                 <button
                   type="button"
                   onClick={() => handleWhatsAppClick('hero_cta')}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-xl bg-leaf px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-leaf/25 hover:bg-leaf/90 transition-all active:scale-95"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-leaf px-7 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-leaf/90 transition-all active:scale-95"
                 >
-                  <MessageCircle className="h-5 w-5 fill-current" />
+                  <MessageCircle className="h-4 w-4" />
                   Get Started on WhatsApp
                   <ArrowRight className="h-4 w-4" />
                 </button>
@@ -449,7 +425,7 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
                     type="button"
                     onClick={handleDemoClick}
                     disabled={demoLoading}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-white px-6 py-3.5 text-sm font-bold text-ink shadow-sm hover:bg-mist transition-all active:scale-95"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full border border-black/[0.1] bg-[#F5F5F7] hover:bg-[#E8E8ED] px-6 py-3.5 text-sm font-semibold text-[#1D1D1F] transition-all active:scale-95"
                   >
                     {demoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-leaf" />}
                     Explore Live Demo
@@ -457,76 +433,64 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
                 )}
               </div>
 
-              {/* Trust Micro-Pills */}
-              <div className="mt-7 flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2 text-xs font-semibold text-slate2">
-                <span className="inline-flex items-center gap-1.5">
-                  <Check className="h-4 w-4 text-leaf" /> No card required
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Check className="h-4 w-4 text-leaf" /> Free setup on WhatsApp
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Check className="h-4 w-4 text-leaf" /> Works on any Android/iPhone
-                </span>
-              </div>
-
-              {/* Operational Reality Anchor */}
-              <div className="mt-8 pt-6 border-t border-border flex items-center justify-center lg:justify-start gap-3 text-left">
-                <div className="flex -space-x-2 overflow-hidden">
-                  <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-slate-200 text-slate-600 font-bold text-[10px] flex items-center justify-center">SB</div>
-                  <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-leaf/20 text-leaf font-bold text-[10px] flex items-center justify-center">BLR</div>
-                  <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-amber/20 text-amber font-bold text-[10px] flex items-center justify-center">KL</div>
+              {/* Trust Indicators */}
+              <div className="mt-8 flex flex-wrap items-center justify-center lg:justify-start gap-x-6 gap-y-2 text-xs text-[#86868B]">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-leaf" />
+                  <span>Free WhatsApp Setup</span>
                 </div>
-                <p className="text-xs text-slate2">
-                  Tested daily with real operators at <strong className="text-ink">StayB Hostels</strong> and properties across India.
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-leaf" />
+                  <span>Direct UPI Payments</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-leaf" />
+                  <span>Zero Commission</span>
+                </div>
               </div>
 
             </div>
 
-            {/* Right Column: Visual Proof (Phone Mockup) */}
+            {/* Right Column: Slender iPhone 16 Pro Mockup */}
             <div className="lg:col-span-5 flex justify-center">
               <PhoneMockup onTryDemo={handleDemoClick} demoLoading={demoLoading} />
             </div>
 
           </div>
-        </div>
-      </section>
 
-      {/* ─── TRUST & STATS BAR ───────────────────────────────────────────────── */}
-      <section className="border-y border-border bg-mist py-8">
-        <div className="mx-auto max-w-6xl px-4 sm:px-8">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 text-center">
+          {/* Metric Bar (Apple Canvas Strip) */}
+          <div className="mt-16 sm:mt-24 grid grid-cols-2 gap-3 sm:grid-cols-4 rounded-[28px] bg-[#F5F5F7] p-4 sm:p-6 text-center border border-black/[0.04]">
             <div className="p-3">
-              <p className="text-2xl sm:text-3xl font-extrabold text-ink tabular-nums">1-Tap</p>
-              <p className="text-xs font-medium text-slate2 mt-1">WhatsApp rent reminders</p>
+              <p className="text-2xl sm:text-3xl font-bold text-[#1D1D1F] tabular-nums">1-Tap</p>
+              <p className="text-xs font-medium text-[#86868B] mt-1">WhatsApp rent reminders</p>
             </div>
             <div className="p-3">
-              <p className="text-2xl sm:text-3xl font-extrabold text-leaf tabular-nums">100%</p>
-              <p className="text-xs font-medium text-slate2 mt-1">Direct to your bank/UPI</p>
+              <p className="text-2xl sm:text-3xl font-bold text-leaf tabular-nums">100%</p>
+              <p className="text-xs font-medium text-[#86868B] mt-1">Direct to your bank / UPI</p>
             </div>
             <div className="p-3">
-              <p className="text-2xl sm:text-3xl font-extrabold text-ink tabular-nums">0</p>
-              <p className="text-xs font-medium text-slate2 mt-1">Messy Excel sheets</p>
+              <p className="text-2xl sm:text-3xl font-bold text-[#1D1D1F] tabular-nums">0</p>
+              <p className="text-xs font-medium text-[#86868B] mt-1">Messy Excel sheets</p>
             </div>
             <div className="p-3">
-              <p className="text-2xl sm:text-3xl font-extrabold text-leaf tabular-nums">&lt; 5 min</p>
-              <p className="text-xs font-medium text-slate2 mt-1">Setup time for your PG</p>
+              <p className="text-2xl sm:text-3xl font-bold text-leaf tabular-nums">&lt; 5 min</p>
+              <p className="text-xs font-medium text-[#86868B] mt-1">Setup time for your PG</p>
             </div>
           </div>
+
         </div>
       </section>
 
-      {/* ─── BEFORE VS AFTER COMPARISON ──────────────────────────────────────── */}
-      <section id="comparison" className="py-20 sm:py-28 bg-white">
+      {/* ─── BEFORE VS AFTER COMPARISON (Apple Clean Layout) ─────────────────── */}
+      <section id="comparison" className="py-20 sm:py-28 bg-white border-t border-black/[0.04]">
         <div className="mx-auto max-w-5xl px-4 sm:px-8">
           
           <div className="text-center max-w-2xl mx-auto">
-            <p className="text-xs font-bold uppercase tracking-widest text-leaf">Why Operators Switch</p>
-            <h2 className="mt-3 text-3xl sm:text-4xl font-extrabold text-ink tracking-tight">
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#86868B]">Why Operators Switch</p>
+            <h2 className="mt-3 text-3xl sm:text-4xl font-semibold text-[#1D1D1F] tracking-tight">
               Stop running your business on notebooks and memory.
             </h2>
-            <p className="mt-3 text-sm text-slate2">
+            <p className="mt-3 text-sm sm:text-base text-[#86868B]">
               See what changes the moment you move your hostel to NivaOps.
             </p>
           </div>
@@ -534,41 +498,41 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
           <div className="mt-12 grid gap-6 sm:grid-cols-2">
             
             {/* The Old Way */}
-            <div className="rounded-2xl border border-coral/30 bg-coral/[0.03] p-6 sm:p-8">
-              <div className="flex items-center gap-2 text-coral font-bold text-sm uppercase tracking-wider mb-4">
-                <span className="h-2 w-2 rounded-full bg-coral" />
-                The Old Way (Notebooks & WhatsApp)
+            <div className="rounded-[28px] border border-red-100 bg-[#FFFBFB] p-6 sm:p-8">
+              <div className="flex items-center gap-2 text-[#E5484D] font-semibold text-xs uppercase tracking-wider mb-5">
+                <span className="h-2 w-2 rounded-full bg-[#E5484D]" />
+                The Old Way (Notebooks &amp; Bank SMS)
               </div>
-              <ul className="space-y-4 text-sm text-slate2">
+              <ul className="space-y-4 text-sm text-[#64748B]">
                 <li className="flex items-start gap-3">
-                  <span className="text-coral font-bold shrink-0">✕</span>
-                  <span><strong>Guessing who paid:</strong> Scrolling through 30 bank SMS and phone gallery screenshots every 5th of the month.</span>
+                  <span className="text-[#E5484D] font-bold shrink-0 mt-0.5">✕</span>
+                  <span><strong>Guessing who paid:</strong> Scrolling through 30 bank SMS and phone screenshots on the 5th of every month.</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="text-coral font-bold shrink-0">✕</span>
+                  <span className="text-[#E5484D] font-bold shrink-0 mt-0.5">✕</span>
                   <span><strong>Awkward follow-ups:</strong> Making uncomfortable phone calls or typing out "Bhaiya rent kab doge?" 40 times.</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="text-coral font-bold shrink-0">✕</span>
+                  <span className="text-[#E5484D] font-bold shrink-0 mt-0.5">✕</span>
                   <span><strong>Move-out deposit disputes:</strong> "I paid ₹10,000 deposit" vs "No you paid ₹5,000"—arguments with no signed record.</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="text-coral font-bold shrink-0">✕</span>
+                  <span className="text-[#E5484D] font-bold shrink-0 mt-0.5">✕</span>
                   <span><strong>Untracked vacancies:</strong> Beds sitting empty for weeks because you forgot which room had a free bed.</span>
                 </li>
               </ul>
             </div>
 
             {/* With NivaOps */}
-            <div className="rounded-2xl border border-leaf/40 bg-leaf/[0.03] p-6 sm:p-8 shadow-sm">
-              <div className="flex items-center gap-2 text-leaf font-bold text-sm uppercase tracking-wider mb-4">
+            <div className="rounded-[28px] border border-black/[0.06] bg-[#F5F5F7] p-6 sm:p-8 shadow-xs">
+              <div className="flex items-center gap-2 text-leaf font-semibold text-xs uppercase tracking-wider mb-5">
                 <span className="h-2 w-2 rounded-full bg-leaf" />
                 With NivaOps (Your PG in your pocket)
               </div>
-              <ul className="space-y-4 text-sm text-ink">
+              <ul className="space-y-4 text-sm text-[#1D1D1F]">
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="h-5 w-5 text-leaf shrink-0 mt-0.5" />
-                  <span><strong>One-screen visibility:</strong> Paid (Green), Due Today (Amber), Overdue (Red). Know your total collections in 2 seconds.</span>
+                  <span><strong>One-screen visibility:</strong> Paid (Green), Due Today (Amber), Overdue (Red). Know your collections in 2 seconds.</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="h-5 w-5 text-leaf shrink-0 mt-0.5" />
@@ -580,7 +544,7 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="h-5 w-5 text-leaf shrink-0 mt-0.5" />
-                  <span><strong>Live room & bed grid:</strong> See exactly which beds are occupied, vacant, or on notice period right on your phone.</span>
+                  <span><strong>Live room &amp; bed grid:</strong> See exactly which beds are occupied, vacant, or on notice period right on your phone.</span>
                 </li>
               </ul>
             </div>
@@ -591,94 +555,94 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
             <button
               type="button"
               onClick={() => handleWhatsAppClick('comparison_bottom')}
-              className="inline-flex items-center gap-2 text-sm font-bold text-leaf hover:underline"
+              className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-leaf hover:underline"
             >
-              See how easy it is to switch → Talk to our team
+              See how easy it is to switch → Talk to our team on WhatsApp
             </button>
           </div>
 
         </div>
       </section>
 
-      {/* ─── CORE FEATURES ───────────────────────────────────────────────────── */}
-      <section id="features" className="py-20 sm:py-28 bg-mist border-y border-border">
+      {/* ─── CORE FEATURES (Apple Bento Grid) ─────────────────────────────────── */}
+      <section id="features" className="py-20 sm:py-28 bg-[#F5F5F7]">
         <div className="mx-auto max-w-6xl px-4 sm:px-8">
           
           <div className="max-w-2xl">
-            <p className="text-xs font-bold uppercase tracking-widest text-leaf">Core Features</p>
-            <h2 className="mt-3 text-3xl sm:text-4xl font-extrabold text-ink tracking-tight">
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#86868B]">Features</p>
+            <h2 className="mt-3 text-3xl sm:text-4xl font-semibold text-[#1D1D1F] tracking-tight">
               Built around how you actually run your property.
             </h2>
-            <p className="mt-3 text-sm text-slate2">
+            <p className="mt-3 text-sm text-[#86868B]">
               Every feature solves an everyday task that currently wastes your time.
             </p>
           </div>
 
-          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             
             {/* Feature 1 */}
-            <div className="rounded-2xl border border-border bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-leaf/10 text-leaf mb-4">
+            <div className="rounded-[24px] border border-black/[0.04] bg-white p-7 shadow-xs hover:shadow-sm transition-shadow">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-leaf/10 text-leaf mb-4">
                 <MessageCircle className="h-5 w-5" />
               </div>
-              <h3 className="text-base font-bold text-ink">1-Tap WhatsApp Reminders</h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate2 leading-relaxed">
-                Tapping "Remind" opens WhatsApp with the exact tenant name, room number, amount due, and your GPay/UPI link. No manual copy-pasting.
+              <h3 className="text-base font-semibold text-[#1D1D1F]">1-Tap WhatsApp Reminders</h3>
+              <p className="mt-2 text-xs sm:text-sm text-[#86868B] leading-relaxed font-normal">
+                Tapping "Remind" opens WhatsApp with the exact tenant name, room number, amount due, and your GPay/UPI link.
               </p>
             </div>
 
             {/* Feature 2 */}
-            <div className="rounded-2xl border border-border bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-leaf/10 text-leaf mb-4">
+            <div className="rounded-[24px] border border-black/[0.04] bg-white p-7 shadow-xs hover:shadow-sm transition-shadow">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-leaf/10 text-leaf mb-4">
                 <BedDouble className="h-5 w-5" />
               </div>
-              <h3 className="text-base font-bold text-ink">Bed-Level Occupancy Grid</h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate2 leading-relaxed">
-                Organize rooms by floor (Ground, 1st, 2nd). See bed-level vacancy dots so you can place inquiries into available beds instantly.
+              <h3 className="text-base font-semibold text-[#1D1D1F]">Bed-Level Occupancy Grid</h3>
+              <p className="mt-2 text-xs sm:text-sm text-[#86868B] leading-relaxed font-normal">
+                Organize rooms by floor (Ground, 1st, 2nd). See vacant beds instantly so you can answer incoming calls right away.
               </p>
             </div>
 
             {/* Feature 3 */}
-            <div className="rounded-2xl border border-border bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-leaf/10 text-leaf mb-4">
+            <div className="rounded-[24px] border border-black/[0.04] bg-white p-7 shadow-xs hover:shadow-sm transition-shadow">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-leaf/10 text-leaf mb-4">
                 <ShieldCheck className="h-5 w-5" />
               </div>
-              <h3 className="text-base font-bold text-ink">Security Deposit Settlement</h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate2 leading-relaxed">
-                Track held deposits, record move-out notice dates, and log deductions with explanations (e.g. food adjustments or painting repairs).
+              <h3 className="text-base font-semibold text-[#1D1D1F]">Security Deposit Settlement</h3>
+              <p className="mt-2 text-xs sm:text-sm text-[#86868B] leading-relaxed font-normal">
+                Track held deposits, record move-out notice dates, and log deductions with clear explanations for zero checkout disputes.
               </p>
             </div>
 
             {/* Feature 4 */}
-            <div className="rounded-2xl border border-border bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-leaf/10 text-leaf mb-4">
+            <div className="rounded-[24px] border border-black/[0.04] bg-white p-7 shadow-xs hover:shadow-sm transition-shadow">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-leaf/10 text-leaf mb-4">
                 <UserCheck className="h-5 w-5" />
               </div>
-              <h3 className="text-base font-bold text-ink">Day Guests with ID Camera</h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate2 leading-relaxed">
-                Capture high-margin daily guests with day rate and total days. Snap and save their Aadhaar/ID photo directly from your phone camera.
+              <h3 className="text-base font-semibold text-[#1D1D1F]">Day Guests with ID Camera</h3>
+              <p className="mt-2 text-xs sm:text-sm text-[#86868B] leading-relaxed font-normal">
+                Capture high-margin daily guests with day rates and days count. Snap and save their Aadhaar ID photo straight from your phone.
               </p>
             </div>
 
             {/* Feature 5 */}
-            <div className="rounded-2xl border border-border bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-leaf/10 text-leaf mb-4">
+            <div className="rounded-[24px] border border-black/[0.04] bg-white p-7 shadow-xs hover:shadow-sm transition-shadow">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-leaf/10 text-leaf mb-4">
                 <TrendingUp className="h-5 w-5" />
               </div>
-              <h3 className="text-base font-bold text-ink">Real Profit & Loss (P&L)</h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate2 leading-relaxed">
-                Know what your hostel actually earned this month. Deducts building rent, electricity, cook salaries, and repairs from real collected income.
+              <h3 className="text-base font-semibold text-[#1D1D1F]">Real Profit &amp; Loss (P&amp;L)</h3>
+              <p className="mt-2 text-xs sm:text-sm text-[#86868B] leading-relaxed font-normal">
+                Know what your hostel actually earned. Deducts building rent, electricity, cook salaries, and repairs from collected income.
               </p>
             </div>
 
             {/* Feature 6 */}
-            <div className="rounded-2xl border border-border bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-leaf/10 text-leaf mb-4">
+            <div className="rounded-[24px] border border-black/[0.04] bg-white p-7 shadow-xs hover:shadow-sm transition-shadow">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-leaf/10 text-leaf mb-4">
                 <Smartphone className="h-5 w-5" />
               </div>
-              <h3 className="text-base font-bold text-ink">Installs on Home Screen</h3>
-              <p className="mt-2 text-xs sm:text-sm text-slate2 leading-relaxed">
-                Works like a native app on iOS and Android. No App Store clutter, ultra-fast load times, and minimal mobile data usage.
+              <h3 className="text-base font-semibold text-[#1D1D1F]">Installs on Home Screen</h3>
+              <p className="mt-2 text-xs sm:text-sm text-[#86868B] leading-relaxed font-normal">
+                Progressive Web App (PWA) with zero App Store downloads. Opens instantly from your home screen just like a native app.
               </p>
             </div>
 
@@ -686,16 +650,16 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
         </div>
       </section>
 
-      {/* ─── PRICING ─────────────────────────────────────────────────────────── */}
-      <section id="pricing" className="py-20 sm:py-28 bg-white">
+      {/* ─── PRICING (Apple Style) ───────────────────────────────────────────── */}
+      <section id="pricing" className="py-20 sm:py-28 bg-white border-t border-black/[0.04]">
         <div className="mx-auto max-w-5xl px-4 sm:px-8">
           
           <div className="text-center max-w-xl mx-auto">
-            <p className="text-xs font-bold uppercase tracking-widest text-leaf">Transparent Pricing</p>
-            <h2 className="mt-3 text-3xl sm:text-4xl font-extrabold text-ink tracking-tight">
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#86868B]">Pricing</p>
+            <h2 className="mt-3 text-3xl sm:text-4xl font-semibold text-[#1D1D1F] tracking-tight">
               Less than the rent of half a bed.
             </h2>
-            <p className="mt-3 text-sm text-slate2">
+            <p className="mt-3 text-sm text-[#86868B]">
               No setup fees. No long-term lock-in. Cancel anytime.
             </p>
           </div>
@@ -703,25 +667,25 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
           <div className="mt-12 grid gap-6 sm:grid-cols-2 max-w-4xl mx-auto">
             
             {/* Starter Plan */}
-            <div className="rounded-3xl border border-border bg-white p-8 flex flex-col justify-between shadow-sm">
+            <div className="rounded-[28px] border border-black/[0.06] bg-[#F5F5F7] p-8 flex flex-col justify-between shadow-xs">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate2">Starter</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#86868B]">Starter</p>
                 <div className="mt-4 flex items-baseline gap-1">
-                  <span className="text-4xl sm:text-5xl font-extrabold text-ink tabular-nums">₹799</span>
-                  <span className="text-sm text-slate2 font-semibold">/month</span>
+                  <span className="text-4xl sm:text-5xl font-bold text-[#1D1D1F] tabular-nums">₹799</span>
+                  <span className="text-sm text-[#86868B] font-medium">/month</span>
                 </div>
-                <p className="mt-2 text-xs text-slate2">Best for single-building hostels & PGs.</p>
+                <p className="mt-2 text-xs text-[#86868B]">Best for single-building hostels &amp; PGs.</p>
 
-                <hr className="my-6 border-border" />
+                <hr className="my-6 border-black/[0.06]" />
 
-                <ul className="space-y-3 text-xs sm:text-sm text-ink">
+                <ul className="space-y-3 text-xs sm:text-sm text-[#1D1D1F]">
                   <li className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 text-leaf shrink-0" />
                     <span>Up to 25 beds · 1 property</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 text-leaf shrink-0" />
-                    <span>Unlimited tenant & bed tracking</span>
+                    <span>Unlimited tenant &amp; bed tracking</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 text-leaf shrink-0" />
@@ -729,7 +693,7 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 text-leaf shrink-0" />
-                    <span>Security deposits & expense tracking</span>
+                    <span>Security deposits &amp; expense tracking</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 text-leaf shrink-0" />
@@ -742,7 +706,7 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
                 <button
                   type="button"
                   onClick={() => handleWhatsAppClick('pricing_starter')}
-                  className="w-full rounded-xl border border-border bg-mist hover:bg-border py-3 text-sm font-bold text-ink transition-all active:scale-95"
+                  className="w-full rounded-full border border-black/[0.1] bg-white hover:bg-[#E8E8ED] py-3 text-xs font-semibold text-[#1D1D1F] transition-all active:scale-95 shadow-2xs"
                 >
                   Start 14-Day Free Trial
                 </button>
@@ -750,16 +714,16 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
             </div>
 
             {/* Pro Plan */}
-            <div className="relative rounded-3xl bg-[#0F172A] text-white p-8 flex flex-col justify-between shadow-xl ring-2 ring-leaf">
-              <span className="absolute -top-3 right-8 rounded-full bg-leaf px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-white shadow-md">
+            <div className="relative rounded-[28px] bg-[#1D1D1F] text-white p-8 flex flex-col justify-between shadow-lg">
+              <span className="absolute -top-3 right-8 rounded-full bg-leaf px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-xs">
                 Most Popular
               </span>
 
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-white/50">Pro</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-white/50">Pro</p>
                 <div className="mt-4 flex items-baseline gap-1">
-                  <span className="text-4xl sm:text-5xl font-extrabold text-white tabular-nums">₹1,499</span>
-                  <span className="text-sm text-white/50 font-semibold">/month</span>
+                  <span className="text-4xl sm:text-5xl font-bold text-white tabular-nums">₹1,499</span>
+                  <span className="text-sm text-white/50 font-medium">/month</span>
                 </div>
                 <p className="mt-2 text-xs text-white/60">For growing operators and multi-branch PGs.</p>
 
@@ -772,11 +736,11 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 text-leaf shrink-0" />
-                    <span>Full Profit & Loss (P&L) & Cashflow ledger</span>
+                    <span>Full Profit &amp; Loss (P&amp;L) &amp; Cashflow ledger</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 text-leaf shrink-0" />
-                    <span>Staff logins (Manager & Caretaker access)</span>
+                    <span>Staff logins (Manager &amp; Caretaker access)</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 text-leaf shrink-0" />
@@ -784,7 +748,7 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 text-leaf shrink-0" />
-                    <span>Priority WhatsApp support & data import</span>
+                    <span>Priority WhatsApp support &amp; data import</span>
                   </li>
                 </ul>
               </div>
@@ -793,7 +757,7 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
                 <button
                   type="button"
                   onClick={() => handleWhatsAppClick('pricing_pro')}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-leaf hover:bg-leaf/90 py-3 text-sm font-bold text-white shadow-md transition-all active:scale-95"
+                  className="w-full flex items-center justify-center gap-2 rounded-full bg-leaf hover:bg-leaf/90 py-3 text-xs font-semibold text-white shadow-sm transition-all active:scale-95"
                 >
                   <MessageCircle className="h-4 w-4" />
                   Get Pro via WhatsApp
@@ -804,42 +768,42 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
           </div>
 
           {/* Concierge Setup Callout */}
-          <div className="mt-10 rounded-2xl bg-mist border border-border p-6 text-center max-w-2xl mx-auto">
-            <p className="text-sm font-bold text-ink">🤝 Free WhatsApp Concierge Setup</p>
-            <p className="text-xs text-slate2 mt-1">
-              Too busy to enter all your rooms and beds? Just send us a photo of your register or Excel file on WhatsApp. We'll set up your property for you before you start.
+          <div className="mt-10 rounded-[24px] bg-[#F5F5F7] border border-black/[0.04] p-6 text-center max-w-2xl mx-auto">
+            <p className="text-sm font-semibold text-[#1D1D1F]">🤝 Free WhatsApp Concierge Setup</p>
+            <p className="text-xs text-[#86868B] mt-1 leading-relaxed">
+              Too busy to enter all your rooms and beds? Just send a photo of your register or Excel file on WhatsApp. We'll set up your property for you before you start.
             </p>
           </div>
 
         </div>
       </section>
 
-      {/* ─── FAQ SECTION ─────────────────────────────────────────────────────── */}
-      <section id="faq" className="py-20 sm:py-28 bg-mist border-t border-border">
+      {/* ─── FAQ SECTION (Apple Accordion) ───────────────────────────────────── */}
+      <section id="faq" className="py-20 sm:py-28 bg-[#F5F5F7] border-t border-black/[0.04]">
         <div className="mx-auto max-w-3xl px-4 sm:px-8">
           
           <div className="text-center">
-            <p className="text-xs font-bold uppercase tracking-widest text-leaf">Questions & Answers</p>
-            <h2 className="mt-3 text-3xl font-extrabold text-ink tracking-tight">
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#86868B]">Questions &amp; Answers</p>
+            <h2 className="mt-3 text-3xl font-semibold text-[#1D1D1F] tracking-tight">
               Frequently Asked Questions
             </h2>
           </div>
 
-          <div className="mt-10 space-y-3">
+          <div className="mt-10 space-y-2.5">
             {faqs.map((faq, index) => {
               const isOpen = activeFaq === index;
               return (
-                <div key={index} className="rounded-xl border border-border bg-white overflow-hidden shadow-sm">
+                <div key={index} className="rounded-[20px] border border-black/[0.04] bg-white overflow-hidden shadow-2xs">
                   <button
                     type="button"
                     onClick={() => setActiveFaq(isOpen ? null : index)}
-                    className="w-full flex items-center justify-between p-4 sm:p-5 text-left font-bold text-sm text-ink hover:text-leaf transition-colors"
+                    className="w-full flex items-center justify-between p-4 sm:p-5 text-left font-semibold text-sm text-[#1D1D1F] hover:text-leaf transition-colors"
                   >
                     <span>{faq.q}</span>
-                    <ChevronDown className={`h-4 w-4 text-slate2 transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`h-4 w-4 text-[#86868B] transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
                   </button>
                   {isOpen && (
-                    <div className="px-4 pb-5 sm:px-5 text-xs sm:text-sm text-slate2 leading-relaxed border-t border-border pt-3">
+                    <div className="px-4 pb-5 sm:px-5 text-xs sm:text-sm text-[#86868B] leading-relaxed border-t border-black/[0.04] pt-3">
                       {faq.a}
                     </div>
                   )}
@@ -851,8 +815,8 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
         </div>
       </section>
 
-      {/* ─── FINAL CTA SECTION ───────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-[#0F172A] py-20 sm:py-28 text-center text-white">
+      {/* ─── FINAL CTA SECTION (Apple Clean Dark) ────────────────────────────── */}
+      <section className="relative overflow-hidden bg-[#1D1D1F] py-20 sm:py-28 text-center text-white">
         <div
           className="pointer-events-none absolute left-1/2 top-1/2 h-[400px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-15 blur-3xl"
           style={{ background: 'radial-gradient(circle, #16A34A 0%, transparent 70%)' }}
@@ -860,8 +824,8 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
         />
 
         <div className="relative mx-auto max-w-2xl px-4 sm:px-8">
-          <p className="text-xs font-bold uppercase tracking-widest text-leaf">Start Today</p>
-          <h2 className="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight">
+          <p className="text-xs font-semibold uppercase tracking-widest text-leaf">Start Today</p>
+          <h2 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight">
             Stop losing rent. Start collecting on time.
           </h2>
           <p className="mt-4 text-sm sm:text-base text-white/60 max-w-lg mx-auto leading-relaxed">
@@ -872,9 +836,9 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
             <button
               type="button"
               onClick={() => handleWhatsAppClick('final_cta')}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-leaf px-7 py-3.5 text-sm font-bold text-white shadow-lg hover:bg-leaf/90 transition-all active:scale-95"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-leaf px-7 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-leaf/90 transition-all active:scale-95"
             >
-              <MessageCircle className="h-5 w-5" />
+              <MessageCircle className="h-4 w-4" />
               Chat on WhatsApp to Start
             </button>
 
@@ -883,7 +847,7 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
                 type="button"
                 onClick={handleDemoClick}
                 disabled={demoLoading}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 px-6 py-3.5 text-sm font-bold text-white transition-all active:scale-95"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 hover:bg-white/20 px-6 py-3.5 text-sm font-semibold text-white transition-all active:scale-95"
               >
                 {demoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-leaf" />}
                 Explore Live Demo
@@ -893,33 +857,33 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
         </div>
       </section>
 
-      {/* ─── FOOTER ──────────────────────────────────────────────────────────── */}
+      {/* ─── FOOTER (Apple Minimalist) ───────────────────────────────────────── */}
       <footer
-        className="border-t border-border bg-[#0B0F19] pt-8 text-white/60 text-xs"
+        className="border-t border-black/[0.06] bg-[#F5F5F7] pt-8 text-[#86868B] text-xs"
         style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 16px) + 5rem)' }}
       >
         <div className="mx-auto flex max-w-6xl flex-col sm:flex-row items-center justify-between gap-4 px-4 sm:px-8">
           <div className="flex items-center gap-2">
-            <NivaLogo size={20} />
-            <span className="font-bold text-white">NivaOps</span>
-            <span className="text-white/40">· The PG Management System</span>
+            <NivaLogo size={18} />
+            <span className="font-semibold text-[#1D1D1F]">NivaOps</span>
+            <span className="text-[#86868B]">· The PG Management System</span>
           </div>
 
-          <p className="text-center sm:text-right text-white/40">
-            © {new Date().getFullYear()} NivaOps. Built for Indian PG & Hostel Operators.
+          <p className="text-center sm:text-right text-[#86868B]">
+            © {new Date().getFullYear()} NivaOps. Built for Indian PG &amp; Hostel Operators.
           </p>
         </div>
       </footer>
 
-      {/* ─── FLOATING MOBILE QUICK ACTION BAR ─────────────────────────────────── */}
+      {/* ─── FLOATING MOBILE QUICK ACTION BAR (Frosted Pill) ─────────────────── */}
       <div
-        className="fixed bottom-0 inset-x-0 z-40 sm:hidden border-t border-border bg-white/95 backdrop-blur-md px-4 pt-2.5 flex items-center gap-2 shadow-2xl"
+        className="fixed bottom-0 inset-x-0 z-40 sm:hidden border-t border-black/[0.06] bg-white/80 backdrop-blur-xl px-4 pt-2.5 flex items-center gap-2 shadow-lg"
         style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 10px) + 0.5rem)' }}
       >
         <button
           type="button"
           onClick={() => handleWhatsAppClick('mobile_sticky_bar')}
-          className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-leaf py-3 text-xs font-bold text-white shadow-md active:scale-95 transition-all"
+          className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-leaf py-2.5 text-xs font-semibold text-white shadow-xs active:scale-95 transition-all"
         >
           <MessageCircle className="h-4 w-4" />
           Chat on WhatsApp
@@ -929,7 +893,7 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
             type="button"
             onClick={handleDemoClick}
             disabled={demoLoading}
-            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-border bg-mist py-3 text-xs font-bold text-ink active:scale-95 transition-all"
+            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full border border-black/[0.1] bg-[#F5F5F7] py-2.5 text-xs font-semibold text-[#1D1D1F] active:scale-95 transition-all"
           >
             {demoLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 text-leaf" />}
             Live Demo
