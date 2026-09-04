@@ -71,7 +71,7 @@ export function fmt(value) {
 
 export function Label({ children, className = '' }) {
   return (
-    <span className={`text-2xs font-semibold uppercase tracking-widest text-slate2 ${className}`}>
+    <span className={`text-[11px] font-semibold uppercase tracking-[0.06em] text-slate2 ${className}`}>
       {children}
     </span>
   );
@@ -82,7 +82,7 @@ export function Label({ children, className = '' }) {
 
 export function Card({ children, className = '' }) {
   return (
-    <div className={`rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow duration-200 border border-border ${className}`}>
+    <div className={`rounded-2xl bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)] hover:shadow-[0_4px_16px_rgba(15,23,42,0.06)] transition-all duration-200 border border-black/[0.06] ${className}`}>
       {children}
     </div>
   );
@@ -93,7 +93,7 @@ export function Card({ children, className = '' }) {
 
 export function SectionHeader({ title, action }) {
   return (
-    <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-border">
+    <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-black/[0.06]">
       <Label>{title}</Label>
       {action}
     </div>
@@ -106,24 +106,24 @@ export function SectionHeader({ title, action }) {
 
 export function Btn({ children, className = '', variant = 'ghost', size = 'md', ...props }) {
   const variants = {
-    primary:        'bg-green hover:bg-green-hover active:scale-[0.98] text-white font-semibold text-sm px-5 py-2.5 rounded-lg transition-all duration-150',
-    secondary:      'bg-white hover:bg-light border border-border text-charcoal font-semibold text-sm px-5 py-2.5 rounded-lg transition-all duration-150',
-    ghost:          'bg-transparent hover:bg-light text-charcoal font-medium text-sm px-5 py-2.5 rounded-lg transition-all duration-150',
-    destructive:    'bg-error/10 hover:bg-error/20 text-error border border-error/20 font-semibold text-sm px-5 py-2.5 rounded-lg transition-all duration-150',
+    primary:        'bg-green hover:bg-green-hover text-white font-semibold shadow-sm transition-all duration-150',
+    secondary:      'bg-[#F5F5F7] hover:bg-black/[0.05] border border-black/[0.08] text-ink font-semibold transition-all duration-150',
+    ghost:          'bg-transparent hover:bg-black/[0.04] text-slate2 hover:text-ink font-medium transition-all duration-150',
+    destructive:    'bg-coral/10 hover:bg-coral/20 text-coral border border-coral/20 font-semibold transition-all duration-150',
     danger:         'text-coral hover:bg-coral/10',
     success:        'text-leaf hover:bg-leaf/10',
-    'filled-success': 'bg-leaf text-white hover:bg-leaf/90',
+    'filled-success': 'bg-leaf text-white hover:bg-leaf/90 shadow-sm',
   };
   const sizes = {
-    sm:   'px-2.5 py-1.5 text-xs',
-    md:   'px-3 py-2 text-sm',
-    lg:   'px-4 py-2.5 text-sm',
-    icon: 'p-2.5',   // 40px effective tap target — minimum for mobile
+    sm:   'px-3 py-1.5 text-xs rounded-lg',
+    md:   'px-4 py-2 text-sm rounded-xl',
+    lg:   'px-5 py-2.5 text-sm rounded-xl',
+    icon: 'p-2.5 rounded-xl',   // 40px effective tap target — minimum for mobile
   };
   return (
     <button
       type="button"
-      className={`inline-flex items-center justify-center gap-1.5 rounded-lg font-semibold transition-all active:scale-95 ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 font-semibold transition-all active:scale-95 ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
       {children}
@@ -176,10 +176,10 @@ export function VacateModal({ tenant, onConfirm, onCancel, saving }) {
   // would render squeezed inside the card instead of full-screen.
   return createPortal(
     <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onCancel} />
-      <div className="relative w-full sm:max-w-sm bg-white rounded-t-2xl sm:rounded-2xl shadow-xl overflow-hidden">
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-md" onClick={onCancel} />
+      <div className="relative w-full sm:max-w-sm bg-white rounded-t-[28px] sm:rounded-[24px] border border-black/[0.06] shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-black/[0.06]">
           <div>
             <h2 className="font-semibold text-ink">Vacate Tenant</h2>
             <p className="text-xs text-slate2 mt-0.5">{tenant.name} · Room {tenant.roomNumber} Bed {tenant.bedNumber}</p>
@@ -273,24 +273,24 @@ export function VacateModal({ tenant, onConfirm, onCancel, saving }) {
 
 export function StatusBadge({ status, label }) {
   const styles = {
-    paid:     'bg-success/10 text-success border border-success/20',
-    unpaid:   'bg-error/10 text-error border border-error/20',
-    vacant:   'bg-slate/10 text-slate border border-slate/20',
-    full:     'bg-success/10 text-success border border-success/20',
-    empty:    'bg-slate/10 text-slate border border-slate/20',
-    partial:  'bg-warning/10 text-warning border border-warning/20',
-    free:     'bg-green-light text-green border border-green/20',
-    active:   'bg-green-light text-green border border-green/20',
-    overdue:  'bg-error/10 text-error border border-error/20',
-    pending:  'bg-warning/10 text-warning border border-warning/20',
-    occupied: 'bg-midnight/10 text-midnight border border-midnight/20',
+    paid:     'bg-leaf/10 text-leaf border border-leaf/20',
+    unpaid:   'bg-coral/10 text-coral border border-coral/20',
+    vacant:   'bg-black/[0.04] text-slate2 border border-black/[0.06]',
+    full:     'bg-leaf/10 text-leaf border border-leaf/20',
+    empty:    'bg-black/[0.04] text-slate2 border border-black/[0.06]',
+    partial:  'bg-amber/10 text-amber border border-amber/20',
+    free:     'bg-leaf/10 text-leaf border border-leaf/20',
+    active:   'bg-leaf/10 text-leaf border border-leaf/20',
+    overdue:  'bg-coral/10 text-coral border border-coral/20',
+    pending:  'bg-amber/10 text-amber border border-amber/20',
+    occupied: 'bg-black/[0.06] text-ink border border-black/[0.08]',
   };
   const defaultLabels = {
     paid: 'Paid', unpaid: 'Unpaid', vacant: 'Vacant',
     full: 'Full', empty: 'Empty', partial: 'Partial', free: 'Free',
   };
   return (
-    <span className={`inline-flex items-center rounded px-2 py-0.5 text-2xs font-semibold shrink-0 ${styles[status] ?? 'bg-surface text-slate border border-slate/20'}`}>
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium tracking-wide shrink-0 ${styles[status] ?? 'bg-black/[0.04] text-slate2 border border-black/[0.06]'}`}>
       {label ?? defaultLabels[status] ?? status}
     </span>
   );
@@ -327,7 +327,7 @@ export function WhatsAppLink({ name, phone, roomNumber, bedNumber, rent, label, 
       target="_blank"
       rel="noreferrer"
       title="WhatsApp reminder"
-      className={`inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#25D366]/10 text-[#15803D] border border-[#25D366]/25 hover:bg-[#25D366]/20 transition-all active:scale-95 ${label ? 'px-2.5 py-1.5 text-xs font-bold' : 'p-2'} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-full bg-[#25D366]/10 text-[#15803D] border border-[#25D366]/25 hover:bg-[#25D366]/20 transition-all active:scale-95 ${label ? 'px-3 py-1.5 text-xs font-semibold' : 'p-2'} ${className}`}
     >
       <MessageCircle className="h-4 w-4 shrink-0 text-[#25D366]" />
       {label && <span>{label}</span>}
@@ -399,9 +399,9 @@ export function PaymentLinkBtn({ propertyId, tenantId, phone, name, label, class
       onClick={handle}
       disabled={busy}
       title={link ? 'Tap to copy payment link' : failed ? 'Could not generate link — try again' : 'Generate Razorpay payment link'}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-lg transition-colors ${
-        link ? 'bg-leaf/10 text-leaf hover:bg-leaf/20' : failed ? 'text-coral hover:bg-coral/10' : 'text-slate2 hover:bg-mist hover:text-ink'
-      } ${label ? 'px-2.5 py-2 text-xs font-semibold' : 'p-2.5'} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-full transition-all active:scale-95 ${
+        link ? 'bg-leaf/10 text-leaf hover:bg-leaf/20 border border-leaf/20' : failed ? 'text-coral hover:bg-coral/10' : 'bg-black/[0.04] text-slate2 hover:bg-black/[0.08] hover:text-ink border border-black/[0.06]'
+      } ${label ? 'px-3 py-1.5 text-xs font-semibold' : 'p-2.5'} ${className}`}
     >
       {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
       {label && <span>{copied ? 'Copied!' : link ? 'Copy link' : failed ? 'Retry' : label}</span>}
@@ -439,7 +439,7 @@ export function StatCard({ label, value, sub, color = 'text-ink' }) {
   return (
     <Card className="p-4">
       <Label>{label}</Label>
-      <p className={`mt-1.5 text-xl font-bold tabular-nums ${color}`}>{value}</p>
+      <p className={`mt-1.5 text-xl font-bold tabular-nums tracking-tight ${color}`}>{value}</p>
       {sub && <p className="mt-0.5 text-xs text-slate2">{sub}</p>}
     </Card>
   );
@@ -466,11 +466,11 @@ export function EmptyState({ icon: Icon, title, body, action }) {
 export function StatStrip({ stats }) {
   return (
     <Card className="overflow-hidden">
-      <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-px bg-black/[0.06] sm:grid-cols-4">
         {stats.map(s => (
           <div key={s.label} className="bg-white px-4 py-4">
             <Label>{s.label}</Label>
-            <p className={`mt-1.5 text-xl font-bold tabular-nums ${s.color ?? 'text-ink'}`}>{s.value}</p>
+            <p className={`mt-1.5 text-xl font-bold tabular-nums tracking-tight ${s.color ?? 'text-ink'}`}>{s.value}</p>
             {s.sub && <p className="mt-0.5 text-xs text-slate2">{s.sub}</p>}
           </div>
         ))}
@@ -486,22 +486,22 @@ export function StatStrip({ stats }) {
 // [{ label, value, sub?, tint? }] where tint is 'neutral' | 'green' | 'amber' | 'coral'.
 
 const HERO_TINTS = {
-  neutral: { bg: 'bg-white/[0.06]', text: 'text-white', sub: 'text-white/40' },
-  green:   { bg: 'bg-leaf/[0.18]',  text: 'text-leaf',  sub: 'text-leaf/60' },
-  amber:   { bg: 'bg-amber/[0.14]', text: 'text-amber', sub: 'text-amber/60' },
-  coral:   { bg: 'bg-coral/[0.14]', text: 'text-coral', sub: 'text-coral/60' },
+  neutral: { bg: 'bg-white/[0.06]', text: 'text-white', sub: 'text-white/50' },
+  green:   { bg: 'bg-leaf/[0.20]',  text: 'text-[#4ADE80]',  sub: 'text-[#4ADE80]/70' },
+  amber:   { bg: 'bg-amber/[0.18]', text: 'text-[#FCD34D]', sub: 'text-[#FCD34D]/70' },
+  coral:   { bg: 'bg-coral/[0.18]', text: 'text-[#FCA5A5]', sub: 'text-[#FCA5A5]/70' },
 };
 
 export function HeroStatStrip({ title = 'Today', stats }) {
   return (
-    <div className="rounded-2xl bg-ink p-5">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/30 mb-4">{title}</p>
+    <div className="rounded-2xl bg-[#16181D] border border-white/10 p-5 shadow-[0_4px_24px_rgba(0,0,0,0.12)]">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/40 mb-4">{title}</p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {stats.map(s => {
           const t = HERO_TINTS[s.tint ?? 'neutral'];
           return (
-            <div key={s.label} className={`rounded-xl p-4 ${t.bg}`}>
-              <p className={`text-[11px] mb-1.5 ${t.sub}`}>{s.label}</p>
+            <div key={s.label} className={`rounded-xl p-4 ${t.bg} border border-white/[0.05]`}>
+              <p className={`text-[11px] font-medium mb-1.5 ${t.sub}`}>{s.label}</p>
               <p className={`text-2xl font-bold tabular-nums tracking-tight ${t.text}`}>{s.value}</p>
               {s.sub && <p className={`text-[11px] mt-0.5 ${t.sub}`}>{s.sub}</p>}
             </div>
@@ -592,48 +592,48 @@ export function CollectModal({ record, onConfirm, onCancel }) {
   const deduction = record.amount - numAmount;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/50 px-4" style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}>
-      <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
-        <div className="px-5 pt-5 pb-4">
-          <h3 className="font-semibold text-ink">Record Payment</h3>
-          <p className="text-sm text-slate2 mt-0.5">{record.name} · Room {record.roomNumber} · Bed {record.bedNumber}</p>
+    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-md px-4" style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}>
+      <div className="w-full max-w-sm rounded-t-[28px] sm:rounded-[24px] bg-white border border-black/[0.06] shadow-2xl overflow-hidden">
+        <div className="px-6 pt-6 pb-5">
+          <h3 className="font-semibold text-ink text-base">Record Payment</h3>
+          <p className="text-xs text-slate2 mt-0.5">{record.name} · Room {record.roomNumber} · Bed {record.bedNumber}</p>
 
-          <div className="mt-4 flex items-center justify-between rounded-lg bg-mist px-3 py-2.5">
+          <div className="mt-4 flex items-center justify-between rounded-xl bg-[#F5F5F7] px-3.5 py-2.5 border border-black/[0.04]">
             <Label>Standard Rent</Label>
             <span className="text-sm font-bold text-ink tabular-nums">{fmt(record.amount)}</span>
           </div>
 
-          <label className="mt-3 block">
+          <label className="mt-3.5 block">
             <Label>Amount Collected</Label>
             <MoneyInput value={amount} onChange={setAmount} min={0} className="mt-1.5" />
           </label>
 
           {deduction > 0 && (
-            <div className="mt-2 flex items-center justify-between rounded-lg border border-coral/20 bg-coral/5 px-3 py-2">
+            <div className="mt-2.5 flex items-center justify-between rounded-xl border border-coral/20 bg-coral/5 px-3.5 py-2">
               <span className="text-xs text-slate2">Deduction</span>
               <span className="text-sm font-bold text-coral tabular-nums">{fmt(deduction)}</span>
             </div>
           )}
 
           {deduction > 0 && (
-            <label className="mt-3 block">
+            <label className="mt-3.5 block">
               <Label>Reason <span className="font-normal text-slate2">(optional)</span></Label>
               <div className="relative mt-1.5">
                 <select
                   value={reason}
                   onChange={e => setReason(e.target.value)}
-                  className="w-full appearance-none rounded-lg border border-border bg-white px-3 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-green"
+                  className="w-full appearance-none rounded-xl border border-border bg-white px-3.5 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-green"
                 >
                   <option value="">Select reason…</option>
                   {DEDUCTION_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
-                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate2" />
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate2" />
               </div>
             </label>
           )}
         </div>
 
-        <div className="flex gap-2 justify-end border-t border-border px-5 py-3.5">
+        <div className="flex gap-2 justify-end border-t border-black/[0.06] bg-[#FBFBFD] px-6 py-4">
           <Btn variant="secondary" onClick={onCancel}>Cancel</Btn>
           <Btn variant="filled-success" onClick={() => onConfirm(numAmount, reason || null)}>
             <CheckCircle2 className="h-4 w-4" />

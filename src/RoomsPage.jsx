@@ -18,7 +18,7 @@ import {
 function OccBar({ occupied, capacity }) {
   const pct = capacity ? Math.round((occupied / capacity) * 100) : 0;
   return (
-    <div className="mt-2 h-1.5 w-full rounded-full bg-border overflow-hidden">
+    <div className="mt-2.5 h-1.5 w-full rounded-full bg-black/[0.06] overflow-hidden">
       <div className="h-full rounded-full bg-green transition-all" style={{ width: `${pct}%` }} />
     </div>
   );
@@ -42,10 +42,10 @@ function RoomCard({ room, isSelected, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-left rounded-xl border p-4 transition-all active:scale-[0.98] ${
+      className={`w-full text-left rounded-2xl border p-4 transition-all active:scale-[0.98] ${
         isSelected
-          ? 'border-green bg-green/5 shadow-lift'
-          : 'border-border bg-white hover:border-slate/60 shadow-card'
+          ? 'border-green bg-green/5 shadow-[0_4px_16px_rgba(22,163,74,0.12)]'
+          : 'border-black/[0.06] bg-white hover:border-black/[0.15] shadow-[0_1px_3px_rgba(15,23,42,0.04)]'
       }`}
     >
       <div className="flex items-start justify-between gap-2">

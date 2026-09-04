@@ -132,13 +132,13 @@ function PropertyPill({ properties, selectedId, onChange, loading, canAddPropert
           <select
             value={selectedId}
             onChange={e => onChange(e.target.value)}
-            className={`appearance-none rounded-lg bg-mist pl-3 pr-7 py-1.5 text-sm font-semibold text-ink border border-border focus:outline-none focus:ring-2 focus:ring-ink/20 cursor-pointer ${fullWidth ? 'w-full' : ''}`}
+            className={`appearance-none rounded-full bg-[#F5F5F7] pl-3.5 pr-8 py-1.5 text-xs font-semibold text-ink border border-black/[0.06] hover:border-black/[0.15] focus:outline-none focus:ring-2 focus:ring-black/10 cursor-pointer transition-colors ${fullWidth ? 'w-full' : ''}`}
           >
             {properties.map(p => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
-          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate2" />
+          <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate2" />
         </div>
       )}
       {canAddProperty && isOwner && (
@@ -146,7 +146,7 @@ function PropertyPill({ properties, selectedId, onChange, loading, canAddPropert
           type="button"
           onClick={onAddProperty}
           title="Add property"
-          className="inline-flex items-center justify-center rounded-lg bg-mist border border-border p-1.5 text-slate2 hover:bg-border hover:text-ink transition-colors"
+          className="inline-flex items-center justify-center rounded-full bg-[#F5F5F7] border border-black/[0.06] p-1.5 text-slate2 hover:bg-black/[0.05] hover:text-ink transition-colors"
         >
           <Plus className="h-3.5 w-3.5" />
         </button>
@@ -157,16 +157,16 @@ function PropertyPill({ properties, selectedId, onChange, loading, canAddPropert
             type="button"
             onClick={() => setShowMenu(v => !v)}
             title="More options"
-            className="inline-flex items-center justify-center rounded-lg bg-mist border border-border p-1.5 text-slate2 hover:bg-border hover:text-ink transition-colors"
+            className="inline-flex items-center justify-center rounded-full bg-[#F5F5F7] border border-black/[0.06] p-1.5 text-slate2 hover:bg-black/[0.05] hover:text-ink transition-colors"
           >
             <MoreVertical className="h-3.5 w-3.5" />
           </button>
           {showMenu && (
-            <div className="absolute right-0 top-full mt-1 w-40 rounded-xl border border-border bg-white shadow-lift py-1 z-50">
+            <div className="absolute right-0 top-full mt-1.5 w-44 rounded-2xl border border-black/[0.06] bg-white/95 backdrop-blur-xl shadow-xl py-1.5 z-50 overflow-hidden">
               <button
                 type="button"
                 onClick={() => { setShowRename(true); setShowMenu(false); }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-ink hover:bg-mist transition-colors text-left"
+                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-ink hover:bg-[#F5F5F7] transition-colors text-left"
               >
                 <Pencil className="h-3.5 w-3.5 text-slate2" />
                 Rename
@@ -174,7 +174,7 @@ function PropertyPill({ properties, selectedId, onChange, loading, canAddPropert
               <button
                 type="button"
                 onClick={() => { setShowMenu(false); onDeleteProperty(); }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-coral hover:bg-coral/5 transition-colors text-left"
+                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-coral hover:bg-coral/5 transition-colors text-left"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 Delete property
@@ -295,7 +295,7 @@ function Header({ properties, selectedPropertyId, onPropertyChange, loadingPrope
   );
 
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-border px-4 py-3 sm:px-6" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}>
+    <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-black/[0.06] px-4 py-3 sm:px-6" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}>
       <div className="mx-auto max-w-5xl">
         <div className="flex items-center justify-between gap-4">
           <div className="lg:hidden"><AppLogo onClick={handleLogoClick} /></div>
@@ -306,7 +306,7 @@ function Header({ properties, selectedPropertyId, onPropertyChange, loadingPrope
                 type="button"
                 onClick={onOpenAdmin}
                 title="Back to admin panel"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-mist border border-border px-2.5 py-1.5 text-xs font-semibold text-slate2 hover:bg-border hover:text-ink transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#F5F5F7] border border-black/[0.06] px-3 py-1.5 text-xs font-semibold text-slate2 hover:bg-black/[0.05] hover:text-ink transition-colors"
               >
                 <ShieldCheck className="h-3.5 w-3.5" />
                 Admin
@@ -315,7 +315,7 @@ function Header({ properties, selectedPropertyId, onPropertyChange, loadingPrope
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="inline-flex items-center justify-center rounded-lg p-2 text-slate2 hover:bg-mist transition-colors"
+              className="inline-flex items-center justify-center rounded-full p-2 text-slate2 hover:bg-black/[0.04] transition-colors"
               aria-label="Menu"
             >
               <Menu className="h-5 w-5" />
@@ -327,22 +327,22 @@ function Header({ properties, selectedPropertyId, onPropertyChange, loadingPrope
       {mobileMenuOpen && createPortal(
         <>
           <div
-            className="fixed inset-0 z-[90] bg-ink/40 backdrop-blur-sm sm:hidden"
+            className="fixed inset-0 z-[90] bg-black/30 backdrop-blur-md sm:hidden"
             onClick={() => setMobileMenuOpen(false)}
           />
           <div
-            className="fixed left-0 right-0 z-[95] bg-white rounded-b-2xl shadow-xl sm:hidden"
+            className="fixed left-0 right-0 z-[95] bg-white/95 backdrop-blur-xl rounded-b-[28px] border-b border-black/[0.06] shadow-2xl sm:hidden"
             style={{ top: 0, paddingTop: 'env(safe-area-inset-top, 0px)' }}
           >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-black/[0.06]">
               <AppLogo onClick={() => { setMobileMenuOpen(false); handleLogoClick?.(); }} />
               <IconBtn variant="ghost" onClick={() => setMobileMenuOpen(false)}>
                 <X className="h-5 w-5" />
               </IconBtn>
             </div>
-            <div className="p-4 flex flex-col gap-3">
-              <div className="rounded-lg bg-white border border-border px-3 py-2.5">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate2 mb-1.5">Property</p>
+            <div className="p-5 flex flex-col gap-3.5">
+              <div className="rounded-2xl bg-[#F5F5F7] border border-black/[0.04] p-3.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate2 mb-2">Property</p>
                 <PropertyPill
                   properties={properties}
                   selectedId={selectedPropertyId}
@@ -360,14 +360,14 @@ function Header({ properties, selectedPropertyId, onPropertyChange, loadingPrope
                 <button
                   type="button"
                   onClick={() => { setMobileMenuOpen(false); onOpenAdmin(); }}
-                  className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-2.5 text-sm font-semibold text-ink hover:bg-mist transition-colors"
+                  className="flex items-center gap-2.5 rounded-xl border border-black/[0.06] px-4 py-3 text-sm font-semibold text-ink hover:bg-[#F5F5F7] transition-colors"
                 >
                   <ShieldCheck className="h-4 w-4 text-slate2" />
                   Admin panel
                 </button>
               )}
               {onSignOut && (
-                <div className="pt-2 border-t border-border">
+                <div className="pt-2 border-t border-black/[0.06]">
                   <SignOutBtn onSignOut={onSignOut} className="pt-2" />
                 </div>
               )}
@@ -392,8 +392,8 @@ const PAGES = [
 function BottomNav({ active, onChange, bookingCount = 0, overdueCount = 0 }) {
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 bg-midnight border-t border-white/10 sm:hidden"
-      style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 8px) + 0.25rem)' }}
+      className="fixed bottom-0 left-0 right-0 z-50 bg-white/85 backdrop-blur-xl border-t border-black/[0.08] sm:hidden shadow-[0_-4px_24px_rgba(0,0,0,0.03)]"
+      style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), 8px) + 0.35rem)' }}
     >
       <div className="grid grid-cols-4">
         {PAGES.map(p => {
@@ -408,16 +408,17 @@ function BottomNav({ active, onChange, bookingCount = 0, overdueCount = 0 }) {
               key={p.id}
               type="button"
               onClick={() => onChange(p.id)}
-              className={`relative flex flex-col items-center gap-0.5 pt-2.5 pb-1 text-[10px] font-medium tracking-normal transition-colors ${
-                isActive ? 'text-green' : 'text-white/40'
+              className={`relative flex flex-col items-center gap-1 pt-2.5 pb-1 text-[10px] font-medium tracking-tight transition-all active:scale-95 ${
+                isActive ? 'text-[#1D1D1F] font-semibold' : 'text-[#8E8E93] hover:text-[#1D1D1F]'
               }`}
             >
-              {isActive && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full bg-green" />
-              )}
-              <div className={`relative rounded-xl p-1 transition-colors ${isActive ? 'bg-green/10' : ''}`}>
-                <Icon className={`h-5 w-5 ${isActive ? 'text-green stroke-[2.5]' : 'text-white/40 stroke-[1.5]'}`} />
-                {badge > 0 && <span className={`absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full ${badgeColor} text-white text-[8px] font-bold flex items-center justify-center`}>{badge > 9 ? '9+' : badge}</span>}
+              <div className={`relative rounded-xl p-1 transition-colors ${isActive ? 'bg-black/[0.05]' : ''}`}>
+                <Icon className={`h-5 w-5 ${isActive ? 'text-[#1D1D1F] stroke-[2.3]' : 'text-[#8E8E93] stroke-[1.6]'}`} />
+                {badge > 0 && (
+                  <span className={`absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full ${badgeColor} text-white text-[8px] font-bold flex items-center justify-center shadow-xs`}>
+                    {badge > 9 ? '9+' : badge}
+                  </span>
+                )}
               </div>
               {p.label}
             </button>
@@ -430,14 +431,14 @@ function BottomNav({ active, onChange, bookingCount = 0, overdueCount = 0 }) {
 
 function Sidebar({ active, onChange, bookingCount = 0, overdueCount = 0 }) {
   return (
-    <aside className="hidden lg:flex fixed inset-y-0 left-0 z-40 w-60 flex-col bg-white border-r border-border" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+    <aside className="hidden lg:flex fixed inset-y-0 left-0 z-40 w-60 flex-col bg-[#FBFBFD] border-r border-black/[0.06]" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
       <button
         type="button"
         onClick={() => onChange('dashboard')}
-        className="flex items-center gap-2.5 px-5 h-16 shrink-0 border-b border-border text-left"
+        className="flex items-center gap-2.5 px-6 h-16 shrink-0 border-b border-black/[0.06] text-left hover:opacity-90 transition-opacity"
       >
         <NivaLogo size={22} />
-        <span className="font-bold tracking-tight text-ink">Niva<span className="text-green">Ops</span></span>
+        <span className="font-bold tracking-tight text-ink text-base">Niva<span className="text-green">Ops</span></span>
       </button>
       <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
         {PAGES.map(p => {
@@ -452,11 +453,13 @@ function Sidebar({ active, onChange, bookingCount = 0, overdueCount = 0 }) {
               key={p.id}
               type="button"
               onClick={() => onChange(p.id)}
-              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive ? 'bg-green/10 text-green' : 'text-slate2 hover:text-ink hover:bg-mist'
+              className={`relative flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                isActive
+                  ? 'bg-black/[0.06] text-ink font-semibold'
+                  : 'text-slate2 hover:text-ink hover:bg-black/[0.03]'
               }`}
             >
-              <Icon className={`h-4 w-4 ${isActive ? 'text-green' : ''}`} />
+              <Icon className={`h-4 w-4 ${isActive ? 'text-ink stroke-[2.2]' : 'text-slate2'}`} />
               {p.label}
               {badge > 0 && <span className={`ml-auto h-4 w-4 rounded-full ${badgeColor} text-white text-[9px] font-bold flex items-center justify-center`}>{badge > 9 ? '9+' : badge}</span>}
             </button>
@@ -469,7 +472,7 @@ function Sidebar({ active, onChange, bookingCount = 0, overdueCount = 0 }) {
 
 function TopNav({ active, onChange, bookingCount = 0, overdueCount = 0 }) {
   return (
-    <nav className="hidden sm:flex lg:hidden border-b border-border bg-white px-6">
+    <nav className="hidden sm:flex lg:hidden border-b border-black/[0.06] bg-white px-6">
       <div className="mx-auto max-w-5xl w-full flex gap-1">
         {PAGES.map(p => {
           const Icon = p.icon;
@@ -1537,10 +1540,10 @@ function QuickActions({ onAssignTenant, onAddTenant, onOpenRooms, onOpenFinance 
           key={a.label}
           type="button"
           onClick={a.onClick}
-          className="flex flex-col items-start gap-3 rounded-xl bg-white border border-border shadow-card p-4 text-left transition-all hover:border-slate2/40 active:scale-[0.97]"
+          className="flex flex-col items-start gap-3 rounded-2xl bg-white border border-black/[0.06] shadow-[0_2px_8px_rgba(15,23,42,0.03)] p-4 text-left transition-all hover:border-black/[0.15] hover:shadow-[0_4px_16px_rgba(15,23,42,0.06)] active:scale-[0.97]"
         >
-          <div className="rounded-lg bg-mist p-2.5">
-            <a.icon className="h-5 w-5 text-ink" />
+          <div className="rounded-xl bg-[#F5F5F7] p-2.5">
+            <a.icon className="h-5 w-5 text-ink stroke-[1.8]" />
           </div>
           <div>
             <p className="text-sm font-semibold text-ink leading-tight">{a.label}</p>

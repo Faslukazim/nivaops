@@ -52,15 +52,15 @@ function ymLabel(ym) {
 function MonthNav({ ym, onChange }) {
   const cur = ymNow();
   return (
-    <div className="flex items-center justify-between px-1">
-      <IconBtn onClick={() => onChange(ymPrev(ym))}><ChevronLeft className="h-5 w-5" /></IconBtn>
-      <span className="font-semibold text-ink tabular-nums">{ymLabel(ym)}</span>
+    <div className="flex items-center justify-between px-2 py-1 bg-white rounded-2xl border border-black/[0.06] shadow-sm">
+      <IconBtn onClick={() => onChange(ymPrev(ym))} className="rounded-full hover:bg-black/[0.04]"><ChevronLeft className="h-4 w-4 text-ink" /></IconBtn>
+      <span className="text-sm font-semibold text-ink tabular-nums tracking-tight">{ymLabel(ym)}</span>
       <IconBtn
         onClick={() => onChange(ymNext(ym))}
         disabled={ym >= cur}
-        className="disabled:opacity-30 disabled:pointer-events-none"
+        className="rounded-full hover:bg-black/[0.04] disabled:opacity-30 disabled:pointer-events-none"
       >
-        <ChevronRight className="h-5 w-5" />
+        <ChevronRight className="h-4 w-4 text-ink" />
       </IconBtn>
     </div>
   );
@@ -77,22 +77,25 @@ const SUB_TABS = [
 
 function SubNav({ active, onChange }) {
   return (
-    <div className="flex gap-4 border-b border-border px-1">
-      {SUB_TABS.map(t => (
-        <button
-          key={t.id}
-          type="button"
-          onClick={() => onChange(t.id)}
-          className={`text-sm transition-colors ${
-            active === t.id
-              ? 'text-green border-b-2 border-green font-semibold pb-2'
-              : 'text-slate hover:text-charcoal pb-2'
-          }`}
-        >
-          <span className="sm:hidden">{t.short}</span>
-          <span className="hidden sm:inline">{t.label}</span>
-        </button>
-      ))}
+    <div className="p-1 rounded-2xl bg-black/[0.04] border border-black/[0.04] inline-flex w-full sm:w-auto gap-1">
+      {SUB_TABS.map(t => {
+        const isActive = active === t.id;
+        return (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => onChange(t.id)}
+            className={`flex-1 sm:flex-none text-center px-4 py-2 text-xs font-semibold rounded-xl transition-all active:scale-[0.98] ${
+              isActive
+                ? 'bg-white text-ink shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                : 'text-slate2 hover:text-ink hover:bg-black/[0.02]'
+            }`}
+          >
+            <span className="sm:hidden">{t.short}</span>
+            <span className="hidden sm:inline">{t.label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
