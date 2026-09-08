@@ -42,7 +42,7 @@ function scrollTo(id) {
 
 // ─── Slender Apple-Style Flagship iPhone Mockup ──────────────────────────────
 // Authentic 19.5:9 smartphone silhouette (eliminates wide/squat "tablet/tab" look)
-function PhoneMockup() {
+function PhoneMockup({ onTryDemo, demoLoading }) {
   const [samplePaid, setSamplePaid] = useState(false);
 
   return (
@@ -174,6 +174,21 @@ function PhoneMockup() {
               </div>
             </div>
           </div>
+
+          {/* Test Live Demo Bar */}
+          {onTryDemo && (
+            <div className="mt-auto pt-2">
+              <button
+                type="button"
+                onClick={onTryDemo}
+                disabled={demoLoading}
+                className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#1D1D1F] text-white py-2 text-[11px] font-semibold hover:bg-black transition-all active:scale-95 shadow-sm"
+              >
+                {demoLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3 text-leaf" />}
+                <span>Try interactive demo live</span>
+              </button>
+            </div>
+          )}
 
         </div>
 
@@ -411,7 +426,7 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
 
             {/* Right Column: Slender iPhone 16 Pro Mockup */}
             <div className="lg:col-span-5 flex justify-center">
-              <PhoneMockup />
+              <PhoneMockup onTryDemo={handleDemoClick} demoLoading={demoLoading} />
             </div>
 
           </div>
