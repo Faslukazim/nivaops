@@ -42,7 +42,7 @@ function scrollTo(id) {
 
 // ─── Slender Apple-Style Flagship iPhone Mockup ──────────────────────────────
 // Authentic 19.5:9 smartphone silhouette (eliminates wide/squat "tablet/tab" look)
-function PhoneMockup({ onTryDemo, demoLoading }) {
+function PhoneMockup() {
   const [samplePaid, setSamplePaid] = useState(false);
 
   return (
@@ -175,21 +175,6 @@ function PhoneMockup({ onTryDemo, demoLoading }) {
             </div>
           </div>
 
-          {/* Test Live Demo Bar */}
-          {onTryDemo && (
-            <div className="mt-auto pt-2">
-              <button
-                type="button"
-                onClick={onTryDemo}
-                disabled={demoLoading}
-                className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#1D1D1F] text-white py-2 text-[11px] font-semibold hover:bg-black transition-all active:scale-95 shadow-sm"
-              >
-                {demoLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3 text-leaf" />}
-                <span>Try interactive demo live</span>
-              </button>
-            </div>
-          )}
-
         </div>
 
         {/* iOS Home Indicator Bar */}
@@ -297,15 +282,6 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
                 Live Demo
               </button>
             )}
-
-            <button
-              type="button"
-              onClick={() => handleWhatsAppClick('header')}
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#1D1D1F] hover:bg-black px-4 py-1.5 text-xs font-semibold text-white shadow-xs transition-all active:scale-95"
-            >
-              <MessageCircle className="h-3.5 w-3.5 text-leaf" />
-              Chat on WhatsApp
-            </button>
           </div>
 
           {/* Mobile Hamburger */}
@@ -362,14 +338,6 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
               </button>
               <button
                 type="button"
-                onClick={() => { setMobileMenuOpen(false); handleWhatsAppClick('mobile_menu'); }}
-                className="w-full flex items-center justify-center gap-2 rounded-full bg-[#1D1D1F] py-2.5 text-xs font-semibold text-white shadow-sm"
-              >
-                <MessageCircle className="h-3.5 w-3.5 text-leaf" />
-                Chat on WhatsApp
-              </button>
-              <button
-                type="button"
                 onClick={() => { setMobileMenuOpen(false); onShowAuth(); }}
                 className="py-2 text-center text-xs font-semibold text-[#86868B]"
               >
@@ -391,14 +359,8 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
             {/* Left Column: Value Prop & CTAs */}
             <div className="text-center lg:text-left lg:col-span-7">
               
-              {/* Eyebrow Pill */}
-              <div className="inline-flex items-center gap-2 rounded-full border border-black/[0.06] bg-[#F5F5F7] px-3.5 py-1 text-xs font-medium text-[#1D1D1F] shadow-2xs">
-                <span className="h-1.5 w-1.5 rounded-full bg-leaf animate-pulse" />
-                <span>Built for Indian PG &amp; Hostel Owners</span>
-              </div>
-
               {/* Main Headline */}
-              <h1 className="mt-5 text-4xl font-semibold tracking-[-0.03em] text-[#1D1D1F] sm:text-5xl lg:text-[56px] leading-[1.08]">
+              <h1 className="text-4xl font-semibold tracking-[-0.03em] text-[#1D1D1F] sm:text-5xl lg:text-[56px] leading-[1.08]">
                 Run your PG without the{' '}
                 <span className="text-leaf">rent-day headache.</span>
               </h1>
@@ -443,17 +405,13 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
                   <CheckCircle2 className="h-4 w-4 text-leaf" />
                   <span>Direct UPI Payments</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-4 w-4 text-leaf" />
-                  <span>Zero Commission</span>
-                </div>
               </div>
 
             </div>
 
             {/* Right Column: Slender iPhone 16 Pro Mockup */}
             <div className="lg:col-span-5 flex justify-center">
-              <PhoneMockup onTryDemo={handleDemoClick} demoLoading={demoLoading} />
+              <PhoneMockup />
             </div>
 
           </div>
