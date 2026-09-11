@@ -7,6 +7,7 @@ import { vacateTenant, giveVacateNotice, moveTenant, updateTenant } from './serv
 import { createBooking, cancelBooking, convertBooking } from './services/bookingService';
 import { markTenantRecordPaid } from './services/paymentService';
 import { logActivity } from './services/activityService';
+import { calculateMoveInFinancials } from './utils/financialEngine';
 import {
   fmt, Label, Card, SectionHeader, Btn, IconBtn,
   StatusBadge, PaymentToggleBtn, WhatsAppLink, PaymentLinkBtn,
@@ -394,36 +395,63 @@ function BedRow({ bed, roomNumber, roomId, rooms, propertyId, upiId, onMarkPaid,
           )}
         </div>
 
-        <PaymentToggleBtn
-          isPaid={isPaid}
-          onMarkPaid={() => onMarkPaid({
-            tenantId: tenant.id,
-            name: tenant.name,
-            roomNumber,
-            bedNumber: bed.bed_number,
+        {(() => {
+          const fin = calculateMoveInFinancials({
             monthlyRent: occ.monthly_rent,
-            bookingAdvance: tenant.bookingAdvance || 0,
-            moveInCollection: occ.move_in_collection || (occ.monthly_rent + (occ.admission_fee || 0) + (occ.deposit_amount || 0)),
-            admissionFee: occ.admission_fee || 0,
-            depositAmount: occ.deposit_amount || 0,
+            admissionFee: occ.admission_fee,
+            depositAmount: occ.deposit_amount,
+            bookingAdvance: tenant.bookingAdvance,
             paymentStatus: occ.payment_status,
-          })}
-          onMarkUnpaid={() => onMarkUnpaid(tenant.id)}
-        />
+          });
+          return (
+            <PaymentToggleBtn
+              isPaid={isPaid}
+              onMarkPaid={() => onMarkPaid({
+                tenantId: tenant.id,
+                name: tenant.name,
+                roomNumber,
+                bedNumber: bed.bed_number,
+                monthlyRent: fin.breakdown.rent,
+                bookingAdvance: fin.bookingAdvance,
+                moveInCollection: fin.totalCharges,
+                admissionFee: fin.breakdown.admissionFee,
+                depositAmount: fin.breakdown.depositAmount,
+                paymentStatus: occ.payment_status,
+                balance: fin.balance,
+              })}
+              onMarkUnpaid={() => onMarkUnpaid(tenant.id)}
+            />
+          );
+        })()}
       </div>
 
       {/* Bottom row: secondary actions aligned under name */}
       <div className="flex flex-wrap items-center gap-1 mt-1.5 pl-11">
-        <WhatsAppLink
-          name={tenant.name}
-          phone={tenant.phone}
-          roomNumber={roomNumber}
-          bedNumber={bed.bed_number}
-          rent={tenant.bookingAdvance > 0 ? Math.max(0, (occ.move_in_collection || occ.monthly_rent) - tenant.bookingAdvance) : occ.monthly_rent}
-          label="Remind"
-          upiId={upiId}
-        />
-        <PaymentLinkBtn propertyId={propertyId} tenantId={tenant.id} phone={tenant.phone} name={tenant.name} label="Pay Link" />
+        {(() => {
+          const fin = calculateMoveInFinancials({
+            monthlyRent: occ.monthly_rent,
+            admissionFee: occ.admission_fee,
+            depositAmount: occ.deposit_amount,
+            bookingAdvance: tenant.bookingAdvance,
+            paymentStatus: occ.payment_status,
+          });
+          const rentDue = fin.balance > 0 ? fin.balance : fin.breakdown.rent;
+          return (
+            <>
+              <WhatsAppLink
+                name={tenant.name}
+                phone={tenant.phone}
+                roomNumber={roomNumber}
+                bedNumber={bed.bed_number}
+                rent={rentDue}
+                label="Remind"
+                upiId={upiId}
+                advance={tenant.bookingAdvance}
+              />
+              <PaymentLinkBtn propertyId={propertyId} tenantId={tenant.id} phone={tenant.phone} name={tenant.name} amount={rentDue} label="Pay Link" />
+            </>
+          );
+        })()}
         <button
           type="button"
           title="Move tenant to another bed"
@@ -510,9 +538,14 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
   const pendingAmt = room.beds
     .filter(b => b.occupancy?.payment_status === 'Unpaid')
     .reduce((s, b) => {
-      const adv = b.tenant?.bookingAdvance || 0;
-      const rent = Number(b.occupancy?.monthly_rent || 0);
-      return s + (adv > 0 ? Math.max(0, rent - adv) : rent);
+      const fin = calculateMoveInFinancials({
+        monthlyRent: b.occupancy?.monthly_rent,
+        admissionFee: b.occupancy?.admission_fee,
+        depositAmount: b.occupancy?.deposit_amount,
+        bookingAdvance: b.tenant?.bookingAdvance,
+        paymentStatus: b.occupancy?.payment_status,
+      });
+      return s + (fin.balance > 0 ? fin.balance : fin.breakdown.rent);
     }, 0);
   const [collectingBed, setCollectingBed] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -530,9 +563,14 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
     const today = new Date().toISOString().slice(0, 10);
     try {
       await Promise.all(unpaidBeds.map(async bed => {
-        const adv = bed.tenant?.bookingAdvance || 0;
-        const rent = Number(bed.occupancy?.monthly_rent || 0);
-        const amountToCollect = adv > 0 ? Math.max(0, rent - adv) : rent;
+        const fin = calculateMoveInFinancials({
+          monthlyRent: bed.occupancy?.monthly_rent,
+          admissionFee: bed.occupancy?.admission_fee,
+          depositAmount: bed.occupancy?.deposit_amount,
+          bookingAdvance: bed.tenant?.bookingAdvance,
+          paymentStatus: bed.occupancy?.payment_status,
+        });
+        const amountToCollect = fin.balance > 0 ? fin.balance : fin.breakdown.rent;
         await updateTenant(bed.tenant.id, { paymentStatus: 'Paid', paymentDate: today });
         await markTenantRecordPaid(bed.tenant.id, currentYM, amountToCollect, null).catch(() => {});
       }));
@@ -759,9 +797,15 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
               .filter(b => b.occupancy?.payment_status === 'Unpaid' && b.tenant)
               .map(b => {
                 const phone = String(b.tenant.phone).replace(/\D/g, '');
-                const adv = b.tenant.bookingAdvance || 0;
-                const dueAmt = adv > 0 ? Math.max(0, b.occupancy.monthly_rent - adv) : b.occupancy.monthly_rent;
-                const msg = `Hi ${b.tenant.name}, rent reminder for Room ${room.room_number} Bed ${b.bed_number}. ${adv > 0 ? `Remaining balance of ${fmt(dueAmt)} (after ${fmt(adv)} booking advance)` : `Monthly rent ${fmt(b.occupancy.monthly_rent)}`} is unpaid. Please pay at your earliest.`;
+                const fin = calculateMoveInFinancials({
+                  monthlyRent: b.occupancy.monthly_rent,
+                  admissionFee: b.occupancy.admission_fee,
+                  depositAmount: b.occupancy.deposit_amount,
+                  bookingAdvance: b.tenant.bookingAdvance,
+                  paymentStatus: b.occupancy.payment_status,
+                });
+                const dueAmt = fin.balance > 0 ? fin.balance : fin.breakdown.rent;
+                const msg = `Hi ${b.tenant.name}, rent reminder for Room ${room.room_number} Bed ${b.bed_number}. ${fin.bookingAdvance > 0 ? `Remaining balance of ${fmt(dueAmt)} (after ${fmt(fin.bookingAdvance)} booking advance)` : `Monthly rent ${fmt(b.occupancy.monthly_rent)}`} is unpaid. Please pay at your earliest.`;
                 const href = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
                 return (
                   <a
@@ -783,22 +827,29 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
         </div>
       )}
 
-      {collectingBed && (
-        <CollectModal
-          record={{
-            amount: collectingBed.bookingAdvance > 0 && collectingBed.paymentStatus !== 'Paid'
-              ? Math.max(0, (collectingBed.moveInCollection || collectingBed.monthlyRent) - collectingBed.bookingAdvance)
-              : collectingBed.monthlyRent,
-            name: collectingBed.name,
-            roomNumber: collectingBed.roomNumber,
-            bedNumber: collectingBed.bedNumber,
-            bookingAdvance: collectingBed.bookingAdvance,
-            totalCharges: collectingBed.moveInCollection || collectingBed.monthlyRent,
-          }}
-          onConfirm={handleConfirmPaid}
-          onCancel={() => setCollectingBed(null)}
-        />
-      )}
+      {collectingBed && (() => {
+        const fin = calculateMoveInFinancials({
+          monthlyRent: collectingBed.monthlyRent,
+          admissionFee: collectingBed.admissionFee,
+          depositAmount: collectingBed.depositAmount,
+          bookingAdvance: collectingBed.bookingAdvance,
+          paymentStatus: collectingBed.paymentStatus,
+        });
+        return (
+          <CollectModal
+            record={{
+              amount: fin.balance > 0 ? fin.balance : fin.breakdown.rent,
+              name: collectingBed.name,
+              roomNumber: collectingBed.roomNumber,
+              bedNumber: collectingBed.bedNumber,
+              bookingAdvance: collectingBed.paymentStatus !== 'Paid' ? fin.bookingAdvance : 0,
+              totalCharges: fin.totalCharges,
+            }}
+            onConfirm={handleConfirmPaid}
+            onCancel={() => setCollectingBed(null)}
+          />
+        );
+      })()}
     </div>
   );
 }

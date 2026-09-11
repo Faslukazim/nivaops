@@ -1,5 +1,6 @@
 import { hasSupabaseConfig, supabase } from '../lib/supabase';
 import { fetchTenants } from './tenantService';
+import { calculateMoveInFinancials } from '../utils/financialEngine';
 
 function localRecordsFromTenants(tenants) {
   return tenants.map(t => ({
@@ -9,13 +10,15 @@ function localRecordsFromTenants(tenants) {
     phone: t.phone,
     roomNumber: t.roomNumber,
     bedNumber: t.bedNumber,
-    amount: t.monthlyRent,
+    amount: (t.balance != null && t.balance > 0) ? t.balance : t.monthlyRent,
     // Use explicit rentDueDay; fall back to joinDate day for old localStorage data
     dueDay: t.rentDueDay ?? (t.joinDate ? Number(t.joinDate.slice(8, 10)) : 1),
     status: t.paymentStatus === 'Paid' ? 'paid' : 'unpaid',
     paidAt: t.paymentDate || null,
-    amountCollected: null,
-    deductionReason: null,
+    amountCollected: t.amountCollected || null,
+    deductionReason: t.deductionReason || null,
+    bookingAdvance: t.bookingAdvance || 0,
+    isMoveInMonth: Boolean(t.joinDate && String(t.joinDate).slice(0, 7) === new Date().toISOString().slice(0, 7)),
   }));
 }
 
@@ -24,7 +27,7 @@ export async function ensurePaymentRecords(propertyId, yearMonth) {
 
   const query = supabase
     .from('occupancies')
-    .select('id, property_id, tenant_id, monthly_rent, rent_due_day, payment_status, payment_date')
+    .select('id, property_id, tenant_id, monthly_rent, rent_due_day, payment_status, payment_date, start_date, admission_fee, deposit_amount, booking_advance')
     .eq('status', 'active');
   if (propertyId) query.eq('property_id', propertyId);
 
@@ -33,6 +36,21 @@ export async function ensurePaymentRecords(propertyId, yearMonth) {
   if (!occupancies.length) return;
 
   const records = occupancies.map(occ => {
+    const isMoveInMonth = occ.start_date && String(occ.start_date).slice(0, 7) === yearMonth;
+    let recAmount = Number(occ.monthly_rent || 0);
+
+    // In the move-in month with an advance paid, the remaining balance due is calculated authoritatively
+    if (isMoveInMonth && Number(occ.booking_advance) > 0) {
+      const fin = calculateMoveInFinancials({
+        monthlyRent: occ.monthly_rent,
+        admissionFee: occ.admission_fee,
+        depositAmount: occ.deposit_amount,
+        bookingAdvance: occ.booking_advance,
+        paymentStatus: occ.payment_status,
+      });
+      recAmount = fin.remainingDueToCollect;
+    }
+
     // If occupancy was already marked Paid for this month (e.g. via Rooms/Dashboard
     // before Finance tab was first opened), initialise the record as paid so the
     // Finance page stays in sync even when the payment_records row didn't exist yet.
@@ -44,7 +62,7 @@ export async function ensurePaymentRecords(propertyId, yearMonth) {
       tenant_id:    occ.tenant_id,
       occupancy_id: occ.id,
       month:        yearMonth,
-      amount:       occ.monthly_rent,
+      amount:       recAmount,
       due_day:      occ.rent_due_day ?? 1,
       status:       paidThisMonth ? 'paid' : 'unpaid',
       paid_at:      paidThisMonth ? new Date().toISOString() : null,
@@ -65,7 +83,7 @@ export async function fetchPaymentRecords(propertyId, yearMonth) {
 
   const query = supabase
     .from('payment_records')
-    .select('*, tenant:tenants(name, phone, status), occupancy:occupancies(monthly_rent, rent_due_day, status, room:rooms(room_number), bed:beds(bed_number))')
+    .select('*, tenant:tenants(name, phone, status), occupancy:occupancies(monthly_rent, rent_due_day, status, booking_advance, admission_fee, deposit_amount, start_date, room:rooms(room_number), bed:beds(bed_number))')
     .eq('month', yearMonth);
   if (propertyId) query.eq('property_id', propertyId);
 
@@ -89,7 +107,21 @@ export async function fetchPaymentRecords(propertyId, yearMonth) {
     dueDay: r.due_day,
     status: r.status,
     paidAt: r.paid_at,
+    bookingAdvance: Number(r.occupancy?.booking_advance ?? 0),
+    isMoveInMonth: Boolean(r.occupancy?.start_date && String(r.occupancy.start_date).slice(0, 7) === yearMonth),
   }));
+}
+
+export async function updatePaymentRecordAmount(recordId, amount) {
+  if (!hasSupabaseConfig || !recordId || amount == null) return;
+  const num = Number(amount);
+  if (num <= 0) return;
+  const { error } = await supabase
+    .from('payment_records')
+    .update({ amount: num })
+    .eq('id', recordId)
+    .neq('status', 'paid');
+  if (error) console.error('updatePaymentRecordAmount failed:', error);
 }
 
 export async function markRecordPaid(recordId, amountCollected, deductionReason) {

@@ -13,8 +13,8 @@ import { fetchProperties, fetchRoomsWithBeds, updatePropertyUpiId, updatePropert
 import { fetchExpenses } from './services/financeService';
 import { seedSampleWorkspace, clearSampleWorkspace } from './services/seedService';
 import { fetchBookings, convertBooking } from './services/bookingService';
-import { hasSupabaseConfig } from './lib/supabase';
 import { STATUS, computeTenantStatus, tenantDaysOverdue } from './utils/paymentStatus';
+import { calculateMoveInFinancials, calculateCycleFinancials, calculateBookingFinancials } from './utils/financialEngine';
 import RoomsPage from './RoomsPage';
 import FinancePage from './FinancePage';
 import TenantProfile from './TenantProfile';
@@ -895,42 +895,50 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
           </label>
         </div>
 
-        {!initialTenant && (
-          <div className="rounded-xl border border-border bg-mist p-4 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Total Charges</Label>
-                <p className="text-xs text-slate2 mt-0.5">
-                  Rent ({fmt(Number(form.monthlyRent || 0))}) + Admission ({fmt(Number(form.admissionFee || 0))}) + Deposit ({fmt(Number(form.depositAmount || 0))})
+        {!initialTenant && (() => {
+          const fin = calculateMoveInFinancials({
+            monthlyRent: form.monthlyRent,
+            admissionFee: form.admissionFee,
+            depositAmount: form.depositAmount,
+            bookingAdvance: advanceAlreadyPaid,
+          });
+          return (
+            <div className="rounded-xl border border-border bg-mist p-4 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Total Charges</Label>
+                  <p className="text-xs text-slate2 mt-0.5">
+                    Rent ({fmt(fin.breakdown.rent)}) + Admission ({fmt(fin.breakdown.admissionFee)}) + Deposit ({fmt(fin.breakdown.depositAmount)})
+                  </p>
+                </div>
+                <p className="text-lg font-bold text-ink tabular-nums">
+                  {fmt(fin.totalCharges)}
                 </p>
               </div>
-              <p className="text-lg font-bold text-ink tabular-nums">
-                {fmt(Number(form.monthlyRent || 0) + Number(form.admissionFee || 0) + Number(form.depositAmount || 0))}
-              </p>
-            </div>
 
-            {advanceAlreadyPaid > 0 && (
-              <div className="pt-3 border-t border-black/[0.06] flex flex-col gap-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-leaf">Booking Advance Already Paid</span>
-                  <span className="text-sm font-bold text-leaf tabular-nums">−{fmt(advanceAlreadyPaid)}</span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg bg-white p-3 border border-black/[0.06]">
-                  <div>
-                    <span className="text-xs font-bold text-ink block">Remaining Balance</span>
-                    <span className="text-[11px] text-slate2">Amount left to collect</span>
+              {advanceAlreadyPaid > 0 && (
+                <div className="pt-3 border-t border-black/[0.06] flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-leaf">Booking Advance Already Paid</span>
+                    <span className="text-sm font-bold text-leaf tabular-nums">−{fmt(fin.bookingAdvance)}</span>
                   </div>
-                  <span className="text-base font-bold text-coral tabular-nums">
-                    {fmt(Math.max(0, (Number(form.monthlyRent || 0) + Number(form.admissionFee || 0) + Number(form.depositAmount || 0)) - advanceAlreadyPaid))}
-                  </span>
+                  <div className="flex items-center justify-between rounded-lg bg-white p-3 border border-black/[0.06]">
+                    <div>
+                      <span className="text-xs font-bold text-ink block">Remaining Balance</span>
+                      <span className="text-[11px] text-slate2">Amount left to collect</span>
+                    </div>
+                    <span className="text-base font-bold text-coral tabular-nums">
+                      {fmt(fin.balance)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate2 leading-relaxed">
+                    Your tenant charges remain {fmt(fin.totalCharges)}. The {fmt(fin.bookingAdvance)} booking advance has already been paid and is deducted only from the amount due, not from the individual charges.
+                  </p>
                 </div>
-                <p className="text-xs text-slate2 leading-relaxed">
-                  Your tenant charges remain {fmt(Number(form.monthlyRent || 0) + Number(form.admissionFee || 0) + Number(form.depositAmount || 0))}. The {fmt(advanceAlreadyPaid)} booking advance has already been paid and is deducted only from the amount due, not from the individual charges.
-                </p>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          );
+        })()}
 
         {/* ID Photo */}
         <div>
@@ -1175,30 +1183,33 @@ function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMa
         )}
 
         {/* Admission & Move-In Summary */}
-        {(tenant.admissionFee > 0 || tenant.bookingAdvance > 0) && (
-          <div className="mt-2 flex flex-col gap-1.5 rounded-lg border border-border p-2.5 bg-mist/60">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate2">Total Move-In Charges</span>
-              <span className="font-semibold tabular-nums text-ink">
-                {fmt(tenant.moveInCollection || (tenant.monthlyRent + (tenant.admissionFee || 0) + (tenant.depositAmount || 0)))}
-              </span>
-            </div>
-            {tenant.bookingAdvance > 0 && (
+        {(tenant.admissionFee > 0 || tenant.bookingAdvance > 0) && (() => {
+          const fin = calculateMoveInFinancials(tenant);
+          return (
+            <div className="mt-2 flex flex-col gap-1.5 rounded-lg border border-border p-2.5 bg-mist/60">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-leaf font-medium">Booking Advance Paid</span>
-                <span className="font-semibold tabular-nums text-leaf">−{fmt(tenant.bookingAdvance)}</span>
-              </div>
-            )}
-            {!isPaid && tenant.bookingAdvance > 0 && (
-              <div className="flex items-center justify-between text-xs pt-1 border-t border-black/[0.04]">
-                <span className="font-bold text-coral">Remaining Balance</span>
-                <span className="font-bold tabular-nums text-coral">
-                  {fmt(Math.max(0, (tenant.moveInCollection || (tenant.monthlyRent + (tenant.admissionFee || 0) + (tenant.depositAmount || 0))) - tenant.bookingAdvance))}
+                <span className="text-slate2">Total Move-In Charges</span>
+                <span className="font-semibold tabular-nums text-ink">
+                  {fmt(fin.totalCharges)}
                 </span>
               </div>
-            )}
-          </div>
-        )}
+              {fin.bookingAdvance > 0 && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-leaf font-medium">Booking Advance Paid</span>
+                  <span className="font-semibold tabular-nums text-leaf">−{fmt(fin.bookingAdvance)}</span>
+                </div>
+              )}
+              {!isPaid && fin.bookingAdvance > 0 && (
+                <div className="flex items-center justify-between text-xs pt-1 border-t border-black/[0.04]">
+                  <span className="font-bold text-coral">Remaining Balance</span>
+                  <span className="font-bold tabular-nums text-coral">
+                    {fmt(fin.balance)}
+                  </span>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {tenant.paymentDate && (
           <p className="mt-2 text-xs text-slate2">Paid {fmtShortDate(tenant.paymentDate)}</p>
@@ -1239,10 +1250,11 @@ function TenantCard({ tenant, upiId, flashPaid, onEdit, onDelete, onVacate, onMa
             phone={tenant.phone}
             roomNumber={tenant.roomNumber}
             bedNumber={tenant.bedNumber}
-            rent={tenant.monthlyRent}
+            rent={tenant.balance > 0 ? tenant.balance : tenant.monthlyRent}
             upiId={upiId}
+            advance={tenant.bookingAdvance}
           />
-          <PaymentLinkBtn propertyId={tenant.propertyId} tenantId={tenant.id} phone={tenant.phone} name={tenant.name} />
+          <PaymentLinkBtn propertyId={tenant.propertyId} tenantId={tenant.id} phone={tenant.phone} name={tenant.name} amount={tenant.balance > 0 ? tenant.balance : tenant.monthlyRent} />
           <IconBtn variant="ghost" onClick={() => onEdit(tenant)} title="Edit">
             <Pencil className="h-4 w-4" />
           </IconBtn>
@@ -1285,10 +1297,8 @@ function BusinessHealth({ tenants, totalBeds, selectedPropertyId, onOpenRooms, o
     return s === STATUS.OVERDUE || s === STATUS.DUE_TODAY || s === STATUS.DUE_SOON;
   });
   const pendingRent = unpaid.reduce((s, t) => {
-    const balance = t.bookingAdvance > 0
-      ? Math.max(0, (t.moveInCollection || (t.monthlyRent + (t.admissionFee || 0) + (t.depositAmount || 0))) - t.bookingAdvance)
-      : Number(t.monthlyRent || 0);
-    return s + balance;
+    const fin = calculateMoveInFinancials(t);
+    return s + (fin.balance > 0 ? fin.balance : fin.breakdown.rent);
   }, 0);
 
   const currentYM = useMemo(() => new Date().toISOString().slice(0, 7), []);
@@ -1379,7 +1389,7 @@ function BusinessHealth({ tenants, totalBeds, selectedPropertyId, onOpenRooms, o
 function MoveInHealth({ tenants }) {
   const currentYM = new Date().toISOString().slice(0, 7);
   const newThisMonth = tenants.filter(t => t.joinDate?.startsWith(currentYM));
-  const moveInTotal = newThisMonth.reduce((s, t) => s + Number(t.moveInCollection || (t.monthlyRent + (t.admissionFee || 0) + (t.depositAmount || 0))), 0);
+  const moveInTotal = newThisMonth.reduce((s, t) => s + calculateMoveInFinancials(t).totalCharges, 0);
   const admissionTotal = newThisMonth.reduce((s, t) => s + Number(t.admissionFee || 0), 0);
   const depositsCollected = newThisMonth.filter(t => !t.depositPreAccounted).reduce((s, t) => s + Number(t.depositAmount || 0), 0);
   const advanceTotal = newThisMonth.reduce((s, t) => s + Number(t.bookingAdvance || 0), 0);
@@ -1567,8 +1577,8 @@ function AttentionRequired({ tenants, upiId, onMarkPaid, onViewTenant }) {
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0 justify-end">
-                  <WhatsAppLink name={t.name} phone={t.phone} roomNumber={t.roomNumber} bedNumber={t.bedNumber} rent={t.monthlyRent} upiId={upiId} />
-                  <PaymentLinkBtn propertyId={t.propertyId} tenantId={t.id} phone={t.phone} name={t.name} label="Pay Link" />
+                  <WhatsAppLink name={t.name} phone={t.phone} roomNumber={t.roomNumber} bedNumber={t.bedNumber} rent={t.balance > 0 ? t.balance : t.monthlyRent} upiId={upiId} advance={t.bookingAdvance} />
+                  <PaymentLinkBtn propertyId={t.propertyId} tenantId={t.id} phone={t.phone} name={t.name} amount={t.balance > 0 ? t.balance : t.monthlyRent} label="Pay Link" />
                   <Btn size="sm" variant="filled-success" onClick={() => onMarkPaid(t)} className="ml-auto sm:ml-0">Mark Paid</Btn>
                 </div>
               </div>
@@ -2258,8 +2268,8 @@ function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, sa
     const paid = tenants.filter(t => t.paymentStatus === 'Paid').length;
     const notice = tenants.filter(t => !!t.noticeEndDate).length;
     const collected = tenants.reduce((s, t) => {
-      if (t.paymentStatus === 'Paid') return s + (Number(t.monthlyRent) || 0);
-      return s + Number(t.bookingAdvance || 0);
+      const fin = calculateMoveInFinancials(t);
+      return s + fin.totalPaid;
     }, 0);
     return { all: tenants.length, unpaid, paid, notice, collected };
   }, [tenants]);
@@ -2798,7 +2808,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
       // If converted from a booking, mark the booking converted only after tenant/occupancy creation succeeded
       if (bookingId) {
         try {
-          await convertBooking(bookingId);
+          await convertBooking(bookingId, c.id);
         } catch (bookingErr) {
           console.error('Failed to convert booking after tenant creation:', bookingErr);
           toast.error(`Tenant created, but booking status could not be updated: ${bookingErr.message}`);
@@ -3238,22 +3248,23 @@ export default function App({ session, organizationName, organizationId: orgIdPr
         }
       </main>
 
-      {collectingTenant && (
-        <CollectModal
-          record={{
-            amount: collectingTenant.bookingAdvance > 0 && collectingTenant.paymentStatus !== 'Paid'
-              ? Math.max(0, (collectingTenant.moveInCollection || (collectingTenant.monthlyRent + (collectingTenant.admissionFee || 0) + (collectingTenant.depositAmount || 0))) - collectingTenant.bookingAdvance)
-              : collectingTenant.monthlyRent,
-            name: collectingTenant.name,
-            roomNumber: collectingTenant.roomNumber,
-            bedNumber: collectingTenant.bedNumber,
-            bookingAdvance: collectingTenant.bookingAdvance,
-            totalCharges: collectingTenant.moveInCollection || (collectingTenant.monthlyRent + (collectingTenant.admissionFee || 0) + (collectingTenant.depositAmount || 0)),
-          }}
-          onConfirm={handleTenantMarkPaid}
-          onCancel={() => setCollectingTenant(null)}
-        />
-      )}
+      {collectingTenant && (() => {
+        const fin = calculateMoveInFinancials(collectingTenant);
+        return (
+          <CollectModal
+            record={{
+              amount: fin.balance > 0 ? fin.balance : fin.breakdown.rent,
+              name: collectingTenant.name,
+              roomNumber: collectingTenant.roomNumber,
+              bedNumber: collectingTenant.bedNumber,
+              bookingAdvance: collectingTenant.paymentStatus !== 'Paid' ? fin.bookingAdvance : 0,
+              totalCharges: fin.totalCharges,
+            }}
+            onConfirm={handleTenantMarkPaid}
+            onCancel={() => setCollectingTenant(null)}
+          />
+        );
+      })()}
 
       {viewingTenant && (
         <TenantProfile

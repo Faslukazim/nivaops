@@ -5,6 +5,7 @@ import { fetchTenantPaymentHistory } from './services/paymentService';
 import { getIdPhotoUrl } from './services/incomeService';
 import { updateTenant } from './services/tenantService';
 import { computeTenantStatus, STATUS } from './utils/paymentStatus';
+import { calculateMoveInFinancials } from './utils/financialEngine';
 
 function ordinal(n) {
   const s = ['th','st','nd','rd'];
@@ -84,7 +85,9 @@ export default function TenantProfile({ tenant, properties, onClose, onCollect, 
 
   const phone = String(tenant.phone).replace(/\D/g, '');
   const upiLine = property?.upi_id ? ` Pay via GPay/UPI: ${property.upi_id}` : '';
-  const waMsg = `Hi ${tenant.name}, rent reminder for Room ${tenant.roomNumber} Bed ${tenant.bedNumber}. Monthly rent ${fmt(tenant.monthlyRent)} is unpaid. Please pay at your earliest.${upiLine}`;
+  const dueAmt = (tenant.balance != null && tenant.balance > 0) ? tenant.balance : tenant.monthlyRent;
+  const advText = (tenant.bookingAdvance && Number(tenant.bookingAdvance) > 0) ? ` (₹${Number(tenant.bookingAdvance).toLocaleString('en-IN')} advance credited)` : '';
+  const waMsg = `Hi ${tenant.name}, rent reminder for Room ${tenant.roomNumber} Bed ${tenant.bedNumber}. Amount due ${fmt(dueAmt)}${advText} is unpaid. Please pay at your earliest.${upiLine}`;
   const waHref = `https://wa.me/${phone}?text=${encodeURIComponent(waMsg)}`;
   const callHref = `tel:${tenant.phone}`;
 
@@ -156,6 +159,7 @@ export default function TenantProfile({ tenant, properties, onClose, onCollect, 
                 tenantId={tenant.id}
                 phone={tenant.phone}
                 name={tenant.name}
+                amount={dueAmt}
                 label="Pay link"
                 className="flex-1 justify-center border border-border"
               />
@@ -251,41 +255,57 @@ export default function TenantProfile({ tenant, properties, onClose, onCollect, 
           )}
 
           {/* Deposit + Admission + Booking Advance */}
-          {(tenant.depositAmount > 0 || tenant.admissionFee > 0 || tenant.bookingAdvance > 0) && (
-            <div className="rounded-xl border border-border p-4 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                {tenant.admissionFee > 0 && (
-                  <div>
-                    <Label>Admission Fee</Label>
-                    <p className="mt-0.5 text-sm font-semibold text-ink">{fmt(tenant.admissionFee)}</p>
-                    <p className="text-xs text-slate2">non-refundable</p>
+          {(tenant.depositAmount > 0 || tenant.admissionFee > 0 || tenant.bookingAdvance > 0) && (() => {
+            const fin = calculateMoveInFinancials(tenant);
+            return (
+              <div className="rounded-xl border border-border p-4 space-y-3">
+                <div className="flex items-center justify-between text-xs pb-2 border-b border-border">
+                  <span className="font-semibold text-slate2">Total Move-In Charges</span>
+                  <span className="font-bold text-ink tabular-nums">{fmt(fin.totalCharges)}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {fin.breakdown.admissionFee > 0 && (
+                    <div>
+                      <Label>Admission Fee</Label>
+                      <p className="mt-0.5 text-sm font-semibold text-ink">{fmt(fin.breakdown.admissionFee)}</p>
+                      <p className="text-xs text-slate2">non-refundable</p>
+                    </div>
+                  )}
+                  {fin.breakdown.depositAmount > 0 && (
+                    <div>
+                      <Label>Security Deposit</Label>
+                      <p className="mt-0.5 text-sm font-semibold text-ink">{fmt(fin.breakdown.depositAmount)}</p>
+                      <p className={`text-xs ${
+                        fin.depositStatus === 'returned' ? 'text-leaf' :
+                        fin.depositStatus === 'forfeited' ? 'text-coral' : 'text-slate2'
+                      }`}>
+                        {fin.depositStatus === 'returned' ? 'Returned' :
+                         fin.depositStatus === 'forfeited' ? 'Not refundable' : 'Held'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                {fin.bookingAdvance > 0 && (
+                  <div className="pt-2 border-t border-border flex items-center justify-between">
+                    <div>
+                      <Label>Booking Advance</Label>
+                      <p className="text-xs text-slate2">Paid during reservation</p>
+                    </div>
+                    <span className="text-sm font-bold text-leaf tabular-nums">−{fmt(fin.bookingAdvance)}</span>
                   </div>
                 )}
-                {tenant.depositAmount > 0 && (
-                  <div>
-                    <Label>Security Deposit</Label>
-                    <p className="mt-0.5 text-sm font-semibold text-ink">{fmt(tenant.depositAmount)}</p>
-                    <p className={`text-xs ${
-                      tenant.depositStatus === 'returned' ? 'text-leaf' :
-                      tenant.depositStatus === 'forfeited' ? 'text-coral' : 'text-slate2'
-                    }`}>
-                      {tenant.depositStatus === 'returned' ? 'Returned' :
-                       tenant.depositStatus === 'forfeited' ? 'Not refundable' : 'Held'}
-                    </p>
+                {status !== STATUS.PAID && fin.bookingAdvance > 0 && (
+                  <div className="pt-2 border-t border-black/[0.06] flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-ink">Remaining Balance Due</span>
+                      <p className="text-[11px] text-slate2">Due to complete check-in</p>
+                    </div>
+                    <span className="text-base font-bold text-coral tabular-nums">{fmt(fin.balance)}</span>
                   </div>
                 )}
               </div>
-              {tenant.bookingAdvance > 0 && (
-                <div className="pt-2 border-t border-border flex items-center justify-between">
-                  <div>
-                    <Label>Booking Advance</Label>
-                    <p className="text-xs text-slate2">Paid during reservation</p>
-                  </div>
-                  <span className="text-sm font-bold text-leaf tabular-nums">−{fmt(tenant.bookingAdvance)}</span>
-                </div>
-              )}
-            </div>
-          )}
+            );
+          })()}
 
           {/* ID Photo */}
           {idPhotoUrl && (
@@ -362,22 +382,23 @@ export default function TenantProfile({ tenant, properties, onClose, onCollect, 
         </div>
       </div>
 
-      {showCollect && (
-        <CollectModal
-          record={{
-            amount: tenant.bookingAdvance > 0 && tenant.paymentStatus !== 'Paid'
-              ? Math.max(0, (tenant.moveInCollection || (tenant.monthlyRent + (tenant.admissionFee || 0) + (tenant.depositAmount || 0))) - tenant.bookingAdvance)
-              : tenant.monthlyRent,
-            name: tenant.name,
-            roomNumber: tenant.roomNumber,
-            bedNumber: tenant.bedNumber,
-            bookingAdvance: tenant.paymentStatus !== 'Paid' ? tenant.bookingAdvance : 0,
-            totalCharges: tenant.moveInCollection || (tenant.monthlyRent + (tenant.admissionFee || 0) + (tenant.depositAmount || 0)),
-          }}
-          onConfirm={(amt, reason) => { setShowCollect(false); onCollect(tenant, amt, reason); }}
-          onCancel={() => setShowCollect(false)}
-        />
-      )}
+      {showCollect && (() => {
+        const fin = calculateMoveInFinancials(tenant);
+        return (
+          <CollectModal
+            record={{
+              amount: fin.balance > 0 ? fin.balance : fin.breakdown.rent,
+              name: tenant.name,
+              roomNumber: tenant.roomNumber,
+              bedNumber: tenant.bedNumber,
+              bookingAdvance: tenant.paymentStatus !== 'Paid' ? fin.bookingAdvance : 0,
+              totalCharges: fin.totalCharges,
+            }}
+            onConfirm={(amt, reason) => { setShowCollect(false); onCollect(tenant, amt, reason); }}
+            onCancel={() => setShowCollect(false)}
+          />
+        );
+      })()}
     </>
   );
 }

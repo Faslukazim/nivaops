@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Loader2, MessageCircle, CheckCircle2, ChevronDown, LogOut, Link2, X, UserMinus } from 'lucide-react';
 import { createPaymentLink } from '../services/paymentLinkService';
-import { fetchCurrentMonthPaymentRecord } from '../services/paymentService';
+import { fetchCurrentMonthPaymentRecord, updatePaymentRecordAmount } from '../services/paymentService';
 import { useToast } from '../lib/toast.jsx';
 
 // ─── SignOutBtn ───────────────────────────────────────────────────────────────
@@ -316,10 +316,11 @@ export function PaymentToggleBtn({ isPaid, onMarkPaid, onMarkUnpaid, showLabel =
 // ─── WhatsAppLink ─────────────────────────────────────────────────────────────
 // Consistent WA reminder link. Used in TenantCard, BedRow, PaymentsPage, RoomDetail.
 
-export function WhatsAppLink({ name, phone, roomNumber, bedNumber, rent, label, upiId, className = '' }) {
+export function WhatsAppLink({ name, phone, roomNumber, bedNumber, rent, label, upiId, advance, className = '' }) {
   const p = String(phone).replace(/\D/g, '');
   const upiLine = upiId ? ` Pay via GPay/UPI: ${upiId}` : '';
-  const msg = `Hi ${name}, rent reminder for Room ${roomNumber} Bed ${bedNumber}. Monthly rent ${fmt(rent)} is unpaid. Please pay at your earliest.${upiLine}`;
+  const advText = (advance && Number(advance) > 0) ? ` (₹${Number(advance).toLocaleString('en-IN')} advance credited)` : '';
+  const msg = `Hi ${name}, rent reminder for Room ${roomNumber} Bed ${bedNumber}. Amount due ${fmt(rent)}${advText} is unpaid. Please pay at your earliest.${upiLine}`;
   const href = `https://wa.me/${p}?text=${encodeURIComponent(msg)}`;
   return (
     <a
@@ -343,7 +344,7 @@ export function WhatsAppLink({ name, phone, roomNumber, bedNumber, rent, label, 
 // have one. Silently disabled (renders nothing) if Razorpay isn't configured
 // or the tenant has no phone on file.
 
-export function PaymentLinkBtn({ propertyId, tenantId, phone, name, label, className = '' }) {
+export function PaymentLinkBtn({ propertyId, tenantId, phone, name, amount, label, className = '' }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [link, setLink] = useState(null);
@@ -376,11 +377,20 @@ export function PaymentLinkBtn({ propertyId, tenantId, phone, name, label, class
     try {
       const record = await fetchCurrentMonthPaymentRecord(propertyId, tenantId);
       if (!record) throw new Error('No rent record found for this tenant.');
+
+      const targetAmount = (amount != null && Number(amount) > 0) ? Number(amount) : Number(record.amount || 0);
+
+      // If requested amount differs from recorded invoice amount and invoice is not yet paid, sync payment record
+      if (targetAmount > 0 && Math.round(targetAmount * 100) !== Math.round(Number(record.amount) * 100) && record.status !== 'paid') {
+        await updatePaymentRecordAmount(record.id, targetAmount);
+        record.amount = targetAmount;
+      }
+
       setLink(record.payment_link || await createPaymentLink({
         paymentRecordId: record.id,
         tenantName: name,
         phone,
-        amount: record.amount,
+        amount: targetAmount,
         description: 'Monthly rent',
       }));
       toast.success(`Payment link ready for ${name} — tap again to copy`);

@@ -12,6 +12,21 @@ export async function fetchBookings(propertyId) {
   return data;
 }
 
+export async function fetchBookingsForMonth(propertyId, yearMonth) {
+  if (!hasSupabaseConfig) return [];
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('*')
+    .eq('property_id', propertyId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  if (!yearMonth) return data || [];
+  return (data || []).filter(b => {
+    const d = b.created_at || b.booking_date || '';
+    return d.slice(0, 7) === yearMonth;
+  });
+}
+
 export async function createBooking(propertyId, _organizationId, { roomId, bedId, name, phone, advanceAmount, expectedJoinDate }) {
   if (!hasSupabaseConfig) return null;
 
@@ -66,11 +81,14 @@ export async function cancelBooking(bookingId, bedId) {
   }
 }
 
-export async function convertBooking(bookingId) {
+export async function convertBooking(bookingId, tenantId) {
   if (!hasSupabaseConfig) return;
+  const patch = { status: 'converted' };
+  if (tenantId) patch.tenant_id = tenantId;
   const { error } = await supabase
     .from('bookings')
-    .update({ status: 'converted' })
-    .eq('id', bookingId);
+    .update(patch)
+    .eq('id', bookingId)
+    .eq('status', 'pending');
   if (error) throw error;
 }

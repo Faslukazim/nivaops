@@ -28,6 +28,8 @@ import {
   INCOME_CATEGORIES, fetchIncomeRecords, addIncomeRecord, deleteIncomeRecord, uploadIdPhoto,
 } from './services/incomeService';
 import { fetchDepositSettlementsForMonth } from './services/tenantService';
+import { fetchBookingsForMonth } from './services/bookingService';
+import { reconcileMonthlyAccounts } from './utils/financialEngine';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -146,13 +148,18 @@ function RentStatusRow({ r, ym, propertyId, onMarkPaid, onMarkUnpaid, onViewTena
           {r.name}
         </button>
         <p className="text-xs text-slate2 tabular-nums">Room {r.roomNumber} · Bed {r.bedNumber} · {fmt(r.amount)}</p>
+        {r.bookingAdvance > 0 && r.isMoveInMonth && (
+          <p className="text-[11px] text-slate2 mt-0.5">
+            Advance paid at booking: <span className="font-semibold text-leaf">{fmt(r.bookingAdvance)}</span> · Balance due: <span className="font-semibold text-ink">{fmt(r.amount)}</span>
+          </p>
+        )}
         {statusLine}
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {st !== STATUS.PAID ? (
           <>
-            <WhatsAppLink name={r.name} phone={r.phone} roomNumber={r.roomNumber} bedNumber={r.bedNumber} rent={r.amount} label="Remind" upiId={upiId} />
-            <PaymentLinkBtn propertyId={propertyId} tenantId={r.tenantId} phone={r.phone} name={r.name} label="Pay link" />
+            <WhatsAppLink name={r.name} phone={r.phone} roomNumber={r.roomNumber} bedNumber={r.bedNumber} rent={r.amount} label="Remind" upiId={upiId} advance={r.bookingAdvance} />
+            <PaymentLinkBtn propertyId={propertyId} tenantId={r.tenantId} phone={r.phone} name={r.name} amount={r.amount} label="Pay link" />
             <Btn size="sm" variant="filled-success" onClick={() => onMarkPaid(r)}>Mark Paid</Btn>
           </>
         ) : confirmUndo ? (
@@ -855,6 +862,7 @@ function PLTab({ selectedPropertyId, tenants }) {
   const [expenses, setExpenses] = useState([]);
   const [incomeRecs, setIncomeRecs] = useState([]);
   const [depositSettlements, setDepositSettlements] = useState([]);
+  const [monthlyBookings, setMonthlyBookings] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -865,41 +873,52 @@ function PLTab({ selectedPropertyId, tenants }) {
       fetchExpenses(selectedPropertyId, ym),
       fetchIncomeRecords(selectedPropertyId, ym),
       fetchDepositSettlementsForMonth(selectedPropertyId, ym),
+      fetchBookingsForMonth(selectedPropertyId, ym),
     ])
-      .then(([recs, exps, incs, deposits]) => { setRecords(recs); setExpenses(exps); setIncomeRecs(incs); setDepositSettlements(deposits); })
+      .then(([recs, exps, incs, deposits, bks]) => {
+        setRecords(recs);
+        setExpenses(exps);
+        setIncomeRecs(incs);
+        setDepositSettlements(deposits);
+        setMonthlyBookings(bks || []);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [selectedPropertyId, ym]);
 
-  // Income
+  const recon = useMemo(() => {
+    return reconcileMonthlyAccounts({
+      paymentRecords: records,
+      expenses,
+      incomeRecords: incomeRecs,
+      bookings: monthlyBookings,
+      tenants,
+      depositSettlements,
+      yearMonth: ym,
+    });
+  }, [records, expenses, incomeRecs, monthlyBookings, tenants, depositSettlements, ym]);
+
   const paidRecords = records.filter(r => r.status === 'paid');
-  const rentCollected = paidRecords.reduce((s, r) => s + (r.amountCollected ?? r.amount), 0);
-  const rentDeductions = paidRecords.reduce((s, r) => s + (r.amount - (r.amountCollected ?? r.amount)), 0);
+  const rentCollected = recon.inflow.rentCollected;
+  const rentDeductions = recon.inflow.rentDeductions;
+  const bookingAdvanceIncome = recon.inflow.bookingAdvancesCollected;
+  const admissionIncome = recon.inflow.admissionCollected;
+  const otherIncome = recon.inflow.otherIncome;
+  const depositCollected = recon.inflow.depositsCollected;
+  const depositForfeited = recon.inflow.forfeitedDeposits;
 
-  const curYM = ymNow();
+  const totalIncome = recon.inflow.totalInflow;
+  const totalExpenses = recon.outflow.totalExpenses;
+  const netProfit = recon.netProfit;
+
   const newThisMonth = tenants.filter(t => t.joinDate?.startsWith(ym));
-  const admissionIncome = newThisMonth.reduce((s, t) => s + Number(t.admissionFee || 0), 0);
-  const otherIncome = incomeRecs.reduce((s, r) => s + Number(r.amount), 0);
+  const pendingReservationsThisMonth = monthlyBookings.filter(b => (!b.status || b.status === 'pending'));
 
-  // Deposits — treated as cash-basis income/expense (per operator's request):
-  // collected this month = income, forfeited this month = income (you kept
-  // it). A returned deposit is posted as a real 'deposit_refund' expense row
-  // (see tenantService.postDepositRefundExpense) so it's just another
-  // expense category here rather than a separate bolt-on subtotal. Pre-
-  // accounted legacy deposits are excluded server-side already.
-  const depositCollected = newThisMonth.filter(t => !t.depositPreAccounted).reduce((s, t) => s + Number(t.depositAmount || 0), 0);
-  const depositForfeited = depositSettlements.filter(d => d.deposit_status === 'forfeited').reduce((s, d) => s + Number(d.deposit_amount || 0), 0);
-
-  const totalIncome = rentCollected + admissionIncome + otherIncome + depositCollected + depositForfeited;
-
-  // Expenses
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
   const byCategory = EXPENSE_CATEGORIES.map(cat => ({
     ...cat,
     total: expenses.filter(e => e.category === cat.id).reduce((s, e) => s + e.amount, 0),
   })).filter(c => c.total > 0);
 
-  const netProfit = totalIncome - totalExpenses;
   const profitColor = netProfit >= 0 ? 'text-leaf' : 'text-coral';
   const profitLabel = netProfit >= 0 ? 'Net Profit' : 'Net Loss';
   const hasData = totalIncome > 0 || totalExpenses > 0;
@@ -944,6 +963,15 @@ function PLTab({ selectedPropertyId, tenants }) {
                     <p className="text-xs text-slate2">adjustments from rent</p>
                   </div>
                   <span className="text-sm font-semibold tabular-nums text-coral">−{fmt(rentDeductions)}</span>
+                </div>
+              )}
+              {bookingAdvanceIncome > 0 && (
+                <div className="flex items-center justify-between px-4 py-3">
+                  <div>
+                    <p className="text-sm text-ink">Booking Advances</p>
+                    <p className="text-xs text-slate2">{pendingReservationsThisMonth.length} pending reservation{pendingReservationsThisMonth.length !== 1 ? 's' : ''}</p>
+                  </div>
+                  <span className="text-sm font-semibold tabular-nums text-ink">{fmt(bookingAdvanceIncome)}</span>
                 </div>
               )}
               {admissionIncome > 0 && (

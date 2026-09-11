@@ -1,4 +1,5 @@
 import { hasSupabaseConfig, supabase } from '../lib/supabase';
+import { calculateMoveInFinancials } from '../utils/financialEngine';
 
 const STORAGE_KEY = 'stayb-tenants';
 
@@ -48,7 +49,17 @@ function toUiTenant(occupancy, convertedBooking) {
   const monthlyRent = Number(occupancy.monthly_rent ?? 0);
   const admissionFee = Number(occupancy.admission_fee ?? 0);
   const depositAmount = Number(occupancy.deposit_amount ?? 0);
-  const totalCharges = monthlyRent + admissionFee + depositAmount;
+  const bookingAdvance = Number(convertedBooking?.advance_amount ?? occupancy.booking_advance ?? 0);
+
+  const fin = calculateMoveInFinancials({
+    monthlyRent,
+    admissionFee,
+    depositAmount,
+    bookingAdvance,
+    amountCollected: occupancy.amount_collected,
+    paymentStatus: occupancy.payment_status,
+    depositStatus: occupancy.deposit_status,
+  });
 
   return {
     id: occupancy.tenant.id,
@@ -60,18 +71,22 @@ function toUiTenant(occupancy, convertedBooking) {
     phone: occupancy.tenant.phone,
     roomNumber: occupancy.room?.room_number ?? 'Unassigned',
     bedNumber: occupancy.bed?.bed_number ?? '-',
-    monthlyRent,
+    monthlyRent: fin.breakdown.rent,
     joinDate: occupancy.tenant.join_date,
     rentDueDay: occupancy.rent_due_day ?? null,
     paymentStatus: occupancy.payment_status,
     paymentDate: occupancy.payment_date ?? '',
-    depositAmount,
-    depositStatus: occupancy.deposit_status ?? 'none',
+    depositAmount: fin.breakdown.depositAmount,
+    depositStatus: fin.depositStatus,
     depositPreAccounted: occupancy.deposit_pre_accounted ?? false,
     depositSettledAt: occupancy.deposit_settled_at ?? null,
-    admissionFee,
-    moveInCollection: Number(occupancy.move_in_collection || totalCharges),
-    bookingAdvance: Number(convertedBooking?.advance_amount ?? occupancy.booking_advance ?? 0),
+    admissionFee: fin.breakdown.admissionFee,
+    totalCharges: fin.totalCharges,
+    totalPaid: fin.totalPaid,
+    balance: fin.balance,
+    remainingDueToCollect: fin.remainingDueToCollect,
+    moveInCollection: fin.totalCharges,
+    bookingAdvance: fin.bookingAdvance,
     bookingId: convertedBooking?.id ?? occupancy.booking_id ?? null,
     id_photo_url: occupancy.tenant.id_photo_url ?? null,
     noticeEndDate: occupancy.notice_end_date ?? null,
