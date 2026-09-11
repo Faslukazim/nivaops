@@ -24,6 +24,22 @@ function OccBar({ occupied, capacity }) {
   );
 }
 
+function formatJoinDate(dateStr) {
+  if (!dateStr) return '';
+  try {
+    const parts = String(dateStr).split('-');
+    if (parts.length === 3) {
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+      }
+    }
+    return dateStr;
+  } catch {
+    return dateStr;
+  }
+}
+
 // ─── Room card ────────────────────────────────────────────────────────────────
 
 function RoomCard({ room, isSelected, onClick }) {
@@ -32,11 +48,27 @@ function RoomCard({ room, isSelected, onClick }) {
   const capacity = room.beds.length;
   const vacant = capacity - occupied - reserved;
   const unpaid = room.beds.filter(b => b.occupancy?.payment_status === 'Unpaid').length;
-  const isEmpty = occupied === 0;
-  const isFull = occupied === capacity;
+  const isEmpty = occupied === 0 && reserved === 0;
+  const isFull = (occupied + reserved) === capacity;
 
-  const badgeStatus = unpaid > 0 ? 'unpaid' : isFull ? 'paid' : isEmpty ? 'empty' : null;
-  const badgeLabel = unpaid > 0 ? `${unpaid} unpaid` : isFull ? 'All paid' : isEmpty ? 'Empty' : null;
+  const badgeStatus = unpaid > 0
+    ? 'unpaid'
+    : reserved > 0
+    ? 'warning'
+    : isFull
+    ? 'paid'
+    : isEmpty
+    ? 'empty'
+    : null;
+  const badgeLabel = unpaid > 0
+    ? `${unpaid} unpaid`
+    : reserved > 0
+    ? `${reserved} booked`
+    : isFull
+    ? 'All paid'
+    : isEmpty
+    ? 'Empty'
+    : null;
 
   return (
     <button
@@ -65,19 +97,33 @@ function RoomCard({ room, isSelected, onClick }) {
       <OccBar occupied={occupied} capacity={capacity} />
 
       <div className="mt-3 flex gap-2">
-        {Array.from({ length: capacity }).map((_, i) => (
-          <div
-            key={i}
-            className={`h-4 w-4 rounded-sm ${
-              i < occupied ? 'bg-green' : isSelected ? 'bg-green/25 border border-green/40' : 'bg-border'
-            }`}
-          />
-        ))}
+        {room.beds.map(b => {
+          const isOcc = !!b.tenant;
+          const isRes = !b.tenant && !!b.booking;
+          return (
+            <div
+              key={b.id}
+              title={`Bed ${b.bed_number}: ${isOcc ? b.tenant.name : isRes ? `Booked (${b.booking.name})` : 'Available'}`}
+              className={`h-4 w-4 rounded-sm transition-colors ${
+                isOcc
+                  ? 'bg-green'
+                  : isRes
+                  ? 'bg-amber ring-1 ring-amber/50'
+                  : isSelected
+                  ? 'bg-green/25 border border-green/40'
+                  : 'bg-border'
+              }`}
+            />
+          );
+        })}
       </div>
 
-      {occupied > 0 && (
+      {(occupied > 0 || reserved > 0) && (
         <p className="mt-2 text-xs text-slate2 truncate">
-          {room.beds.filter(b => b.tenant).map(b => b.tenant.name.split(' ')[0]).join(' · ')}
+          {[
+            ...room.beds.filter(b => b.tenant).map(b => b.tenant.name.split(' ')[0]),
+            ...room.beds.filter(b => !b.tenant && b.booking).map(b => `${b.booking.name.split(' ')[0]} (Booked)`)
+          ].join(' · ')}
         </p>
       )}
     </button>
@@ -242,17 +288,17 @@ function BedRow({ bed, roomNumber, roomId, rooms, propertyId, upiId, onMarkPaid,
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-ink truncate">{booking.name}</p>
               <p className="text-xs text-slate2 truncate">
-                {booking.advance_amount > 0 ? `Advance ₹${booking.advance_amount}` : 'No advance'}
-                {booking.expected_join_date ? ` · Joining ${booking.expected_join_date}` : ''}
+                Booked · {booking.advance_amount > 0 ? `Advance ${fmt(booking.advance_amount)}` : 'No advance'}
+                {booking.expected_join_date ? ` · Joining ${formatJoinDate(booking.expected_join_date)}` : ''}
               </p>
             </div>
             <span className="shrink-0 rounded-full bg-amber/10 px-2 py-0.5 text-[10px] font-semibold text-amber">Booked</span>
           </div>
-          <div className="flex items-center gap-1 mt-1.5 pl-11">
+          <div className="flex items-center gap-1.5 mt-1.5 pl-11">
             <button
               type="button"
-              onClick={() => onConvertBooking(booking)}
-              className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold text-success hover:bg-success/10 transition-colors"
+              onClick={() => onConvertBooking({ ...booking, room_id: roomId, bed_id: bed.id, roomNumber, bedNumber: bed.bed_number })}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-success bg-success/10 hover:bg-success/20 transition-colors"
             >
               <Plus className="h-3.5 w-3.5" />
               Convert to Tenant
@@ -442,7 +488,7 @@ function BedRow({ bed, roomNumber, roomId, rooms, propertyId, upiId, onMarkPaid,
 
 // ─── Room detail panel ────────────────────────────────────────────────────────
 
-function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, onClose, onAssign, onAssignBed, onRoomUpdate, onViewTenant, onDeleteRoom, onConvertBooking }) {
+function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, onClose, onAssign, onAssignBed, onRoomUpdate, onViewTenant, onDeleteRoom, onConvertBooking, onBookingsChange }) {
   const toast = useToast();
   const occupied = room.beds.filter(b => b.tenant).length;
   const reserved = room.beds.filter(b => !b.tenant && b.booking).length;
@@ -537,7 +583,8 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
         name, phone, advanceAmount, expectedJoinDate,
       });
       toast.success(`Bed ${bed.bed_number} booked for ${name}`);
-      onRoomUpdate();
+      await onRoomUpdate();
+      onBookingsChange?.();
     } catch (e) { toast.error(e.message); }
   }
 
@@ -545,7 +592,8 @@ function RoomDetail({ room, rooms, selectedPropertyId, organizationId, upiId, on
     try {
       await cancelBooking(bookingId, bedId);
       toast.info('Booking cancelled');
-      onRoomUpdate();
+      await onRoomUpdate();
+      onBookingsChange?.();
     } catch (e) { toast.error(e.message); }
   }
 
@@ -789,7 +837,7 @@ function AddRoomSheet({ onSave, onCancel, existingRoomNumbers = [] }) {
 
 // ─── Rooms page ───────────────────────────────────────────────────────────────
 
-export default function RoomsPage({ selectedPropertyId, organizationId, upiId, onAssignBed, onViewTenant, onConvertBooking, roomsVersion }) {
+export default function RoomsPage({ selectedPropertyId, organizationId, upiId, onAssignBed, onViewTenant, onConvertBooking, roomsVersion, onBookingsChange }) {
   const toast = useToast();
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -839,6 +887,18 @@ export default function RoomsPage({ selectedPropertyId, organizationId, upiId, o
     return { totalBeds, occupied, reserved, unpaidRooms };
   }, [rooms]);
 
+  const allBookedBeds = useMemo(() => {
+    const list = [];
+    for (const r of rooms) {
+      for (const b of r.beds) {
+        if (!b.tenant && b.booking) {
+          list.push({ room: r, bed: b, booking: b.booking });
+        }
+      }
+    }
+    return list;
+  }, [rooms]);
+
   function handleAssign(room) {
     const availableBed = room.beds.find(b => !b.tenant && !b.booking);
     onAssignBed({ propertyId: selectedPropertyId, roomId: room.id, bedId: availableBed?.id ?? '' });
@@ -879,7 +939,7 @@ export default function RoomsPage({ selectedPropertyId, organizationId, upiId, o
         { label: 'Total rooms',     value: rooms.length,                          color: 'text-ink' },
         { label: 'Occupancy',       value: `${Math.round((stats.occupied / (stats.totalBeds || 1)) * 100)}%` },
         { label: 'Vacant beds',     value: stats.totalBeds - stats.occupied - stats.reserved,      color: (stats.totalBeds - stats.occupied - stats.reserved) > 0 ? 'text-amber' : 'text-success' },
-        { label: 'Rooms Pending', value: stats.unpaidRooms,                     color: stats.unpaidRooms > 0 ? 'text-coral' : 'text-success' },
+        { label: 'Reserved / Booked', value: stats.reserved,                     color: stats.reserved > 0 ? 'text-amber' : 'text-slate2' },
       ]} />
       </div>
       <Btn variant="ghost" className="shrink-0 mt-0.5" onClick={() => setAddingRoom(true)}>
@@ -888,6 +948,72 @@ export default function RoomsPage({ selectedPropertyId, organizationId, upiId, o
       </Btn>
     </div>
   );
+
+  const bookedBedsSection = allBookedBeds.length > 0 ? (
+    <div className="mb-4 rounded-2xl border border-amber/20 bg-amber/[0.04] p-3.5 sm:p-4">
+      <div className="flex items-center justify-between gap-2 mb-2.5">
+        <div className="flex items-center gap-2">
+          <Bookmark className="h-4 w-4 text-amber" />
+          <span className="text-xs font-bold uppercase tracking-wider text-amber">
+            Booked Beds ({allBookedBeds.length})
+          </span>
+        </div>
+        <span className="text-[11px] font-medium text-slate2">
+          Reserved beds awaiting check-in
+        </span>
+      </div>
+      <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+        {allBookedBeds.map(({ room, bed, booking }) => (
+          <div
+            key={booking.id}
+            className="flex flex-col justify-between rounded-xl border border-black/[0.06] bg-white p-3 shadow-xs"
+          >
+            <div>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <span className="inline-block rounded-md bg-amber/10 px-1.5 py-0.5 text-[10px] font-bold text-amber">
+                    Room {room.room_number} · Bed {bed.bed_number}
+                  </span>
+                  <p className="mt-1 text-sm font-semibold text-ink truncate">{booking.name}</p>
+                </div>
+                {booking.phone && (
+                  <span className="text-xs text-slate2 tabular-nums">{booking.phone}</span>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-slate2">
+                {booking.advance_amount > 0 ? `Advance ${fmt(booking.advance_amount)}` : 'No advance'}
+                {booking.expected_join_date ? ` · Joining ${formatJoinDate(booking.expected_join_date)}` : ''}
+              </p>
+            </div>
+
+            <div className="mt-2.5 flex items-center gap-2 pt-2 border-t border-black/[0.04]">
+              <button
+                type="button"
+                onClick={() => onConvertBooking({
+                  ...booking,
+                  room_id: room.id,
+                  bed_id: bed.id,
+                  roomNumber: room.room_number,
+                  bedNumber: bed.bed_number,
+                })}
+                className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-green text-white py-1.5 text-xs font-semibold hover:bg-green-hover transition-colors shadow-2xs"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Convert to Tenant
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedRoom(room)}
+                className="px-2.5 py-1.5 rounded-lg border border-border text-xs font-medium text-slate2 hover:text-ink hover:bg-mist transition-colors"
+              >
+                View
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : null;
 
   const isMobile = window.innerWidth < 640;
 
@@ -916,6 +1042,7 @@ export default function RoomsPage({ selectedPropertyId, organizationId, upiId, o
             onDeleteRoom={handleDeleteRoom}
             onViewTenant={onViewTenant}
             onConvertBooking={onConvertBooking}
+            onBookingsChange={onBookingsChange}
           />
         </Card>
       </div>
@@ -925,6 +1052,7 @@ export default function RoomsPage({ selectedPropertyId, organizationId, upiId, o
   return (
     <div>
       {summaryStrip}
+      {bookedBedsSection}
 
       <div className="hidden sm:grid sm:grid-cols-[300px_1fr] lg:grid-cols-[340px_1fr] gap-4">
         <div className="flex flex-col gap-2 max-h-[calc(100vh-220px)] overflow-y-auto pr-1">
@@ -966,6 +1094,7 @@ export default function RoomsPage({ selectedPropertyId, organizationId, upiId, o
               onDeleteRoom={handleDeleteRoom}
               onViewTenant={onViewTenant}
               onConvertBooking={onConvertBooking}
+              onBookingsChange={onBookingsChange}
             />
           ) : (
             <EmptyState

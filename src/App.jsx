@@ -505,7 +505,7 @@ function TopNav({ active, onChange, bookingCount = 0, overdueCount = 0 }) {
 
 // ─── bed selector ────────────────────────────────────────────────────────────
 
-function BedSelector({ properties, propertyId, roomId, bedId, onPropertyChange, onRoomChange, onBedChange, editingBedId }) {
+function BedSelector({ properties, propertyId, roomId, bedId, onPropertyChange, onRoomChange, onBedChange, editingBedId, reservedBedId }) {
   const [rooms, setRooms] = useState([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
 
@@ -519,10 +519,14 @@ function BedSelector({ properties, propertyId, roomId, bedId, onPropertyChange, 
   }, [propertyId]);
 
   const selectedRoom = rooms.find(r => r.id === roomId);
-  // When editing, include the tenant's own bed even if status='occupied'
-  const availableBeds = selectedRoom?.beds?.filter(
-    b => b.status === 'available' || b.id === editingBedId
-  ) ?? [];
+  // When editing or converting booking, include the target bed even if status='occupied' or 'reserved'
+  const isSelectableBed = b =>
+    b.status === 'available' ||
+    b.id === editingBedId ||
+    b.id === reservedBedId ||
+    b.id === bedId;
+
+  const availableBeds = selectedRoom?.beds?.filter(isSelectableBed) ?? [];
 
   const selectCls = 'w-full appearance-none rounded-lg border border-border bg-white px-3 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink disabled:bg-mist disabled:text-slate2';
 
@@ -539,8 +543,7 @@ function BedSelector({ properties, propertyId, roomId, bedId, onPropertyChange, 
       onChange: e => { onRoomChange(e.target.value); onBedChange(''); },
       disabled: !propertyId || loadingRooms,
       options: rooms.map(r => {
-        // When editing, count the current bed as available for its room
-        const free = r.beds?.filter(b => b.status === 'available' || b.id === editingBedId).length ?? 0;
+        const free = r.beds?.filter(isSelectableBed).length ?? 0;
         return { value: r.id, label: `Room ${r.room_number} (${free} free)`, disabled: free === 0 };
       }),
       placeholder: loadingRooms ? 'Loading…' : 'Select room',
@@ -549,7 +552,10 @@ function BedSelector({ properties, propertyId, roomId, bedId, onPropertyChange, 
       label: 'Bed', value: bedId,
       onChange: e => onBedChange(e.target.value),
       disabled: !roomId,
-      options: availableBeds.map(b => ({ value: b.id, label: `Bed ${b.bed_number}` })),
+      options: availableBeds.map(b => ({
+        value: b.id,
+        label: b.status === 'reserved' ? `Bed ${b.bed_number} (Reserved)` : `Bed ${b.bed_number}`,
+      })),
       placeholder: 'Select bed',
     },
   ];
@@ -626,7 +632,17 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
         moveInCollection: initialTenant.moveInCollection ?? '',
       });
     } else if (prefill) {
-      setForm({ ...emptyForm, propertyId: prefill.propertyId ?? '', roomId: prefill.roomId ?? '', bedId: prefill.bedId ?? '', name: prefill.prefillName ?? '', phone: prefill.prefillPhone ?? '' });
+      setPhoneError('');
+      setForm({
+        ...emptyForm,
+        propertyId: prefill.propertyId ?? defaultPropertyId ?? '',
+        roomId: prefill.roomId ?? '',
+        bedId: prefill.bedId ?? '',
+        name: prefill.prefillName ?? '',
+        phone: prefill.prefillPhone ?? '',
+        joinDate: prefill.joinDate ?? new Date().toISOString().slice(0, 10),
+        bookingId: prefill.bookingId ?? null,
+      });
       setAdvanceAlreadyPaid(Number(prefill.advanceAmount || 0));
     } else {
       setAdvanceAlreadyPaid(0);
@@ -708,6 +724,7 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
       admissionFee: Number(form.admissionFee || 0),
       depositAmount: Number(form.depositAmount || 0),
       moveInCollection: Number(form.moveInCollection || 0),
+      bookingId: form.bookingId || prefill?.bookingId || null,
       _photoFile: photoFile,
     });
     if (!initialTenant) { setForm({ ...emptyForm, propertyId: defaultPropertyId ?? '' }); setPhotoFile(null); setPhotoPreview(null); }
@@ -818,6 +835,7 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
           onRoomChange={v => set('roomId', v)}
           onBedChange={v => set('bedId', v)}
           editingBedId={initialTenant?.bedId}
+          reservedBedId={prefill?.bedId}
         />
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -2167,8 +2185,8 @@ function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, sa
   const [loadingVacated, setLoadingVacated] = useState(false);
 
   useEffect(() => {
-    if (editingTenant) setShowForm(true);
-  }, [editingTenant]);
+    if (editingTenant || roomPrefill) setShowForm(true);
+  }, [editingTenant, roomPrefill]);
 
   useEffect(() => {
     if (!showPast) return;
@@ -2719,7 +2737,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
   async function handleAdd(tenant) {
     setSaving(true); setError('');
     try {
-      const { _photoFile, ...rest } = tenant;
+      const { _photoFile, bookingId, ...rest } = tenant;
       const c = await createTenant({ ...rest, paymentStatus: 'Unpaid', paymentDate: '' });
       if (_photoFile && c.id) {
         const orgId = properties.find(p => p.id === selectedPropertyId)?.organization_id;
@@ -2728,11 +2746,21 @@ export default function App({ session, organizationName, organizationId: orgIdPr
           await saveTenantIdPhoto(c.id, path);
         }
       }
+      // If converted from a booking, mark the booking converted only after tenant/occupancy creation succeeded
+      if (bookingId) {
+        try {
+          await convertBooking(bookingId);
+        } catch (bookingErr) {
+          console.error('Failed to convert booking after tenant creation:', bookingErr);
+          toast.error(`Tenant created, but booking status could not be updated: ${bookingErr.message}`);
+        }
+      }
       setTenants(cur => [c, ...cur]);
       setRoomsVersion(v => v + 1);
+      fetchBookings(selectedPropertyId).then(setPendingBookings).catch(() => {});
       logActivity(selectedPropertyId, properties.find(p=>p.id===selectedPropertyId)?.organization_id, 'tenant_assigned', `${c.name} assigned to Room ${c.roomNumber} Bed ${c.bedNumber}`);
       toast.success(`${c.name} added`);
-    } catch (e) { toast.error(e.message); }
+    } catch (e) { toast.error(e.message); throw e; }
     finally { setSaving(false); }
   }
 
@@ -2780,28 +2808,20 @@ export default function App({ session, organizationName, organizationId: orgIdPr
     finally { setSaving(false); }
   }
 
-  async function handleConvertBooking(booking) {
-    // Verify bed is still available before converting
-    try {
-      const rooms = await fetchRoomsWithBeds(selectedPropertyId);
-      const room = rooms.find(r => r.id === booking.room_id);
-      const bed = room?.beds?.find(b => b.id === booking.bed_id);
-      if (!bed) { toast.error('This bed no longer exists.'); return; }
-    } catch { /* non-critical — proceed */ }
-    try { await convertBooking(booking.id, booking.bed_id); } catch (e) { toast.error(e.message); return; }
-    // Pre-fill the add-tenant form. Use roomPrefill (no initialTenant) so
-    // TenantForm enters "new tenant" mode with name/phone as separate state.
+  function handleConvertBooking(booking) {
+    // Pre-fill the add-tenant form. Booking remains pending and bed remains
+    // reserved in database until createTenant() successfully completes on submit.
     setRoomPrefill({
+      bookingId: booking.id,
       propertyId: selectedPropertyId,
       roomId: booking.room_id,
       bedId: booking.bed_id,
       prefillName: booking.name,
       prefillPhone: booking.phone,
       advanceAmount: Number(booking.advance_amount || 0),
+      joinDate: booking.expected_join_date || new Date().toISOString().slice(0, 10),
     });
     setEditingTenant(null);
-    fetchBookings(selectedPropertyId).then(setPendingBookings).catch(() => {});
-    setRoomsVersion(v => v + 1);
     navigateTo('tenants');
   }
 
@@ -3117,6 +3137,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
                     onAssignBed={prefill => { setRoomPrefill(prefill); navigateTo('tenants'); }}
                     onViewTenant={setViewingTenantId}
                     onConvertBooking={handleConvertBooking}
+                    onBookingsChange={() => fetchBookings(selectedPropertyId).then(setPendingBookings).catch(() => {})}
                   />
                 )}
               </div>
@@ -3133,7 +3154,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
                   flashPaidId={flashPaidId}
                   onAddTenant={t => { handleAdd(t); setRoomPrefill(null); }}
                   onUpdateTenant={handleUpdate}
-                  onCancelEdit={() => setEditingTenant(null)}
+                  onCancelEdit={() => { setEditingTenant(null); setRoomPrefill(null); }}
                   onEdit={t => { setEditingTenant(t); navigateTo('tenants'); }}
                   onDelete={handleDelete}
                   onVacate={handleVacate}
