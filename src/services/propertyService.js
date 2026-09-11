@@ -198,11 +198,12 @@ export async function fetchRoomsWithOccupants(propertyId) {
   });
 
   // Fetch pending bookings for this property to attach to reserved beds
-  const { data: bookings } = await supabase
+  const { data: bookings, error: bookingsError } = await supabase
     .from('bookings')
     .select('*')
     .eq('property_id', propertyId)
     .eq('status', 'pending');
+  if (bookingsError) throw bookingsError;
   const bookingByBed = Object.fromEntries((bookings ?? []).map(b => [b.bed_id, b]));
 
   // Normalize: attach active occupancy + booking directly to each bed
