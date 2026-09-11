@@ -15,15 +15,14 @@ Deno.serve(async (req: Request) => {
     { global: { headers: { Authorization: authHeader } } },
   );
 
-  // Verify caller is authenticated
-  const { data: { user }, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
   const { paymentRecordId, tenantName, phone, amount, description } = await req.json();
-  if (!paymentRecordId || !amount) {
-    return new Response(JSON.stringify({ error: 'Missing paymentRecordId or amount' }), { status: 400, headers: corsHeaders });
+  if (!paymentRecordId || !amount || Number(amount) <= 0) {
+    return new Response(JSON.stringify({ error: 'Missing paymentRecordId or valid amount' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
   const supabaseAdmin = createClient(
@@ -31,41 +30,51 @@ Deno.serve(async (req: Request) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
 
-  // Resolve which organization this payment belongs to, then use that
-  // org's own Razorpay account if they've connected one — falls back to
-  // the platform-wide keys (this project's own account) for orgs that
-  // haven't connected their own yet.
-  const { data: record } = await supabaseAdmin
+  const { data: record, error: recordErr } = await supabaseAdmin
     .from('payment_records')
-    .select('property_id, properties(organization_id)')
+    .select('id, property_id, tenant_id, amount, status, payment_link_id, properties(organization_id)')
     .eq('id', paymentRecordId)
     .maybeSingle();
-  const orgId = (record as any)?.properties?.organization_id;
 
-  let keyId = Deno.env.get('RAZORPAY_KEY_ID');
-  let keySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
-
-  if (orgId) {
-    const { data: creds } = await supabaseAdmin.rpc('get_org_razorpay_credentials', { org_id: orgId });
-    const row = Array.isArray(creds) ? creds[0] : creds;
-    if (row?.key_id && row?.key_secret) {
-      keyId = row.key_id;
-      keySecret = row.key_secret;
-    }
+  if (recordErr || !record) {
+    return new Response(JSON.stringify({ error: 'Payment record not found' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
-  if (!keyId || !keySecret) {
+  const orgId = (record as any)?.properties?.organization_id;
+  if (!orgId) {
+    return new Response(JSON.stringify({ error: 'Payment record is not associated with an organization' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
+  // Rent must be collected into the property's own Razorpay account.
+  // Never fall back to NivaOps's platform account: doing so would make
+  // NivaOps the payment recipient/intermediary and expose the platform to
+  // unnecessary payment volume and compliance obligations.
+  const { data: creds } = await supabaseAdmin.rpc('get_org_razorpay_credentials', { org_id: orgId });
+  const row = Array.isArray(creds) ? creds[0] : creds;
+
+  if (!row?.key_id || !row?.key_secret) {
     return new Response(
-      JSON.stringify({ error: 'Razorpay is not connected for this property. Add your Razorpay keys in Settings.' }),
-      { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      JSON.stringify({ error: 'Razorpay is not connected for this property. Connect the PG\'s Razorpay account in Settings before collecting rent.' }),
+      { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   }
 
-  const credentials = btoa(`${keyId}:${keySecret}`);
-  const expireBy = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60; // 7 days
+  // Prevent generating another link for an invoice that is already paid.
+  if (record.status === 'paid') {
+    return new Response(JSON.stringify({ error: 'This rent payment is already marked as paid' }), { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
+  const expectedAmount = Number(record.amount);
+  const requestedAmount = Number(amount);
+  if (Number.isFinite(expectedAmount) && expectedAmount > 0 && Math.round(expectedAmount * 100) !== Math.round(requestedAmount * 100)) {
+    return new Response(JSON.stringify({ error: 'Payment amount does not match the rent invoice' }), { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
+  const credentials = btoa(`${row.key_id}:${row.key_secret}`);
+  const expireBy = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60;
 
   const payload: Record<string, unknown> = {
-    amount: Math.round(Number(amount) * 100), // paise
+    amount: Math.round(requestedAmount * 100),
     currency: 'INR',
     description: description ?? 'Monthly rent',
     expire_by: expireBy,
@@ -77,8 +86,10 @@ Deno.serve(async (req: Request) => {
 
   if (phone) {
     const digits = String(phone).replace(/\D/g, '').slice(-10);
-    payload.customer = { name: tenantName ?? 'Tenant', contact: `+91${digits}` };
-    payload.notify = { sms: true, email: false };
+    if (digits.length === 10) {
+      payload.customer = { name: tenantName ?? 'Tenant', contact: `+91${digits}` };
+      payload.notify = { sms: true, email: false };
+    }
   }
 
   const rzRes = await fetch('https://api.razorpay.com/v1/payment_links', {
@@ -89,13 +100,23 @@ Deno.serve(async (req: Request) => {
 
   const rzData = await rzRes.json();
   if (!rzRes.ok) {
-    return new Response(JSON.stringify({ error: rzData.error?.description ?? 'Razorpay error' }), { status: 502, headers: corsHeaders });
+    return new Response(JSON.stringify({ error: rzData.error?.description ?? 'Razorpay error' }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
-  await supabaseAdmin
+  const { error: saveErr } = await supabaseAdmin
     .from('payment_records')
-    .update({ payment_link: rzData.short_url, payment_link_id: rzData.id })
-    .eq('id', paymentRecordId);
+    .update({
+      payment_link: rzData.short_url,
+      payment_link_id: rzData.id,
+      status: record.status === 'overdue' ? 'overdue' : 'payment_initiated',
+    })
+    .eq('id', paymentRecordId)
+    .neq('status', 'paid');
+
+  if (saveErr) {
+    console.error('payment_records update failed', saveErr);
+    return new Response(JSON.stringify({ error: 'Payment link was created but could not be saved. Please do not create another link yet; support can reconcile this payment link.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
 
   return new Response(
     JSON.stringify({ url: rzData.short_url, id: rzData.id }),
