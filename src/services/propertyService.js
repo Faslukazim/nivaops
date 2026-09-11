@@ -157,6 +157,8 @@ export async function fetchRoomsWithOccupants(propertyId) {
         occupancies (
           id,
           monthly_rent,
+          admission_fee,
+          move_in_collection,
           payment_status,
           payment_date,
           start_date,
@@ -197,14 +199,15 @@ export async function fetchRoomsWithOccupants(propertyId) {
     return ap !== bp ? ap - bp : an - bn;
   });
 
-  // Fetch pending bookings for this property to attach to reserved beds
+  // Fetch pending and converted bookings for this property to attach to reserved beds / converted tenants
   const { data: bookings, error: bookingsError } = await supabase
     .from('bookings')
     .select('*')
     .eq('property_id', propertyId)
-    .eq('status', 'pending');
+    .in('status', ['pending', 'converted']);
   if (bookingsError) throw bookingsError;
-  const bookingByBed = Object.fromEntries((bookings ?? []).map(b => [b.bed_id, b]));
+  const pendingByBed = Object.fromEntries((bookings ?? []).filter(b => b.status === 'pending').map(b => [b.bed_id, b]));
+  const convertedByBed = Object.fromEntries((bookings ?? []).filter(b => b.status === 'converted').map(b => [b.bed_id, b]));
 
   // Normalize: attach active occupancy + booking directly to each bed
   return data.map(room => ({
@@ -215,11 +218,16 @@ export async function fetchRoomsWithOccupants(propertyId) {
         const activeOcc = bed.occupancies?.find(
           o => o.status === 'active' && o.tenant?.status === 'active'
         );
+        const converted = convertedByBed[bed.id] ?? null;
         return {
           ...bed,
           occupancy: activeOcc ?? null,
-          tenant: activeOcc?.tenant ?? null,
-          booking: bookingByBed[bed.id] ?? null,
+          tenant: activeOcc?.tenant ? {
+            ...activeOcc.tenant,
+            bookingAdvance: Number(converted?.advance_amount || 0),
+            bookingId: converted?.id || null,
+          } : null,
+          booking: pendingByBed[bed.id] ?? null,
         };
       }),
   }));

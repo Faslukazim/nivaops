@@ -580,7 +580,7 @@ export function MoneyInput({ value, onChange, min = 0, className = '' }) {
 
 // ─── CollectModal ─────────────────────────────────────────────────────────────
 // Mark-paid modal: captures amount collected + optional deduction reason.
-// record: { amount, name, roomNumber, bedNumber }
+// record: { amount, name, roomNumber, bedNumber, bookingAdvance, totalCharges }
 
 const DEDUCTION_REASONS = ['Food not taken', 'Home leave', 'Temporary discount', 'Adjustment', 'Other'];
 
@@ -598,10 +598,27 @@ export function CollectModal({ record, onConfirm, onCancel }) {
           <h3 className="font-semibold text-ink text-base">Record Payment</h3>
           <p className="text-xs text-slate2 mt-0.5">{record.name} · Room {record.roomNumber} · Bed {record.bedNumber}</p>
 
-          <div className="mt-4 flex items-center justify-between rounded-xl bg-[#F5F5F7] px-3.5 py-2.5 border border-black/[0.04]">
-            <Label>Standard Rent</Label>
-            <span className="text-sm font-bold text-ink tabular-nums">{fmt(record.amount)}</span>
-          </div>
+          {record.bookingAdvance > 0 ? (
+            <div className="mt-4 rounded-xl bg-[#F5F5F7] p-3 border border-black/[0.04] space-y-1.5 text-xs">
+              <div className="flex items-center justify-between text-slate2">
+                <span>Total Move-In Charges</span>
+                <span className="font-semibold text-ink tabular-nums">{fmt(record.totalCharges || (record.amount + record.bookingAdvance))}</span>
+              </div>
+              <div className="flex items-center justify-between text-leaf">
+                <span>Booking Advance (Already Paid)</span>
+                <span className="font-semibold tabular-nums">−{fmt(record.bookingAdvance)}</span>
+              </div>
+              <div className="pt-1.5 border-t border-border flex items-center justify-between font-bold text-ink text-sm">
+                <span>Remaining Balance Due</span>
+                <span className="tabular-nums">{fmt(record.amount)}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 flex items-center justify-between rounded-xl bg-[#F5F5F7] px-3.5 py-2.5 border border-black/[0.04]">
+              <Label>Standard Rent</Label>
+              <span className="text-sm font-bold text-ink tabular-nums">{fmt(record.amount)}</span>
+            </div>
+          )}
 
           <label className="mt-3.5 block">
             <Label>Amount Collected</Label>

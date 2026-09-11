@@ -250,27 +250,38 @@ export default function TenantProfile({ tenant, properties, onClose, onCollect, 
             </div>
           )}
 
-          {/* Deposit + Admission */}
-          {(tenant.depositAmount > 0 || tenant.admissionFee > 0) && (
-            <div className="grid grid-cols-2 gap-3 rounded-xl border border-border p-4">
-              {tenant.admissionFee > 0 && (
-                <div>
-                  <Label>Admission Fee</Label>
-                  <p className="mt-0.5 text-sm font-semibold text-ink">{fmt(tenant.admissionFee)}</p>
-                  <p className="text-xs text-slate2">non-refundable</p>
-                </div>
-              )}
-              {tenant.depositAmount > 0 && (
-                <div>
-                  <Label>Security Deposit</Label>
-                  <p className="mt-0.5 text-sm font-semibold text-ink">{fmt(tenant.depositAmount)}</p>
-                  <p className={`text-xs ${
-                    tenant.depositStatus === 'returned' ? 'text-leaf' :
-                    tenant.depositStatus === 'forfeited' ? 'text-coral' : 'text-slate2'
-                  }`}>
-                    {tenant.depositStatus === 'returned' ? 'Returned' :
-                     tenant.depositStatus === 'forfeited' ? 'Not refundable' : 'Held'}
-                  </p>
+          {/* Deposit + Admission + Booking Advance */}
+          {(tenant.depositAmount > 0 || tenant.admissionFee > 0 || tenant.bookingAdvance > 0) && (
+            <div className="rounded-xl border border-border p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                {tenant.admissionFee > 0 && (
+                  <div>
+                    <Label>Admission Fee</Label>
+                    <p className="mt-0.5 text-sm font-semibold text-ink">{fmt(tenant.admissionFee)}</p>
+                    <p className="text-xs text-slate2">non-refundable</p>
+                  </div>
+                )}
+                {tenant.depositAmount > 0 && (
+                  <div>
+                    <Label>Security Deposit</Label>
+                    <p className="mt-0.5 text-sm font-semibold text-ink">{fmt(tenant.depositAmount)}</p>
+                    <p className={`text-xs ${
+                      tenant.depositStatus === 'returned' ? 'text-leaf' :
+                      tenant.depositStatus === 'forfeited' ? 'text-coral' : 'text-slate2'
+                    }`}>
+                      {tenant.depositStatus === 'returned' ? 'Returned' :
+                       tenant.depositStatus === 'forfeited' ? 'Not refundable' : 'Held'}
+                    </p>
+                  </div>
+                )}
+              </div>
+              {tenant.bookingAdvance > 0 && (
+                <div className="pt-2 border-t border-border flex items-center justify-between">
+                  <div>
+                    <Label>Booking Advance</Label>
+                    <p className="text-xs text-slate2">Paid during reservation</p>
+                  </div>
+                  <span className="text-sm font-bold text-leaf tabular-nums">−{fmt(tenant.bookingAdvance)}</span>
                 </div>
               )}
             </div>
@@ -353,7 +364,16 @@ export default function TenantProfile({ tenant, properties, onClose, onCollect, 
 
       {showCollect && (
         <CollectModal
-          record={{ amount: tenant.monthlyRent, name: tenant.name, roomNumber: tenant.roomNumber, bedNumber: tenant.bedNumber }}
+          record={{
+            amount: tenant.bookingAdvance > 0 && tenant.paymentStatus !== 'Paid'
+              ? Math.max(0, (tenant.moveInCollection || (tenant.monthlyRent + (tenant.admissionFee || 0) + (tenant.depositAmount || 0))) - tenant.bookingAdvance)
+              : tenant.monthlyRent,
+            name: tenant.name,
+            roomNumber: tenant.roomNumber,
+            bedNumber: tenant.bedNumber,
+            bookingAdvance: tenant.paymentStatus !== 'Paid' ? tenant.bookingAdvance : 0,
+            totalCharges: tenant.moveInCollection || (tenant.monthlyRent + (tenant.admissionFee || 0) + (tenant.depositAmount || 0)),
+          }}
           onConfirm={(amt, reason) => { setShowCollect(false); onCollect(tenant, amt, reason); }}
           onCancel={() => setShowCollect(false)}
         />

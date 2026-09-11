@@ -44,7 +44,12 @@ function writeLocalTenants(tenants) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tenants));
 }
 
-function toUiTenant(occupancy) {
+function toUiTenant(occupancy, convertedBooking) {
+  const monthlyRent = Number(occupancy.monthly_rent ?? 0);
+  const admissionFee = Number(occupancy.admission_fee ?? 0);
+  const depositAmount = Number(occupancy.deposit_amount ?? 0);
+  const totalCharges = monthlyRent + admissionFee + depositAmount;
+
   return {
     id: occupancy.tenant.id,
     occupancyId: occupancy.id,
@@ -55,17 +60,19 @@ function toUiTenant(occupancy) {
     phone: occupancy.tenant.phone,
     roomNumber: occupancy.room?.room_number ?? 'Unassigned',
     bedNumber: occupancy.bed?.bed_number ?? '-',
-    monthlyRent: Number(occupancy.monthly_rent ?? 0),
+    monthlyRent,
     joinDate: occupancy.tenant.join_date,
     rentDueDay: occupancy.rent_due_day ?? null,
     paymentStatus: occupancy.payment_status,
     paymentDate: occupancy.payment_date ?? '',
-    depositAmount: Number(occupancy.deposit_amount ?? 0),
+    depositAmount,
     depositStatus: occupancy.deposit_status ?? 'none',
     depositPreAccounted: occupancy.deposit_pre_accounted ?? false,
     depositSettledAt: occupancy.deposit_settled_at ?? null,
-    admissionFee: Number(occupancy.admission_fee ?? 0),
-    moveInCollection: Number(occupancy.move_in_collection ?? 0),
+    admissionFee,
+    moveInCollection: Number(occupancy.move_in_collection || totalCharges),
+    bookingAdvance: Number(convertedBooking?.advance_amount ?? occupancy.booking_advance ?? 0),
+    bookingId: convertedBooking?.id ?? occupancy.booking_id ?? null,
     id_photo_url: occupancy.tenant.id_photo_url ?? null,
     noticeEndDate: occupancy.notice_end_date ?? null,
     noticeDepositAction: occupancy.notice_deposit_action ?? null,
@@ -181,9 +188,24 @@ export async function fetchTenants(propertyId) {
 
   if (propertyId) query.eq('property_id', propertyId);
 
-  const { data, error } = await query;
+  const bookingsQuery = supabase
+    .from('bookings')
+    .select('id, bed_id, advance_amount, status')
+    .eq('status', 'converted');
+  if (propertyId) bookingsQuery.eq('property_id', propertyId);
+
+  const [{ data, error }, { data: convertedBookings }] = await Promise.all([
+    query,
+    bookingsQuery.then(r => r, () => ({ data: [] })),
+  ]);
   if (error) throw error;
-  return data.map(toUiTenant);
+
+  const bookingByBed = {};
+  for (const b of convertedBookings ?? []) {
+    if (!bookingByBed[b.bed_id]) bookingByBed[b.bed_id] = b;
+  }
+
+  return data.map(occ => toUiTenant(occ, bookingByBed[occ.bed_id]));
 }
 
 export async function createTenant(tenant) {
@@ -249,7 +271,11 @@ export async function createTenant(tenant) {
   if (occupancyError) throw occupancyError;
 
   await setBedStatus(tenant.bedId, 'occupied');
-  return toUiTenant(occupancy);
+  const convertedBooking = (tenant.bookingAdvance || tenant.advanceAmount) ? {
+    advance_amount: tenant.bookingAdvance || tenant.advanceAmount,
+    id: tenant.bookingId,
+  } : null;
+  return toUiTenant(occupancy, convertedBooking);
 }
 
 export async function updateTenant(id, patch) {
