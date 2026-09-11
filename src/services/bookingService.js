@@ -40,7 +40,12 @@ export async function createBooking(propertyId, _organizationId, { roomId, bedId
     .single();
   if (error) throw error;
 
-  await supabase.from('beds').update({ status: 'reserved' }).eq('id', bedId);
+  const { error: bedErr } = await supabase
+    .from('beds')
+    .update({ status: 'reserved' })
+    .eq('id', bedId);
+  if (bedErr) throw bedErr;
+
   return data;
 }
 
@@ -48,17 +53,22 @@ export async function cancelBooking(bookingId, bedId) {
   if (!hasSupabaseConfig) return;
   const { error } = await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', bookingId);
   if (error) throw error;
-  await supabase.from('beds').update({ status: 'available' }).eq('id', bedId);
+  if (bedId) {
+    const { error: bedErr } = await supabase.from('beds').update({ status: 'available' }).eq('id', bedId);
+    if (bedErr) throw bedErr;
+  }
 }
 
-export async function convertBooking(bookingId, bedId) {
+// Conversion is intentionally separate from tenant creation. The booking
+// remains pending while the operator fills in the tenant details. Once the
+// tenant is successfully created, App marks this booking as converted.
+// This prevents a booking from disappearing if the tenant form is abandoned.
+export async function convertBooking(bookingId) {
   if (!hasSupabaseConfig) return;
-  const { error } = await supabase.from('bookings').update({ status: 'converted' }).eq('id', bookingId);
+  const { error } = await supabase
+    .from('bookings')
+    .update({ status: 'converted' })
+    .eq('id', bookingId)
+    .eq('status', 'pending');
   if (error) throw error;
-  // Booking is no longer pending, so it stops reserving the bed. The bed
-  // reverts to available until createTenant() marks it occupied on submit —
-  // this avoids a stuck 'reserved' status if the tenant form is abandoned.
-  if (bedId) {
-    await supabase.from('beds').update({ status: 'available' }).eq('id', bedId);
-  }
 }
