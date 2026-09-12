@@ -60,7 +60,7 @@ function PropertyCard({ property, onOpen, index }) {
           <div className="absolute bottom-3.5 right-3.5"><GenderTag value={property.gender_preference} /></div>
         )}
       </div>
-      <div className="p-4.5 p-5">
+      <div className="p-5">
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-[17px] font-bold tracking-[-0.025em] text-ink">{property.name}</h2>
@@ -176,7 +176,7 @@ export default function ListingPage({ city: initialCity }) {
     <div className="min-h-screen bg-[#f5f7f5] text-ink">
       <header className="sticky top-0 z-30 border-b border-black/[0.06] bg-white/90 backdrop-blur-xl" style={{ paddingTop: 'env(safe-area-inset-top,0px)' }}>
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-8">
-          <div className="flex items-center gap-2"><NivaLogo size={25} /><NivaWordmark size="base" /><span className="hidden pl-2 text-xs text-slate2 sm:inline">STAYS</span></div>
+          <div className="flex items-center gap-2"><NivaLogo size={25} /><NivaWordmark size="base" /></div>
           <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[.12em] text-slate2"><span className="h-1.5 w-1.5 rounded-full bg-leaf" />Live</div>
         </div>
       </header>
