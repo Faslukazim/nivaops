@@ -244,6 +244,8 @@ function GenderSelect({ value, onChange }) {
         type="button"
         onClick={() => setOpen(current => !current)}
         className="flex h-12 items-center gap-1.5 border-l border-border px-4 text-[13px] font-semibold text-ink transition-colors hover:bg-mist/60 sm:px-5"
+        aria-expanded={open}
+        aria-haspopup="listbox"
       >
         {current.label}
         <ChevronDown size={15} className={`text-slate2 transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -251,11 +253,13 @@ function GenderSelect({ value, onChange }) {
       {open && (
         <>
           <button type="button" aria-label="Close filter menu" className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-[calc(100%+8px)] z-20 min-w-[140px] overflow-hidden rounded-2xl border border-border bg-white p-1.5 shadow-xl">
+          <div className="absolute right-0 top-[calc(100%+8px)] z-20 min-w-[140px] overflow-hidden rounded-2xl border border-border bg-white p-1.5 shadow-xl" role="listbox">
             {GENDER_OPTIONS.map(option => (
               <button
                 key={option.value}
                 type="button"
+                role="option"
+                aria-selected={option.value === value}
                 onClick={() => {
                   onChange(option.value);
                   setOpen(false);
@@ -349,7 +353,7 @@ export default function ListingPage({ city: initialCity }) {
       </header>
 
       <main>
-        <section className="relative overflow-hidden border-b border-border bg-white">
+        <section className="relative border-b border-border bg-white">
           <div className="pointer-events-none absolute -right-32 -top-40 h-80 w-80 rounded-full bg-leaf/10 blur-3xl" />
           <div className="pointer-events-none absolute -left-32 bottom-[-180px] h-96 w-96 rounded-full bg-leaf/5 blur-3xl" />
 
