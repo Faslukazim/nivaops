@@ -10,13 +10,8 @@
   to   { width: 0%;   }
 }
 
-.toast-item {
-  animation: toast-in 0.18s ease-out both;
-}
-
-.toast-bar {
-  animation: toast-bar 3.5s linear forwards;
-}
+.toast-item { animation: toast-in 0.18s ease-out both; }
+.toast-bar { animation: toast-bar 3.5s linear forwards; }
 
 /* ── Stagger fade-up for lists ──────────────────────────────────────────── */
 
@@ -43,11 +38,7 @@
   animation: rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-@keyframes fadein {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
 .animate-fadein { animation: fadein 0.2s ease-out both; }
 
 @keyframes slideup {
@@ -81,16 +72,9 @@
   100% { background-color: transparent; }
 }
 
-.flash-paid {
-  animation: flash-paid 1s ease-out;
-}
+.flash-paid { animation: flash-paid 1s ease-out; }
 
 /* ── Tenant form: responsive drawer ─────────────────────────────────────── */
-/*
-   The tenant form is rendered inside the Tenants page so its state remains
-   local to the workflow. The :has() selector lets us promote only that form
-   to an app-level drawer without duplicating the large TenantForm component.
-*/
 
 @keyframes tenant-drawer-in {
   from { opacity: 0; transform: translateX(28px); }
@@ -118,7 +102,6 @@ body:has(form input[placeholder="Full name"])::before {
   animation: fadein 0.2s ease-out both;
 }
 
-/* TenantForm's Card wrapper */
 body:has(form input[placeholder="Full name"]) div:has(> form input[placeholder="Full name"]) {
   position: fixed;
   z-index: 100;
@@ -178,6 +161,56 @@ body:has(form input[placeholder="Full name"]) div:has(> form input[placeholder="
   body:has(form input[placeholder="Full name"]) div:has(> form input[placeholder="Full name"]) > form {
     height: calc(94vh - 57px);
     padding-bottom: max(28px, env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ── Indian phone fields ────────────────────────────────────────────────── */
+/*
+   +91 is fixed visually and the realistic example number is hidden behind a
+   neutral placeholder. This keeps the existing React validation/normalising
+   logic untouched while making every tel field consistent.
+*/
+
+label:has(> input[type="tel"]) { position: relative; }
+
+label:has(> input[type="tel"]) > input[type="tel"] {
+  padding-left: 58px;
+}
+
+label:has(> input[type="tel"]) > input[type="tel"]::placeholder {
+  color: transparent;
+}
+
+label:has(> input[type="tel"])::before {
+  content: "+91";
+  position: absolute;
+  left: 13px;
+  bottom: 11px;
+  pointer-events: none;
+  color: #475A72;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+}
+
+label:has(> input[type="tel"])::after {
+  content: "10-digit mobile number";
+  position: absolute;
+  left: 58px;
+  bottom: 11px;
+  pointer-events: none;
+  color: #728198;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+label:has(> input[type="tel"]:not(:placeholder-shown))::after {
+  opacity: 0;
+}
+
+@media (max-width: 639px) {
+  label:has(> input[type="tel"]) > input[type="tel"] {
+    min-height: 46px;
   }
 }
 
