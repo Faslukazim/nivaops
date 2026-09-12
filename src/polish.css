@@ -86,8 +86,6 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Any tenant/day-guest form contains a phone field, so use the field type
-   rather than a name/placeholder to identify the shared drawer. */
 body:has(form input[type="tel"]) {
   overflow: hidden;
   scrollbar-gutter: stable;
@@ -167,7 +165,6 @@ body:has(form input[type="tel"]) div:has(> form input[type="tel"]) > form > butt
 }
 
 /* ── Indian phone fields ────────────────────────────────────────────────── */
-/* +91 is fixed visually and the placeholder is neutral. */
 
 label:has(> input[type="tel"]) { position: relative; }
 
@@ -213,6 +210,145 @@ label:has(> input[type="tel"]:not(:placeholder-shown))::after {
   }
 }
 
+/* ── Premium responsive room grid ─────────────────────────────────────────
+   Room cards are the operational control surface: Room → Beds → People →
+   Action. Keep the visual language quiet, dense enough for owners, and
+   comfortable on touch screens. The selectors intentionally target the
+   existing RoomCard structure so the redesign does not alter workflow logic.
+*/
+
+/* Card shell */
+button.w-full.text-left.rounded-2xl.border.p-4 {
+  position: relative;
+  min-height: 220px;
+  padding: 18px !important;
+  border-color: rgb(15 23 42 / 0.075) !important;
+  border-radius: 20px !important;
+  background: rgba(255,255,255,0.96) !important;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.03), 0 8px 28px rgb(15 23 42 / 0.035) !important;
+  transition: transform 180ms cubic-bezier(.16,1,.3,1), box-shadow 180ms ease, border-color 180ms ease, background 180ms ease !important;
+}
+
+button.w-full.text-left.rounded-2xl.border.p-4:hover {
+  transform: translateY(-2px);
+  border-color: rgb(15 23 42 / 0.14) !important;
+  box-shadow: 0 10px 32px rgb(15 23 42 / 0.075) !important;
+}
+
+button.w-full.text-left.rounded-2xl.border.p-4:active {
+  transform: translateY(0) scale(.995);
+}
+
+/* Selected room */
+button.w-full.text-left.rounded-2xl.border.p-4.border-green {
+  border-color: rgb(22 163 74 / 0.34) !important;
+  background: rgb(22 163 74 / 0.025) !important;
+  box-shadow: 0 0 0 1px rgb(22 163 74 / 0.06), 0 12px 34px rgb(22 163 74 / 0.07) !important;
+}
+
+/* Room heading */
+button.w-full.text-left.rounded-2xl.border.p-4 > div:first-child p.text-base {
+  font-size: 19px !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.025em;
+}
+
+/* Remove the old progress-bar treatment. Occupancy is already expressed by
+   the bed matrix and the room counts. */
+button.w-full.text-left.rounded-2xl.border.p-4 > div:first-child + p + div {
+  display: none !important;
+}
+
+/* Occupancy summary */
+button.w-full.text-left.rounded-2xl.border.p-4 > div:first-child + p {
+  margin-top: 7px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: .01em;
+  color: #728198 !important;
+}
+
+/* Bed matrix */
+button.w-full.text-left.rounded-2xl.border.p-4 > div:nth-of-type(2) {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px !important;
+  margin-top: 18px !important;
+}
+
+button.w-full.text-left.rounded-2xl.border.p-4 > div:nth-of-type(2) > div {
+  width: auto !important;
+  height: 42px !important;
+  min-width: 0;
+  border-radius: 11px !important;
+  border: 1px solid rgb(15 23 42 / 0.06);
+  position: relative;
+  transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+}
+
+button.w-full.text-left.rounded-2xl.border.p-4 > div:nth-of-type(2) > div:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgb(15 23 42 / 0.08);
+}
+
+/* The old inline colours remain as status signals, but get a more premium
+   shape and softer contrast through the shell above. */
+
+/* Tenant names: keep useful context without turning the card into a table. */
+button.w-full.text-left.rounded-2xl.border.p-4 > p:last-child {
+  margin-top: 12px !important;
+  padding-top: 11px;
+  border-top: 1px solid rgb(15 23 42 / 0.055);
+  font-size: 11px !important;
+  line-height: 1.4 !important;
+  color: #5f6f83 !important;
+}
+
+/* Responsive grid behavior. The parent grid can use these breakpoints without
+   introducing horizontal scrolling or oversized cards. */
+@media (max-width: 767px) {
+  button.w-full.text-left.rounded-2xl.border.p-4 {
+    min-height: 198px;
+    padding: 15px !important;
+    border-radius: 18px !important;
+  }
+
+  button.w-full.text-left.rounded-2xl.border.p-4 > div:nth-of-type(2) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px !important;
+    margin-top: 15px !important;
+  }
+
+  button.w-full.text-left.rounded-2xl.border.p-4 > div:nth-of-type(2) > div {
+    height: 36px !important;
+    border-radius: 9px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  button.w-full.text-left.rounded-2xl.border.p-4 {
+    min-height: 184px;
+  }
+
+  button.w-full.text-left.rounded-2xl.border.p-4 > div:nth-of-type(2) {
+    gap: 5px !important;
+  }
+}
+
+@media (min-width: 768px) {
+  button.w-full.text-left.rounded-2xl.border.p-4 {
+    min-height: 226px;
+  }
+}
+
+/* ── Global touch + motion rules for future screen redesigns ─────────────── */
+
+@media (max-width: 767px) {
+  button, a, input, select, textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .toast-item,
   .stagger-item,
@@ -223,7 +359,9 @@ label:has(> input[type="tel"]:not(:placeholder-shown))::after {
   .animate-drift,
   .flash-paid,
   body:has(form input[type="tel"])::before,
-  body:has(form input[type="tel"]) div:has(> form input[type="tel"]) {
+  body:has(form input[type="tel"]) div:has(> form input[type="tel"]),
+  button.w-full.text-left.rounded-2xl.border.p-4 {
     animation: none !important;
+    transition: none !important;
   }
 }
