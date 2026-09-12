@@ -194,10 +194,11 @@ label:has(> input[type="tel"])::before {
 }
 
 label:has(> input[type="tel"])::after {
-  content: "10-digit mobile number";
+  content: "10-digit number";
   position: absolute;
   left: 58px;
   bottom: 11px;
+  white-space: nowrap;
   pointer-events: none;
   color: #728198;
   font-size: 0.875rem;

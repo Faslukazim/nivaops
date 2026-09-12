@@ -698,7 +698,7 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
       return;
     }
     if (!isValidPhone(form.phone)) {
-      setPhoneError('Enter a valid 10-digit Indian mobile number (e.g. 9876543210)');
+      setPhoneError('Enter a valid 10-digit mobile number');
       return;
     }
     if (!form.propertyId || !form.roomId || !form.bedId) {
@@ -751,7 +751,7 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
               <button type="button" onClick={() => setDayGuestMode(true)}  className={`px-3 py-1.5 transition-colors ${dayGuestMode  ? 'bg-ink text-white' : 'text-slate2 hover:bg-mist'}`}>Day Guest</button>
             </div>
           )}
-          {initialTenant && <IconBtn variant="ghost" onClick={onCancel}><X className="h-4 w-4" /></IconBtn>}
+          <IconBtn variant="ghost" onClick={onCancel} title="Close"><X className="h-4 w-4" /></IconBtn>
         </div>
       </div>
 
@@ -764,7 +764,7 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
             </label>
             <label className="block">
               <Label>Phone <span className="text-slate2 font-normal">(optional)</span></Label>
-              <input type="tel" value={guestForm.phone} onChange={e => setGuestForm(f => ({ ...f, phone: e.target.value }))} className={`mt-1.5 ${inputCls2}`} placeholder="9876543210" inputMode="tel" />
+              <input type="tel" value={guestForm.phone} onChange={e => setGuestForm(f => ({ ...f, phone: e.target.value }))} className={`mt-1.5 ${inputCls2}`} placeholder="10-digit mobile number" inputMode="tel" />
             </label>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
@@ -821,11 +821,12 @@ function TenantForm({ initialTenant, properties, defaultPropertyId, prefill, onS
             <Label>Phone</Label>
             <input
               required
+              type="tel"
               value={form.phone}
               onChange={e => { set('phone', e.target.value); setPhoneError(''); }}
-              onBlur={() => form.phone && !isValidPhone(form.phone) && setPhoneError('Enter a valid 10-digit Indian mobile number')}
+              onBlur={() => form.phone && !isValidPhone(form.phone) && setPhoneError('Enter a valid 10-digit mobile number')}
               className={`${inputCls} ${phoneError ? 'border-coral focus:ring-coral/20 focus:border-coral' : ''}`}
-              placeholder="9876543210"
+              placeholder="10-digit mobile number"
               inputMode="tel"
             />
             {phoneError && <p className="mt-1 text-xs text-coral">{phoneError}</p>}
@@ -2181,7 +2182,7 @@ function ListingSettings({ property }) {
             type="text"
             value={whatsappNumber}
             onChange={e => setWhatsappNumber(e.target.value)}
-            placeholder="9876543210"
+            placeholder="10-digit mobile number"
             className="mt-1.5 w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20 focus:border-ink"
           />
         </label>
@@ -2335,7 +2336,9 @@ function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, sa
             properties={properties}
             defaultPropertyId={defaultPropertyId}
             prefill={roomPrefill}
-            onSubmit={editingTenant ? onUpdateTenant : (data) => { onAddTenant(data); setShowForm(false); }}
+            onSubmit={editingTenant
+              ? async (data) => { await onUpdateTenant(data); setShowForm(false); }
+              : async (data) => { await onAddTenant(data); setShowForm(false); }}
             onCancel={handleCancelForm}
             saving={saving}
             organizationId={properties.find(p => p.id === defaultPropertyId)?.organization_id}
@@ -3234,7 +3237,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
                   roomPrefill={roomPrefill}
                   upiId={upiId}
                   flashPaidId={flashPaidId}
-                  onAddTenant={t => { handleAdd(t); setRoomPrefill(null); }}
+                  onAddTenant={async t => { await handleAdd(t); setRoomPrefill(null); }}
                   onUpdateTenant={handleUpdate}
                   onCancelEdit={() => { setEditingTenant(null); setRoomPrefill(null); }}
                   onEdit={t => { setEditingTenant(t); navigateTo('tenants'); }}
