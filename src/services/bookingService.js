@@ -83,12 +83,27 @@ export async function cancelBooking(bookingId, bedId) {
 
 export async function convertBooking(bookingId, tenantId) {
   if (!hasSupabaseConfig) return;
-  const patch = { status: 'converted' };
-  if (tenantId) patch.tenant_id = tenantId;
-  const { error } = await supabase
+
+  // 1. If tenantId is provided, try updating status and tenant_id
+  if (tenantId) {
+    const { error } = await supabase
+      .from('bookings')
+      .update({ status: 'converted', tenant_id: tenantId })
+      .eq('id', bookingId)
+      .eq('status', 'pending');
+
+    if (!error) return;
+
+    // If tenant_id column doesn't exist in live schema cache, fallback to status-only update
+    console.warn('convertBooking with tenant_id failed, falling back to status-only update:', error.message);
+  }
+
+  // 2. Resilient fallback: update status only (works with base bookings schema)
+  const { error: fallbackError } = await supabase
     .from('bookings')
-    .update(patch)
+    .update({ status: 'converted' })
     .eq('id', bookingId)
     .eq('status', 'pending');
-  if (error) throw error;
+
+  if (fallbackError) throw fallbackError;
 }

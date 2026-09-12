@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { convertBooking } from './bookingService';
 
 export async function fetchProperties() {
   const { data, error } = await supabase
@@ -218,7 +219,23 @@ export async function fetchRoomsWithOccupants(propertyId) {
         const activeOcc = bed.occupancies?.find(
           o => o.status === 'active' && o.tenant?.status === 'active'
         );
-        const converted = convertedByBed[bed.id] ?? null;
+        let converted = convertedByBed[bed.id] ?? null;
+        let pending = pendingByBed[bed.id] ?? null;
+
+        // Auto-reconcile: If bed is occupied by an active tenant whose name matches a pending booking for this bed,
+        // it means the booking conversion succeeded in creating the tenant, but booking status update failed.
+        if (activeOcc && pending) {
+          const tenantName = (activeOcc.tenant?.name || '').trim().toLowerCase();
+          const bookingName = (pending.name || '').trim().toLowerCase();
+          if (tenantName && bookingName && tenantName === bookingName) {
+            converted = pending;
+            pending = null;
+            convertBooking(converted.id, activeOcc.tenant?.id).catch(err => {
+              console.warn('Auto-reconciliation of booking failed:', err);
+            });
+          }
+        }
+
         return {
           ...bed,
           occupancy: activeOcc ?? null,
@@ -227,7 +244,7 @@ export async function fetchRoomsWithOccupants(propertyId) {
             bookingAdvance: Number(converted?.advance_amount || 0),
             bookingId: converted?.id || null,
           } : null,
-          booking: pendingByBed[bed.id] ?? null,
+          booking: pending,
         };
       }),
   }));

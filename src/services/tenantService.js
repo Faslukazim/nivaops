@@ -1,5 +1,6 @@
 import { hasSupabaseConfig, supabase } from '../lib/supabase';
 import { calculateMoveInFinancials } from '../utils/financialEngine';
+import { convertBooking } from './bookingService';
 
 const STORAGE_KEY = 'stayb-tenants';
 
@@ -205,22 +206,42 @@ export async function fetchTenants(propertyId) {
 
   const bookingsQuery = supabase
     .from('bookings')
-    .select('id, bed_id, advance_amount, status')
-    .eq('status', 'converted');
+    .select('id, bed_id, advance_amount, status, name')
+    .in('status', ['converted', 'pending']);
   if (propertyId) bookingsQuery.eq('property_id', propertyId);
 
-  const [{ data, error }, { data: convertedBookings }] = await Promise.all([
+  const [{ data, error }, { data: allBookings }] = await Promise.all([
     query,
     bookingsQuery.then(r => r, () => ({ data: [] })),
   ]);
   if (error) throw error;
 
-  const bookingByBed = {};
-  for (const b of convertedBookings ?? []) {
-    if (!bookingByBed[b.bed_id]) bookingByBed[b.bed_id] = b;
+  const convertedByBed = {};
+  const pendingByBed = {};
+  for (const b of allBookings ?? []) {
+    if (b.status === 'converted') {
+      if (!convertedByBed[b.bed_id]) convertedByBed[b.bed_id] = b;
+    } else if (b.status === 'pending') {
+      if (!pendingByBed[b.bed_id]) pendingByBed[b.bed_id] = b;
+    }
   }
 
-  return data.map(occ => toUiTenant(occ, bookingByBed[occ.bed_id]));
+  return data.map(occ => {
+    let booking = convertedByBed[occ.bed_id];
+    if (!booking && pendingByBed[occ.bed_id]) {
+      const p = pendingByBed[occ.bed_id];
+      const tenantName = (occ.tenant?.name || '').trim().toLowerCase();
+      const bookingName = (p.name || '').trim().toLowerCase();
+      if (tenantName && bookingName && tenantName === bookingName) {
+        booking = p;
+        // Auto-reconcile booking in background
+        convertBooking(p.id, occ.tenant?.id).catch(err => {
+          console.warn('Auto-reconciliation of booking failed in fetchTenants:', err);
+        });
+      }
+    }
+    return toUiTenant(occ, booking);
+  });
 }
 
 export async function createTenant(tenant) {

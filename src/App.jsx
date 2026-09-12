@@ -2649,6 +2649,15 @@ export default function App({ session, organizationName, organizationId: orgIdPr
 
   const canAddProperty = plan === 'pro' || properties.length === 0;
 
+  const effectivePendingBookings = useMemo(() => {
+    return pendingBookings.filter(b => {
+      const isAlreadyActiveTenant = tenants.some(
+        t => t.bedId === b.bed_id && t.name?.trim().toLowerCase() === b.name?.trim().toLowerCase()
+      );
+      return !isAlreadyActiveTenant;
+    });
+  }, [pendingBookings, tenants]);
+
   const viewingTenant = viewingTenantId ? tenants.find(t => t.id === viewingTenantId) ?? null : null;
 
   const loadProperties = useCallback(async () => {
@@ -3063,7 +3072,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      <Sidebar active={page} onChange={navigateTo} bookingCount={pendingBookings.length} overdueCount={tenants.filter(t => computeTenantStatus(t) === STATUS.OVERDUE).length} />
+      <Sidebar active={page} onChange={navigateTo} bookingCount={effectivePendingBookings.length} overdueCount={tenants.filter(t => computeTenantStatus(t) === STATUS.OVERDUE).length} />
 
       {/* Swipe-back affordance */}
       {swipeBackX > 0 && (
@@ -3124,7 +3133,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
         onGoHome={() => navigateTo('dashboard')}
         isOwner={isOwner}
       />
-      <TopNav active={page} onChange={navigateTo} bookingCount={pendingBookings.length} overdueCount={tenants.filter(t => computeTenantStatus(t) === STATUS.OVERDUE).length} />
+      <TopNav active={page} onChange={navigateTo} bookingCount={effectivePendingBookings.length} overdueCount={tenants.filter(t => computeTenantStatus(t) === STATUS.OVERDUE).length} />
 
       {(pullY > 0 || refreshing) && (
         <div
@@ -3171,7 +3180,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
                   selectedPropertyId={selectedPropertyId}
                   upiId={upiId}
                   movedOutThisMonth={movedOutThisMonth}
-                  pendingBookings={pendingBookings}
+                  pendingBookings={effectivePendingBookings}
                   onGoToFinance={() => navigateTo('finance')}
                   onGoToRooms={() => navigateTo('rooms')}
                   onOpenFinanceTab={openFinanceTab}
@@ -3299,7 +3308,7 @@ export default function App({ session, organizationName, organizationId: orgIdPr
         />
       )}
 
-      <BottomNav active={page} onChange={navigateTo} bookingCount={pendingBookings.length} overdueCount={tenants.filter(t => computeTenantStatus(t) === STATUS.OVERDUE).length} />
+      <BottomNav active={page} onChange={navigateTo} bookingCount={effectivePendingBookings.length} overdueCount={tenants.filter(t => computeTenantStatus(t) === STATUS.OVERDUE).length} />
     </div>
   );
 }

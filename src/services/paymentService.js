@@ -27,25 +27,37 @@ export async function ensurePaymentRecords(propertyId, yearMonth) {
 
   const query = supabase
     .from('occupancies')
-    .select('id, property_id, tenant_id, monthly_rent, rent_due_day, payment_status, payment_date, start_date, admission_fee, deposit_amount, booking_advance')
+    .select('id, property_id, tenant_id, bed_id, monthly_rent, rent_due_day, payment_status, payment_date, start_date, admission_fee, deposit_amount')
     .eq('status', 'active');
   if (propertyId) query.eq('property_id', propertyId);
 
-  const { data: occupancies, error } = await query;
+  const bookingsQuery = supabase
+    .from('bookings')
+    .select('bed_id, advance_amount')
+    .in('status', ['converted', 'pending']);
+  if (propertyId) bookingsQuery.eq('property_id', propertyId);
+
+  const [{ data: occupancies, error }, { data: bookings }] = await Promise.all([
+    query,
+    bookingsQuery.then(r => r, () => ({ data: [] })),
+  ]);
   if (error) throw error;
-  if (!occupancies.length) return;
+  if (!occupancies?.length) return;
+
+  const advanceByBed = Object.fromEntries((bookings ?? []).map(b => [b.bed_id, Number(b.advance_amount || 0)]));
 
   const records = occupancies.map(occ => {
     const isMoveInMonth = occ.start_date && String(occ.start_date).slice(0, 7) === yearMonth;
     let recAmount = Number(occ.monthly_rent || 0);
+    const bookingAdv = Number(occ.booking_advance || advanceByBed[occ.bed_id] || 0);
 
     // In the move-in month with an advance paid, the remaining balance due is calculated authoritatively
-    if (isMoveInMonth && Number(occ.booking_advance) > 0) {
+    if (isMoveInMonth && bookingAdv > 0) {
       const fin = calculateMoveInFinancials({
         monthlyRent: occ.monthly_rent,
         admissionFee: occ.admission_fee,
         depositAmount: occ.deposit_amount,
-        bookingAdvance: occ.booking_advance,
+        bookingAdvance: bookingAdv,
         paymentStatus: occ.payment_status,
       });
       recAmount = fin.remainingDueToCollect;
@@ -83,12 +95,23 @@ export async function fetchPaymentRecords(propertyId, yearMonth) {
 
   const query = supabase
     .from('payment_records')
-    .select('*, tenant:tenants(name, phone, status), occupancy:occupancies(monthly_rent, rent_due_day, status, booking_advance, admission_fee, deposit_amount, start_date, room:rooms(room_number), bed:beds(bed_number))')
+    .select('*, tenant:tenants(name, phone, status), occupancy:occupancies(monthly_rent, rent_due_day, status, admission_fee, deposit_amount, start_date, bed_id, room:rooms(room_number), bed:beds(bed_number))')
     .eq('month', yearMonth);
   if (propertyId) query.eq('property_id', propertyId);
 
-  const { data, error } = await query;
+  const bookingsQuery = supabase
+    .from('bookings')
+    .select('bed_id, advance_amount')
+    .in('status', ['converted', 'pending']);
+  if (propertyId) bookingsQuery.eq('property_id', propertyId);
+
+  const [{ data, error }, { data: bookings }] = await Promise.all([
+    query,
+    bookingsQuery.then(r => r, () => ({ data: [] })),
+  ]);
   if (error) throw error;
+
+  const advanceByBed = Object.fromEntries((bookings ?? []).map(b => [b.bed_id, Number(b.advance_amount || 0)]));
 
   // Exclude vacated tenants — occupancy ended or tenant archived after move-out
   const active = data.filter(r => r.occupancy?.status === 'active' && r.tenant?.status === 'active');
@@ -107,7 +130,7 @@ export async function fetchPaymentRecords(propertyId, yearMonth) {
     dueDay: r.due_day,
     status: r.status,
     paidAt: r.paid_at,
-    bookingAdvance: Number(r.occupancy?.booking_advance ?? 0),
+    bookingAdvance: Number(r.occupancy?.booking_advance || advanceByBed[r.occupancy?.bed_id] || 0),
     isMoveInMonth: Boolean(r.occupancy?.start_date && String(r.occupancy.start_date).slice(0, 7) === yearMonth),
   }));
 }
