@@ -1,0 +1,35 @@
+name: Fix tenant form lifecycle
+
+on:
+  push:
+    paths:
+      - 'src/.tenant-form-lifecycle-trigger'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch App.jsx
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('src/App.jsx')
+          text = path.read_text()
+          old = """  useEffect(() => {\n    if (editingTenant || roomPrefill) setShowForm(true);\n  }, [editingTenant, roomPrefill]);\n\n  useEffect(() => {\n    if (!showPast) return;"""
+          new = """  useEffect(() => {\n    if (editingTenant || roomPrefill) setShowForm(true);\n  }, [editingTenant, roomPrefill]);\n\n  // The tenant form is a temporary workflow. If the underlying tenant list\n  // changes because the owner performs another tenant action (mark paid,\n  // vacate, etc.), close the unfinished form so it cannot become stale.\n  const tenantSnapshotRef = useRef(null);\n  useEffect(() => {\n    const snapshot = tenants.map(t => `${t.id}:${t.paymentStatus ?? ''}:${t.noticeEndDate ?? ''}:${t.endDate ?? ''}`).join('|');\n    if (showForm && tenantSnapshotRef.current !== null && tenantSnapshotRef.current !== snapshot) {\n      setShowForm(false);\n      onCancelEdit();\n    }\n    tenantSnapshotRef.current = snapshot;\n  }, [tenants, showForm, onCancelEdit]);\n\n  useEffect(() => {\n    if (!showPast) return;"""
+          if old not in text:
+              raise SystemExit('Expected TenantsPage effect block not found')
+          text = text.replace(old, new, 1)
+          path.write_text(text)
+      - name: Commit patch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.jsx
+          git commit -m "Fix tenant form lifecycle [bot]" || exit 0
+          git push
