@@ -654,7 +654,7 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
                 <ul className="space-y-3 text-xs sm:text-sm text-[#1D1D1F]">
                   <li className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 text-leaf shrink-0" />
-                    <span>Up to 25 beds · 1 property</span>
+                    <span>Up to 50 beds · 1 property</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 text-leaf shrink-0" />
@@ -705,7 +705,7 @@ export default function LandingPage({ onShowAuth, onTryDemo, demoLoading }) {
                 <ul className="space-y-3 text-xs sm:text-sm text-white/90">
                   <li className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 text-leaf shrink-0" />
-                    <span><strong>Up to 100 beds</strong> · Multiple properties</span>
+                    <span><strong>Up to 150 beds</strong> · Multiple properties</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 text-leaf shrink-0" />
