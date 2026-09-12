@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { MapPin, Search, X, ArrowRight, BedDouble, MessageCircle, ChevronDown } from 'lucide-react';
+import {
+  ArrowRight,
+  BedDouble,
+  CheckCircle2,
+  ChevronDown,
+  MapPin,
+  MessageCircle,
+  Search,
+  ShieldCheck,
+  X,
+} from 'lucide-react';
 import { fetchListedProperties } from './services/listingService';
 import { NivaLogo, NivaWordmark } from './components/NivaLogo';
 
@@ -11,17 +21,26 @@ const AMENITY_LABEL = {
   ac: 'AC',
 };
 
+const GENDER_OPTIONS = [
+  { value: 'any', label: 'All stays' },
+  { value: 'male', label: 'Men' },
+  { value: 'female', label: 'Women' },
+];
+
 function amenityLine(amenities) {
   if (!amenities?.length) return null;
   return amenities.map(a => AMENITY_LABEL[a] || a).join(' · ');
 }
 
+function locationLine(property) {
+  return [property.locality, property.city].filter(Boolean).join(', ') || 'Location available on enquiry';
+}
+
 function GenderTag({ value }) {
   if (value === 'any' || !value) return null;
-  const label = value === 'male' ? 'Men only' : 'Women only';
   return (
-    <span className="text-[11px] font-semibold uppercase tracking-wide text-slate2 bg-mist px-2 py-1 rounded-full border border-border">
-      {label}
+    <span className="inline-flex items-center rounded-full border border-border bg-mist px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-slate2">
+      {value === 'male' ? 'Men only' : 'Women only'}
     </span>
   );
 }
@@ -29,51 +48,71 @@ function GenderTag({ value }) {
 function whatsappHref(property) {
   const digits = String(property.whatsapp_number || '').replace(/\D/g, '').slice(-10);
   if (!digits) return null;
-  const text = encodeURIComponent(`Hi, I'm interested in a vacant bed at ${property.name} (${property.locality || property.city}). Is it still available?`);
+  const text = encodeURIComponent(
+    `Hi, I'm interested in a vacant bed at ${property.name} (${property.locality || property.city || 'your property'}). Is it still available?`
+  );
   return `https://wa.me/91${digits}?text=${text}`;
 }
 
-function PropertyCard({ p, onOpen, index }) {
+function PropertyImage({ property, detail = false }) {
+  return (
+    <div className={`relative overflow-hidden bg-gradient-to-br from-leaf/15 via-mist to-white ${detail ? 'aspect-[16/10]' : 'aspect-[4/3]'}`}>
+      {property.cover_photo_url ? (
+        <img
+          src={property.cover_photo_url}
+          alt={property.name}
+          className="h-full w-full object-cover transition-transform duration-700 ease-out"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <BedDouble size={detail ? 52 : 42} className="text-leaf/30" />
+        </div>
+      )}
+      <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-ink/35 to-transparent" />
+    </div>
+  );
+}
+
+function PropertyCard({ property, onOpen, index }) {
   return (
     <button
-      onClick={() => onOpen(p)}
-      style={{ animationDelay: `${index * 60}ms` }}
-      className="group text-left rounded-3xl overflow-hidden border border-border bg-white
-                 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[0_24px_48px_-12px_rgba(15,23,42,0.18)]
-                 hover:-translate-y-1.5 transition-all duration-500 ease-out animate-rise"
+      type="button"
+      onClick={() => onOpen(property)}
+      style={{ animationDelay: `${index * 55}ms` }}
+      className="group w-full overflow-hidden rounded-[26px] border border-border bg-white text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-500 ease-out hover:-translate-y-1 hover:shadow-[0_22px_45px_-18px_rgba(15,23,42,0.28)] animate-rise"
     >
-      <div className="relative aspect-[4/3] bg-gradient-to-br from-leaf/15 to-mist overflow-hidden">
-        {p.cover_photo_url ? (
-          <img
-            src={p.cover_photo_url}
-            alt={p.name}
-            className="w-full h-full object-cover group-hover:scale-[1.06] transition-transform duration-700 ease-out"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <BedDouble size={40} className="text-leaf/40" />
-          </div>
-        )}
-        <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-white/95 backdrop-blur px-3 py-1.5 rounded-full shadow-sm">
-          <span className="w-1.5 h-1.5 rounded-full bg-leaf animate-pulse" />
-          <span className="text-[11px] font-bold text-ink">{p.vacant_beds} bed{p.vacant_beds === 1 ? '' : 's'} vacant</span>
+      <div className="relative">
+        <PropertyImage property={property} />
+        <div className="absolute left-3.5 top-3.5 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 shadow-sm backdrop-blur">
+          <span className="h-1.5 w-1.5 rounded-full bg-leaf animate-pulse" />
+          <span className="text-[11px] font-bold text-ink">
+            {property.vacant_beds} bed{property.vacant_beds === 1 ? '' : 's'} available
+          </span>
         </div>
       </div>
+
       <div className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="font-bold text-[17px] leading-snug text-ink group-hover:text-leaf transition-colors">{p.name}</h3>
-          <ArrowRight size={18} className="shrink-0 mt-1 text-slate2 group-hover:text-leaf group-hover:translate-x-0.5 transition-all" />
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h2 className="truncate text-[18px] font-bold leading-tight tracking-[-0.02em] text-ink transition-colors group-hover:text-leaf">
+              {property.name}
+            </h2>
+            <p className="mt-2 flex items-start gap-1.5 text-[13px] leading-snug text-slate2">
+              <MapPin size={14} className="mt-0.5 shrink-0" />
+              <span>{locationLine(property)}</span>
+            </p>
+          </div>
+          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-mist text-slate2 transition-all group-hover:border-leaf/30 group-hover:bg-leaf group-hover:text-white">
+            <ArrowRight size={17} />
+          </span>
         </div>
-        <p className="flex items-center gap-1 text-[13px] text-slate2 mt-1.5">
-          <MapPin size={13} className="shrink-0" />
-          {[p.locality, p.city].filter(Boolean).join(', ')}
-        </p>
-        <div className="flex items-center gap-2 mt-3">
-          <GenderTag value={p.gender_preference} />
+
+        <div className="mt-4 flex min-h-6 flex-wrap items-center gap-2">
+          <GenderTag value={property.gender_preference} />
+          {amenityLine(property.amenities) && (
+            <span className="text-[12px] text-slate2">{amenityLine(property.amenities)}</span>
+          )}
         </div>
-        {amenityLine(p.amenities) && (
-          <p className="mt-2.5 text-[12.5px] text-slate2">{amenityLine(p.amenities)}</p>
-        )}
       </div>
     </button>
   );
@@ -81,39 +120,99 @@ function PropertyCard({ p, onOpen, index }) {
 
 function PropertyDetail({ property, onClose }) {
   const href = whatsappHref(property);
+  const amenities = property.amenities?.map(a => AMENITY_LABEL[a] || a).filter(Boolean) || [];
+
+  useEffect(() => {
+    const onKeyDown = event => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[90] bg-ink/50 backdrop-blur-sm flex items-end sm:items-center justify-center animate-fadein">
-      <div className="bg-white w-full sm:max-w-xl sm:rounded-3xl rounded-t-3xl max-h-[92vh] overflow-y-auto animate-slideup">
-        <div className="relative aspect-[16/9] bg-gradient-to-br from-leaf/15 to-mist">
-          {property.cover_photo_url ? (
-            <img src={property.cover_photo_url} alt={property.name} className="w-full h-full object-cover sm:rounded-t-3xl" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center"><BedDouble size={48} className="text-leaf/40" /></div>
-          )}
-          <button onClick={onClose} className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/95 backdrop-blur flex items-center justify-center shadow-sm">
+    <div
+      className="fixed inset-0 z-[90] flex items-end justify-center bg-ink/55 p-0 backdrop-blur-sm animate-fadein sm:items-center sm:p-6"
+      onMouseDown={event => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className="max-h-[94vh] w-full overflow-y-auto rounded-t-[28px] bg-white shadow-2xl animate-slideup sm:max-w-2xl sm:rounded-[28px]">
+        <div className="relative">
+          <PropertyImage property={property} detail />
+          <button
+            type="button"
+            aria-label="Close property details"
+            onClick={onClose}
+            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 shadow-sm backdrop-blur transition-transform hover:scale-105"
+          >
             <X size={18} />
           </button>
+          <div className="absolute bottom-4 left-5 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 shadow-sm backdrop-blur">
+            <CheckCircle2 size={14} className="text-leaf" />
+            <span className="text-[11px] font-bold text-ink">Live availability</span>
+          </div>
         </div>
-        <div className="p-6">
-          <h2 className="text-2xl font-extrabold text-ink tracking-tight">{property.name}</h2>
-          <p className="flex items-center gap-1.5 text-slate2 mt-1.5">
-            <MapPin size={14} /> {[property.locality, property.city].filter(Boolean).join(', ')}
-          </p>
-          <div className="flex items-center gap-2 mt-4">
+
+        <div className="p-6 sm:p-8">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-[27px] font-extrabold tracking-[-0.035em] text-ink">{property.name}</h2>
+              <p className="mt-2 flex items-start gap-1.5 text-[14px] text-slate2">
+                <MapPin size={15} className="mt-0.5 shrink-0" />
+                {locationLine(property)}
+              </p>
+            </div>
             <GenderTag value={property.gender_preference} />
           </div>
-          {amenityLine(property.amenities) && (
-            <p className="mt-2.5 text-[13px] text-slate2">{amenityLine(property.amenities)}</p>
-          )}
+
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl bg-mist p-4">
+              <BedDouble size={18} className="text-leaf" />
+              <p className="mt-3 text-xl font-extrabold tracking-tight text-ink">{property.vacant_beds}</p>
+              <p className="mt-0.5 text-[12px] text-slate2">beds available</p>
+            </div>
+            <div className="rounded-2xl bg-mist p-4">
+              <ShieldCheck size={18} className="text-leaf" />
+              <p className="mt-3 text-xl font-extrabold tracking-tight text-ink">Live</p>
+              <p className="mt-0.5 text-[12px] text-slate2">owner-managed listing</p>
+            </div>
+            <div className="col-span-2 rounded-2xl bg-mist p-4 sm:col-span-1">
+              <MapPin size={18} className="text-leaf" />
+              <p className="mt-3 truncate text-xl font-extrabold tracking-tight text-ink">{property.city || 'Nearby'}</p>
+              <p className="mt-0.5 text-[12px] text-slate2">area</p>
+            </div>
+          </div>
+
           {property.listing_description && (
-            <p className="mt-5 text-[14.5px] leading-relaxed text-slate2">{property.listing_description}</p>
+            <p className="mt-7 text-[15px] leading-7 text-slate2">{property.listing_description}</p>
           )}
 
-          <div className="mt-6 border-t border-border pt-5">
-            <p className="font-mono text-[11px] font-bold uppercase tracking-widest text-leaf">
-              {property.vacant_beds} bed{property.vacant_beds === 1 ? '' : 's'} available now
-            </p>
+          {amenities.length > 0 && (
+            <div className="mt-7">
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate2">What’s included</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {amenities.map(amenity => (
+                  <span key={amenity} className="rounded-full border border-border bg-white px-3 py-2 text-[13px] font-medium text-ink">
+                    {amenity}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-7 rounded-2xl border border-leaf/15 bg-leaf/5 p-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-leaf" />
+              <div>
+                <p className="text-sm font-bold text-ink">{property.vacant_beds} vacant bed{property.vacant_beds === 1 ? '' : 's'} right now</p>
+                <p className="mt-1 text-xs leading-relaxed text-slate2">Availability comes from the property’s NivaOps occupancy data.</p>
+              </div>
+            </div>
           </div>
 
           {href ? (
@@ -121,12 +220,13 @@ function PropertyDetail({ property, onClose }) {
               href={href}
               target="_blank"
               rel="noreferrer"
-              className="mt-6 flex items-center justify-center gap-2 w-full bg-leaf text-white font-semibold py-3.5 rounded-2xl hover:bg-leaf/90 transition-colors"
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-leaf py-4 text-[15px] font-bold text-white shadow-[0_10px_25px_-12px_rgba(22,101,52,0.6)] transition-all hover:-translate-y-0.5 hover:bg-leaf/90"
             >
-              <MessageCircle size={18} /> Enquire on WhatsApp
+              <MessageCircle size={19} />
+              Ask about a bed on WhatsApp
             </a>
           ) : (
-            <p className="mt-6 text-center text-sm text-slate2">Contact details unavailable for this listing.</p>
+            <p className="mt-6 rounded-2xl bg-mist px-4 py-4 text-center text-sm text-slate2">Contact the property directly for availability.</p>
           )}
         </div>
       </div>
@@ -134,37 +234,35 @@ function PropertyDetail({ property, onClose }) {
   );
 }
 
-const GENDER_OPTIONS = [
-  { value: 'any', label: 'Any' },
-  { value: 'male', label: 'Men' },
-  { value: 'female', label: 'Women' },
-];
-
 function GenderSelect({ value, onChange }) {
   const [open, setOpen] = useState(false);
-  const current = GENDER_OPTIONS.find(g => g.value === value) ?? GENDER_OPTIONS[0];
+  const current = GENDER_OPTIONS.find(option => option.value === value) || GENDER_OPTIONS[0];
 
   return (
-    <div className="relative">
+    <div className="relative shrink-0">
       <button
         type="button"
-        onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 h-full px-4 border-l border-border text-[15px] font-medium text-ink hover:bg-mist/60 transition-colors rounded-r-2xl"
+        onClick={() => setOpen(current => !current)}
+        className="flex h-12 items-center gap-1.5 border-l border-border px-4 text-[13px] font-semibold text-ink transition-colors hover:bg-mist/60 sm:px-5"
       >
-        {current.label} <ChevronDown size={15} className="text-slate2" />
+        {current.label}
+        <ChevronDown size={15} className={`text-slate2 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 z-20 bg-white border border-border rounded-xl shadow-lg overflow-hidden min-w-[120px]">
-            {GENDER_OPTIONS.map(g => (
+          <button type="button" aria-label="Close filter menu" className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-[calc(100%+8px)] z-20 min-w-[140px] overflow-hidden rounded-2xl border border-border bg-white p-1.5 shadow-xl">
+            {GENDER_OPTIONS.map(option => (
               <button
-                key={g.value}
+                key={option.value}
                 type="button"
-                onClick={() => { onChange(g.value); setOpen(false); }}
-                className={`w-full text-left px-4 py-2.5 text-sm hover:bg-mist transition-colors ${g.value === value ? 'font-semibold text-leaf' : 'text-ink'}`}
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+                className={`w-full rounded-xl px-3 py-2.5 text-left text-sm transition-colors hover:bg-mist ${option.value === value ? 'font-bold text-leaf' : 'text-ink'}`}
               >
-                {g.label}
+                {option.label}
               </button>
             ))}
           </div>
@@ -174,8 +272,21 @@ function GenderSelect({ value, onChange }) {
   );
 }
 
+function LoadingCard() {
+  return (
+    <div className="overflow-hidden rounded-[26px] border border-border bg-white">
+      <div className="aspect-[4/3] animate-pulse bg-mist" />
+      <div className="space-y-3 p-5">
+        <div className="h-5 w-2/3 animate-pulse rounded bg-mist" />
+        <div className="h-3 w-1/2 animate-pulse rounded bg-mist" />
+        <div className="h-3 w-3/4 animate-pulse rounded bg-mist" />
+      </div>
+    </div>
+  );
+}
+
 export default function ListingPage({ city: initialCity }) {
-  const [city, setCity] = useState(initialCity || '');
+  const [city] = useState(initialCity || '');
   const [query, setQuery] = useState('');
   const [gender, setGender] = useState('any');
   const [properties, setProperties] = useState(null);
@@ -185,121 +296,167 @@ export default function ListingPage({ city: initialCity }) {
   useEffect(() => {
     let active = true;
     setProperties(null);
+    setError('');
+
     fetchListedProperties(city || null)
-      .then(data => { if (active) setProperties(data); })
-      .catch(e => { if (active) { setError(e.message); setProperties([]); } });
-    return () => { active = false; };
+      .then(data => {
+        if (active) setProperties(Array.isArray(data) ? data : []);
+      })
+      .catch(error => {
+        if (active) {
+          setError(error?.message || 'We could not load listings right now.');
+          setProperties([]);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, [city]);
 
   const filtered = useMemo(() => {
     if (!properties) return [];
-    let list = properties;
-    if (gender !== 'any') list = list.filter(p => p.gender_preference === gender || p.gender_preference === 'any');
-    if (query.trim()) {
-      const q = query.toLowerCase();
-      list = list.filter(p => p.name.toLowerCase().includes(q) || (p.locality || '').toLowerCase().includes(q));
-    }
-    return list;
+    const q = query.trim().toLowerCase();
+
+    return properties.filter(property => {
+      const genderMatch = gender === 'any' || property.gender_preference === gender || property.gender_preference === 'any';
+      const searchMatch = !q || [property.name, property.locality, property.city].filter(Boolean).some(value => value.toLowerCase().includes(q));
+      return genderMatch && searchMatch;
+    });
   }, [properties, query, gender]);
 
-  const recentlyListed = useMemo(() => {
-    if (!properties || properties.length < 4) return [];
-    return [...properties]
-      .sort((a, b) => new Date(b.listed_at) - new Date(a.listed_at))
-      .slice(0, 3);
-  }, [properties]);
-
-  const cityLabel = city ? city.charAt(0).toUpperCase() + city.slice(1) : 'your city';
+  const cityLabel = city
+    ? city.charAt(0).toUpperCase() + city.slice(1)
+    : 'your city';
 
   return (
-    <div className="min-h-screen bg-mist">
+    <div className="min-h-screen bg-mist text-ink">
       <header
-        className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-border"
+        className="sticky top-0 z-30 border-b border-border bg-white/85 backdrop-blur-xl"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
-        <div className="max-w-6xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-between">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
           <div className="flex items-center gap-2">
-            <NivaLogo size={26} />
+            <NivaLogo size={27} />
             <NivaWordmark size="base" />
-            <span className="text-slate2 text-sm hidden sm:inline">/ pg / {city || 'browse'}</span>
+            <span className="hidden text-sm text-slate2 sm:inline">/ stays / {city || 'browse'}</span>
+          </div>
+          <div className="hidden items-center gap-2 text-xs font-medium text-slate2 sm:flex">
+            <CheckCircle2 size={14} className="text-leaf" />
+            Live availability
           </div>
         </div>
       </header>
 
-      <section className="max-w-6xl mx-auto px-5 sm:px-8 pt-14 pb-10 sm:pt-20 sm:pb-14">
-        <p className="font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-leaf mb-4">Live vacancy · Updated in real time</p>
-        <h1 className="text-[clamp(34px,6vw,58px)] font-extrabold tracking-tight leading-[1.03] text-ink max-w-3xl text-wrap-balance">
-          Find a verified PG or hostel bed in {cityLabel}.
-        </h1>
-        <p className="text-slate2 text-[16px] sm:text-[17px] mt-4 max-w-xl leading-relaxed">
-          Every bed shown here is confirmed vacant right now by the owner's own booking system —
-          not a stale listing. No brokerage, no middlemen.
-        </p>
+      <main>
+        <section className="relative overflow-hidden border-b border-border bg-white">
+          <div className="pointer-events-none absolute -right-32 -top-40 h-80 w-80 rounded-full bg-leaf/10 blur-3xl" />
+          <div className="pointer-events-none absolute -left-32 bottom-[-180px] h-96 w-96 rounded-full bg-leaf/5 blur-3xl" />
 
-        <div className="mt-8 flex max-w-2xl rounded-2xl border border-border bg-white focus-within:ring-2 focus-within:ring-leaf/30 focus-within:border-leaf transition-shadow">
-          <div className="relative flex-1">
-            <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate2" />
-            <input
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="Search by hostel name or locality"
-              className="w-full pl-11 pr-4 py-3.5 text-[15px] bg-transparent focus:outline-none"
-            />
-          </div>
-          <GenderSelect value={gender} onChange={setGender} />
-        </div>
-      </section>
-
-      <section className="max-w-6xl mx-auto px-5 sm:px-8 pb-24">
-        {error && (
-          <p className="text-coral text-sm mb-6">{error}</p>
-        )}
-
-        {properties === null ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[0, 1, 2].map(i => (
-              <div key={i} className="rounded-3xl border border-border bg-white overflow-hidden">
-                <div className="aspect-[4/3] bg-mist animate-pulse" />
-                <div className="p-5 space-y-3">
-                  <div className="h-4 bg-mist rounded animate-pulse w-3/4" />
-                  <div className="h-3 bg-mist rounded animate-pulse w-1/2" />
-                </div>
+          <div className="relative mx-auto max-w-6xl px-5 pb-10 pt-14 sm:px-8 sm:pb-14 sm:pt-20">
+            <div className="max-w-3xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-leaf/15 bg-leaf/5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-leaf">
+                <span className="h-1.5 w-1.5 rounded-full bg-leaf animate-pulse" />
+                Live vacancy
               </div>
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-20">
-            <BedDouble size={40} className="mx-auto text-slate2/40 mb-4" />
-            <p className="font-semibold text-ink">No vacant beds listed here yet</p>
-            <p className="text-slate2 text-sm mt-1">Check back soon, or try a different city.</p>
-          </div>
-        ) : (
-          <>
-            {recentlyListed.length > 0 && (
-              <div className="mb-10">
-                <p className="text-sm font-semibold text-ink mb-4">Recently listed</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {recentlyListed.map((p, i) => (
-                    <PropertyCard key={p.id} p={p} index={i} onOpen={setSelected} />
-                  ))}
-                </div>
-              </div>
-            )}
-            <p className="text-sm text-slate2 mb-5">{filtered.length} propert{filtered.length === 1 ? 'y' : 'ies'} with beds available</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filtered.map((p, i) => (
-                <PropertyCard key={p.id} p={p} index={i} onOpen={setSelected} />
-              ))}
+              <h1 className="mt-5 max-w-3xl text-[clamp(38px,6vw,64px)] font-extrabold leading-[0.98] tracking-[-0.055em] text-ink text-wrap-balance">
+                Find your next place to stay in {cityLabel}.
+              </h1>
+              <p className="mt-5 max-w-2xl text-[16px] leading-7 text-slate2 sm:text-[18px]">
+                Browse PGs and hostels with beds available now. See the live vacancy, check the basics, then talk directly to the property.
+              </p>
             </div>
-          </>
-        )}
-      </section>
 
-      <footer className="border-t border-border">
-        <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10 text-center">
-          <p className="text-sm text-slate2">
-            Powered by <span className="font-semibold text-ink">NivaOps</span> — the operations platform Kochi's hostels run on.
-          </p>
+            <div className="mt-8 max-w-3xl rounded-[22px] border border-border bg-white shadow-[0_12px_40px_-25px_rgba(15,23,42,0.3)] transition-shadow focus-within:shadow-[0_18px_50px_-25px_rgba(15,23,42,0.35)] focus-within:ring-2 focus-within:ring-leaf/15">
+              <div className="flex h-12 items-center">
+                <Search size={18} className="ml-4 shrink-0 text-slate2" />
+                <input
+                  value={query}
+                  onChange={event => setQuery(event.target.value)}
+                  placeholder="Search hostel or locality"
+                  aria-label="Search PGs and hostels"
+                  className="min-w-0 flex-1 bg-transparent px-3 text-[14px] text-ink outline-none placeholder:text-slate2/70 sm:text-[15px]"
+                />
+                {query && (
+                  <button type="button" aria-label="Clear search" onClick={() => setQuery('')} className="mr-1 flex h-9 w-9 items-center justify-center rounded-full text-slate2 hover:bg-mist">
+                    <X size={15} />
+                  </button>
+                )}
+                <GenderSelect value={gender} onChange={setGender} />
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[12px] text-slate2">
+              <span className="inline-flex items-center gap-1.5"><CheckCircle2 size={14} className="text-leaf" /> Owner-managed listings</span>
+              <span className="inline-flex items-center gap-1.5"><ShieldCheck size={14} className="text-leaf" /> No brokerage</span>
+              <span className="inline-flex items-center gap-1.5"><MessageCircle size={14} className="text-leaf" /> Direct WhatsApp enquiry</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-14">
+          {error && (
+            <div className="mb-6 rounded-2xl border border-coral/20 bg-coral/5 px-4 py-3 text-sm text-coral">
+              {error}
+            </div>
+          )}
+
+          {properties === null ? (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {[0, 1, 2].map(index => <LoadingCard key={index} />)}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="mx-auto max-w-xl py-16 text-center sm:py-24">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-border">
+                <BedDouble size={28} className="text-slate2/50" />
+              </div>
+              <h2 className="mt-6 text-xl font-bold tracking-tight text-ink">
+                {query || gender !== 'any' ? 'Nothing matches that search' : 'No vacant beds listed yet'}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate2">
+                {query || gender !== 'any'
+                  ? 'Try a different hostel, locality, or stay type.'
+                  : 'New vacancies will appear here as properties open beds.'}
+              </p>
+              {(query || gender !== 'any') && (
+                <button
+                  type="button"
+                  onClick={() => { setQuery(''); setGender('any'); }}
+                  className="mt-5 rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-ink/90"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="mb-6 flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-leaf">Available now</p>
+                  <h2 className="mt-1 text-2xl font-extrabold tracking-[-0.03em] text-ink sm:text-[28px]">
+                    {filtered.length} {filtered.length === 1 ? 'property' : 'properties'}
+                  </h2>
+                </div>
+                <p className="hidden text-right text-xs text-slate2 sm:block">Tap a property to see details</p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {filtered.map((property, index) => (
+                  <PropertyCard key={property.id} property={property} index={index} onOpen={setSelected} />
+                ))}
+              </div>
+            </>
+          )}
+        </section>
+      </main>
+
+      <footer className="border-t border-border bg-white">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-5 py-9 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+          <div className="flex items-center gap-2">
+            <NivaLogo size={21} />
+            <span className="text-sm font-semibold text-ink">NivaOps</span>
+          </div>
+          <p className="text-xs text-slate2">Live PG & hostel listings powered by NivaOps.</p>
         </div>
       </footer>
 
