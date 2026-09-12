@@ -13,8 +13,9 @@ import { fetchProperties, fetchRoomsWithBeds, updatePropertyUpiId, updatePropert
 import { fetchExpenses } from './services/financeService';
 import { seedSampleWorkspace, clearSampleWorkspace } from './services/seedService';
 import { fetchBookings, convertBooking } from './services/bookingService';
+import { hasSupabaseConfig } from './lib/supabase';
 import { STATUS, computeTenantStatus, tenantDaysOverdue } from './utils/paymentStatus';
-import { calculateMoveInFinancials, calculateCycleFinancials, calculateBookingFinancials } from './utils/financialEngine';
+import { calculateMoveInFinancials } from './utils/financialEngine';
 import RoomsPage from './RoomsPage';
 import FinancePage from './FinancePage';
 import TenantProfile from './TenantProfile';
