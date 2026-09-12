@@ -2238,6 +2238,19 @@ function TenantsPage({ tenants, properties, defaultPropertyId, editingTenant, sa
     if (editingTenant || roomPrefill) setShowForm(true);
   }, [editingTenant, roomPrefill]);
 
+  // The tenant form is a temporary workflow. If the underlying tenant list
+  // changes because the owner performs another tenant action (mark paid,
+  // vacate, etc.), close the unfinished form so it cannot become stale.
+  const tenantSnapshotRef = useRef(null);
+  useEffect(() => {
+    const snapshot = tenants.map(t => `${t.id}:${t.paymentStatus ?? ''}:${t.noticeEndDate ?? ''}:${t.endDate ?? ''}`).join('|');
+    if (showForm && tenantSnapshotRef.current !== null && tenantSnapshotRef.current !== snapshot) {
+      setShowForm(false);
+      onCancelEdit();
+    }
+    tenantSnapshotRef.current = snapshot;
+  }, [tenants, showForm, onCancelEdit]);
+
   useEffect(() => {
     if (!showPast) return;
     setLoadingVacated(true);
